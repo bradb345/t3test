@@ -1,5 +1,10 @@
 import { db } from '~/server/db';
 import { Navbar } from '~/components/Navbar';
+import { Input } from "~/components/ui/input";
+import { Button } from "~/components/ui/button";
+import { Search } from "lucide-react";
+import { FeaturedProperties } from '~/components/FeaturedProperties';
+import { Testimonials } from '~/components/Testimonials';
 
 export const dynamic = "force-dynamic"
 
@@ -11,16 +16,39 @@ export default async function HomePage() {
   return (
     <>
       <Navbar />
-      <main className="flex min-h-screen flex-col items-center justify-center bg-orange-300 text-white pt-16">
-        <div className="container flex flex-col items-center justify-center gap-12 px-4 py-16">
-          <h1 className="text-5xl font-extrabold tracking-tight text-white sm:text-[5rem]">
-            AI tests work!
-          </h1>
-          <p className="text-lg">
-            This is AI edited text.
-          </p>
+      <main className="flex min-h-screen flex-col items-center bg-background">
+        <div className="w-full max-w-6xl px-4 pt-32 pb-16">
+          {/* Hero Section */}
+          <div className="text-center space-y-4">
+            <h1 className="text-4xl font-bold tracking-tight sm:text-6xl">
+              Find Your Perfect Home
+            </h1>
+            <p className="text-lg text-muted-foreground">
+              Search through thousands of properties to find your next rental
+            </p>
+          </div>
 
-          {users.map((user) => (<p className="text-lg" key={user.id}>{user.name}</p>))}
+          {/* Search Bar */}
+          <div className="mt-8 max-w-2xl mx-auto flex gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
+              <Input 
+                placeholder="Search for a city, neighborhood, or address..." 
+                className="w-full pl-10 h-12"
+              />
+            </div>
+            <Button className="h-12" size="lg">Search</Button>
+          </div>
+
+          {/* Featured Properties Section */}
+          <div className="mt-16">
+            <FeaturedProperties />
+          </div>
+
+          {/* Testimonials Section */}
+          <div className="mt-32">
+            <Testimonials />
+          </div>
         </div>
       </main>
     </>
