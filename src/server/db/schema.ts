@@ -18,11 +18,14 @@ import {
  */
 export const createTable = pgTableCreator((name) => `t3test_${name}`);
 
-export const posts = createTable(
-  "post",
+export const user = createTable(
+  "user",
   {
     id: serial("id").primaryKey(),
-    name: varchar("name", { length: 256 }),
+    auth_id: varchar("auth_id", { length: 256 }).notNull().unique(),
+    email: varchar("email", { length: 256 }).notNull(),
+    name: varchar("name", { length: 256 }).notNull(),
+    image_url: varchar("image_url", { length: 256 }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .default(sql`CURRENT_TIMESTAMP`)
       .notNull(),
