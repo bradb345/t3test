@@ -15,13 +15,13 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${GeistSans.variable}`}>
       <ClerkProvider afterSignOutUrl="/">
-        <body>
-          <Navbar />
-          {children}
-        </body>
+        <html lang="en" className={`${GeistSans.variable}`}>
+            <body>
+              <Navbar />
+              {children}
+            </body>
+        </html>
       </ClerkProvider>
-    </html>
   );
 }

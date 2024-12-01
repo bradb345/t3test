@@ -1,4 +1,4 @@
-import { db } from '~/server/db';
+// import { db } from '~/server/db';
 import { Input } from "~/components/ui/input";
 import { Button } from "~/components/ui/button";
 import { Search } from "lucide-react";
@@ -8,9 +8,9 @@ import { Testimonials } from '~/components/Testimonials';
 export const dynamic = "force-dynamic"
 
 export default async function HomePage() {
-  const users = await db.query.user.findMany({
-    orderBy: (model, { desc }) => desc(model.id),
-  })
+  // const users = await db.query.user.findMany({
+  //   orderBy: (model, { desc }) => desc(model.id),
+  // })
 
   return (
     <>
