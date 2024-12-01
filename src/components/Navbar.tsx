@@ -22,6 +22,14 @@ export function Navbar() {
           >
             List Your Property
           </Link>
+          {isSignedIn && (
+            <Link 
+              href="/messages" 
+              className="text-sm font-medium text-muted-foreground hover:text-primary"
+            >
+              Messages
+            </Link>
+          )}
           {isSignedIn ? (
             <UserButton />
           ) : (
