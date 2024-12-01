@@ -8,6 +8,7 @@ import {
   serial,
   timestamp,
   varchar,
+  boolean,
 } from "drizzle-orm/pg-core";
 
 /**
@@ -33,6 +34,7 @@ export const user = createTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).$onUpdate(
       () => new Date()
     ),
+    admin: boolean("admin").default(false),
   },
   (example) => ({
     nameIndex: index("name_idx").on(example.first_name, example.last_name),
