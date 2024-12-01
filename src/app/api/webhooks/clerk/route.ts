@@ -47,8 +47,6 @@ export async function POST(req: Request) {
   if (eventType === "user.created" || eventType === "user.updated") {
     const { id, email_addresses, image_url, first_name, last_name } = evt.data;
     const email = email_addresses[0]?.email_address;
-    const name =
-      [first_name, last_name].filter(Boolean).join(" ") || "Anonymous";
 
     // Upsert user data
     await db
@@ -56,14 +54,16 @@ export async function POST(req: Request) {
       .values({
         auth_id: id,
         email: email ?? "",
-        name: name,
+        first_name: first_name ?? "",
+        last_name: last_name ?? "",
         image_url: image_url,
       })
       .onConflictDoUpdate({
         target: [user.auth_id],
         set: {
           email: email ?? "",
-          name: name,
+          first_name: first_name ?? "",
+          last_name: last_name ?? "",
           image_url: image_url,
         },
       });

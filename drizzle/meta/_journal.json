@@ -8,6 +8,20 @@
       "when": 1732967794871,
       "tag": "0000_first_crystal",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1733071033656,
+      "tag": "0001_huge_owl",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1733077421556,
+      "tag": "0002_lush_boomer",
+      "breakpoints": true
     }
   ]
 }
