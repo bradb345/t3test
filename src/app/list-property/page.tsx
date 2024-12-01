@@ -1,9 +1,6 @@
-import { Navbar } from "~/components/Navbar"
-
 export default function ListPropertyPage() {
   return (
     <>
-      <Navbar />
       <main className="flex min-h-screen flex-col items-center bg-background">
         <div className="w-full max-w-6xl px-4 pt-32 pb-16">
           <div className="text-center space-y-4">

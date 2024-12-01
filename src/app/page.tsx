@@ -1,5 +1,4 @@
 import { db } from '~/server/db';
-import { Navbar } from '~/components/Navbar';
 import { Input } from "~/components/ui/input";
 import { Button } from "~/components/ui/button";
 import { Search } from "lucide-react";
@@ -15,7 +14,6 @@ export default async function HomePage() {
 
   return (
     <>
-      <Navbar />
       <main className="flex min-h-screen flex-col items-center bg-background">
         <div className="w-full max-w-6xl px-4 pt-32 pb-16">
           {/* Hero Section */}
