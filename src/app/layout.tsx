@@ -15,9 +15,7 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <ClerkProvider 
-      afterSignOutUrl={null}
-    >
+    <ClerkProvider>
       <html lang="en" className={`${GeistSans.variable}`}>
         <body>
           <Navbar />
