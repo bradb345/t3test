@@ -1,0 +1,1 @@
+ALTER TABLE "t3test_property" ALTER COLUMN "user_id" TYPE text; 

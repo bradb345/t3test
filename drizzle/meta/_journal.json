@@ -22,6 +22,20 @@
       "when": 1733077421556,
       "tag": "0002_lush_boomer",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1733176320147,
+      "tag": "0003_goofy_vision",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1733516480373,
+      "tag": "0004_fancy_jocasta",
+      "breakpoints": true
     }
   ]
 }
