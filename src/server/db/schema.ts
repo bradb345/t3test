@@ -12,7 +12,6 @@ import {
   integer,
   text,
   decimal,
-  foreignKey,
 } from "drizzle-orm/pg-core";
 
 /**

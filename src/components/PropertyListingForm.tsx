@@ -2,11 +2,11 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Card } from "~/components/ui/card";
-import { useUploadThing } from "~/utils/uploadthing";
-import type { OurFileRouter } from "~/app/api/uploadthing/core";
+import { useUploadThing } from "~/utils/uploadthing"
 import { Loader2 } from "lucide-react";
 
 export function PropertyListingForm() {
@@ -189,10 +189,12 @@ export function PropertyListingForm() {
                 <div className="mt-2 flex flex-wrap gap-2">
                   {formData.imageUrls.map((url, index) => (
                     <div key={url} className="relative group">
-                      <img 
+                      <Image 
                         src={url} 
                         alt={`Upload ${index + 1}`} 
-                        className="h-20 w-20 object-cover rounded-md"
+                        width={80}
+                        height={80}
+                        className="object-cover rounded-md"
                       />
                       <button
                         type="button"
