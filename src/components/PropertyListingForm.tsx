@@ -9,6 +9,8 @@ import { Card } from "~/components/ui/card";
 import { useUploadThing } from "~/utils/uploadthing";
 import { Loader2 } from "lucide-react";
 import GooglePlacesAutocomplete from 'react-google-places-autocomplete';
+import { MultiSelect } from "~/components/ui/multi-select";
+import { toast } from "sonner";
 
 type GeocodingResponse = {
   results: {
@@ -22,69 +24,72 @@ type GeocodingResponse = {
   status: string;
 };
 
-export function PropertyListingForm() {
+const AMENITY_OPTIONS = [
+  "Pool",
+  "Gym",
+  "Parking",
+  "Elevator",
+  "Security System",
+  "Storage",
+  "Laundry",
+  "Bike Storage",
+  "Package Room",
+  "Rooftop",
+  "Garden",
+  "Pet Friendly",
+];
+
+interface PropertyListingFormProps {
+  initialData?: any; // Type this properly based on your property schema
+  mode?: "create" | "edit";
+}
+
+interface FormData {
+  name: string;
+  address: string;
+  country: string;
+  latitude: number;
+  longitude: number;
+  description: string;
+  yearBuilt: string | number;
+  totalUnits: string | number;
+  propertyType: string;
+  amenities: string[];
+  parkingAvailable: boolean;
+  imageUrls: string[];
+}
+
+export function PropertyListingForm({ initialData, mode = "create" }: PropertyListingFormProps) {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [formData, setFormData] = useState({
-    name: "",
-    address: "",
-    country: "",
-    description: "",
-    yearBuilt: "",
-    totalUnits: "",
-    propertyType: "",
-    amenities: [] as string[],
-    parkingAvailable: false,
-    imageUrls: [] as string[],
-  });
-
-  const { startUpload } = useUploadThing("imageUploader");
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
 
+  const [formData, setFormData] = useState<FormData>({
+    name: initialData?.name ?? "",
+    address: initialData?.address ?? "",
+    country: initialData?.country ?? "",
+    latitude: initialData?.latitude ?? 0,
+    longitude: initialData?.longitude ?? 0,
+    description: initialData?.description ?? "",
+    yearBuilt: initialData?.yearBuilt ?? "",
+    totalUnits: initialData?.totalUnits ?? "",
+    propertyType: initialData?.propertyType ?? "",
+    amenities: initialData?.amenities ? JSON.parse(initialData.amenities) : [],
+    parkingAvailable: initialData?.parkingAvailable ?? false,
+    imageUrls: initialData?.imageUrls ? JSON.parse(initialData.imageUrls) : [],
+  });
+
+  const { startUpload } = useUploadThing("imageUploader");
+
   const addressInputRef = useRef<HTMLInputElement>(null);
   const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
-  const [selectedPlace, setSelectedPlace] = useState<any>(null);
-
-  useEffect(() => {
-    if (!addressInputRef.current || !window.google) return;
-
-    // Initialize Google Places Autocomplete
-    autocompleteRef.current = new google.maps.places.Autocomplete(
-      addressInputRef.current,
-      {
-        types: ["address"],
-        fields: ["formatted_address", "geometry", "address_components"],
-      }
-    );
-
-    // Add place_changed event listener
-    autocompleteRef.current.addListener("place_changed", () => {
-      const place = autocompleteRef.current?.getPlace();
-      
-      if (!place?.geometry?.location) return;
-
-      // Get country code from address components
-      const countryComponent = place.address_components?.find(
-        (component) => component.types.includes("country")
-      );
-      const countryCode = countryComponent?.short_name || "US";
-
-      setFormData((prev) => ({
-        ...prev,
-        address: place.formatted_address || "",
-        country: countryCode,
-      }));
-    });
-
-    return () => {
-      // Cleanup
-      if (autocompleteRef.current) {
-        google.maps.event.clearInstanceListeners(autocompleteRef.current);
-      }
-    };
-  }, []);
+  const [selectedPlace, setSelectedPlace] = useState<any>(
+    mode === "edit" && initialData?.address
+      ? { label: initialData.address, value: { description: initialData.address } }
+      : null
+  );
 
   const handlePlaceSelect = async (place: any) => {
     if (!place?.value?.place_id) return;
@@ -167,44 +172,54 @@ export function PropertyListingForm() {
     setIsSubmitting(true);
 
     try {
-      const coordinates = await getCoordinates(formData.address);
+      const endpoint = mode === "create" 
+        ? "/api/properties" 
+        : `/api/properties/${initialData.id}`;
+      
+      const method = mode === "create" ? "POST" : "PATCH";
 
-      if (!coordinates) {
-        throw new Error("Could not determine property coordinates");
-      }
-
-      const propertyData = {
+      // Prepare the data for submission
+      const submitData = {
         ...formData,
-        totalUnits: formData.totalUnits || "1",
-        country: formData.country || "US",
-        parkingAvailable: Boolean(formData.parkingAvailable),
-        amenities: formData.amenities || [],
-        latitude: coordinates.lat,
-        longitude: coordinates.lng,
+        // Convert arrays to strings for storage if in create mode
+        amenities: mode === "create" ? JSON.stringify(formData.amenities) : formData.amenities,
+        imageUrls: mode === "create" ? JSON.stringify(formData.imageUrls) : formData.imageUrls,
       };
 
-      console.log("Submitting property with images:", propertyData);
-
-      const response = await fetch("/api/properties", {
-        method: "POST",
+      const response = await fetch(endpoint, {
+        method,
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(propertyData),
+        body: JSON.stringify(submitData),
       });
 
       if (!response.ok) {
-        const error = await response.text();
-        throw new Error(error);
+        throw new Error("Failed to save property");
       }
 
+      toast.success(
+        mode === "create" 
+          ? "Property created successfully" 
+          : "Property updated successfully"
+      );
       router.push("/my-properties");
       router.refresh();
     } catch (error) {
-      console.error("Error creating property:", error);
+      console.error("Error saving property:", error);
+      toast.error("Failed to save property");
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const isStepOneComplete = () => {
+    return (
+      formData.name.trim() !== "" &&
+      formData.address.trim() !== "" &&
+      formData.propertyType !== "" &&
+      formData.totalUnits !== ""
+    );
   };
 
   return (
@@ -215,7 +230,7 @@ export function PropertyListingForm() {
           <div className="space-y-4">
             <div>
               <label className="mb-1 block text-sm font-medium">
-                Property Name
+                Property Name <span className="text-red-500">*</span>
               </label>
               <Input
                 required
@@ -227,7 +242,9 @@ export function PropertyListingForm() {
               />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium">Address</label>
+              <label className="mb-1 block text-sm font-medium">
+                Address <span className="text-red-500">*</span>
+              </label>
               <GooglePlacesAutocomplete
                 apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}
                 selectProps={{
@@ -257,9 +274,47 @@ export function PropertyListingForm() {
                 }}
               />
             </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="mb-1 block text-sm font-medium">
+                  Total Units <span className="text-red-500">*</span>
+                </label>
+                <Input
+                  required
+                  type="number"
+                  min="1"
+                  value={formData.totalUnits}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      totalUnits: e.target.value ? parseInt(e.target.value) : "",
+                    }))
+                  }
+                  placeholder="e.g., 1"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium">
+                  Year Built
+                </label>
+                <Input
+                  required
+                  type="number"
+                  value={formData.yearBuilt}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      yearBuilt: e.target.value ? parseInt(e.target.value) : "",
+                    }))
+                  }
+                  placeholder="e.g., 2020"
+                  className="w-full"
+                />
+              </div>
+            </div>
             <div>
               <label className="mb-1 block text-sm font-medium">
-                Property Type
+                Property Type <span className="text-red-500">*</span>
               </label>
               <select
                 required
@@ -279,9 +334,29 @@ export function PropertyListingForm() {
                 <option value="townhouse">Townhouse</option>
               </select>
             </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium">
+                Amenities <span className="text-red-500">*</span>
+              </label>
+              <MultiSelect
+                options={AMENITY_OPTIONS}
+                selected={formData.amenities}
+                onChange={(selected) => {
+                  setFormData((prev) => ({
+                    ...prev,
+                    amenities: selected,
+                  }));
+                }}
+                placeholder="Select amenities..."
+              />
+            </div>
           </div>
           <div className="mt-6 flex justify-end">
-            <Button type="button" onClick={() => setCurrentStep(2)}>
+            <Button 
+              type="button" 
+              onClick={() => setCurrentStep(2)}
+              disabled={!isStepOneComplete()}
+            >
               Next
             </Button>
           </div>
@@ -372,10 +447,10 @@ export function PropertyListingForm() {
                 {isSubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Creating...
+                    {mode === "create" ? "Creating..." : "Updating..."}
                   </>
                 ) : (
-                  "Create Listing"
+                  mode === "create" ? "Create Listing" : "Update Listing"
                 )}
               </Button>
             </div>
