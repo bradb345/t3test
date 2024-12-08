@@ -16,16 +16,16 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-      <ClerkProvider afterSignOutUrl="/">
-        <html lang="en" className={`${GeistSans.variable}`}>
-            <body>
-              <div className="flex min-h-screen flex-col">
-                <Navbar />
-                {children}
-                <Footer />
-              </div>
-            </body>
-        </html>
-      </ClerkProvider>
+    <ClerkProvider afterSignOutUrl="/">
+      <html lang="en" className={`${GeistSans.variable}`}>
+        <body>
+          <div className="flex min-h-screen flex-col">
+            <Navbar />
+            {children}
+            <Footer />
+          </div>
+        </body>
+      </html>
+    </ClerkProvider>
   );
 }

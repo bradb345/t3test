@@ -15,7 +15,7 @@ export async function POST(req: Request) {
     console.log("Received property data:", data);
 
     // Validate required fields
-    if (!data.name || !data.address || !data.propertyType) {
+    if (!data.name || !data.address || !data.propertyType || !data.latitude || !data.longitude) {
       return new NextResponse("Missing required fields", { status: 400 });
     }
 
@@ -27,8 +27,8 @@ export async function POST(req: Request) {
         name: data.name,
         address: data.address,
         country: data.country || "US",
-        latitude: 0,
-        longitude: 0,
+        latitude: data.latitude,
+        longitude: data.longitude,
         description: data.description || "",
         yearBuilt: data.yearBuilt ? parseInt(data.yearBuilt) : null,
         totalUnits: parseInt(data.totalUnits) || 1,

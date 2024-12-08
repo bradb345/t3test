@@ -64,9 +64,18 @@ export function Navbar() {
           {isSignedIn ? (
             <UserButton />
           ) : (
-            <SignInButton mode="modal">
-              <Button variant="default">Sign In</Button>
-            </SignInButton>
+            <>
+              <Link
+                href="/list-property"
+                className="text-sm font-medium text-muted-foreground hover:text-primary"
+              >
+                List Your Property
+              </Link>
+              
+              <SignInButton mode="modal">
+                <Button variant="default">Sign In</Button>
+              </SignInButton>
+            </>
           )}
         </div>
       </div>
