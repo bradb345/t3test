@@ -4,6 +4,7 @@ import { GeistSans } from "geist/font/sans";
 import { type Metadata } from "next";
 import { ClerkProvider } from "@clerk/nextjs"
 import { Navbar } from "~/components/Navbar";
+import { Footer } from "~/components/Footer";
 
 export const metadata: Metadata = {
   title: "Test",
@@ -18,8 +19,11 @@ export default function RootLayout({
       <ClerkProvider afterSignOutUrl="/">
         <html lang="en" className={`${GeistSans.variable}`}>
             <body>
-              <Navbar />
-              {children}
+              <div className="flex min-h-screen flex-col">
+                <Navbar />
+                {children}
+                <Footer />
+              </div>
             </body>
         </html>
       </ClerkProvider>
