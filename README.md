@@ -28,4 +28,31 @@ You can check out the [create-t3-app GitHub repository](https://github.com/t3-os
 
 Follow our deployment guides for [Vercel](https://create.t3.gg/en/deployment/vercel), [Netlify](https://create.t3.gg/en/deployment/netlify) and [Docker](https://create.t3.gg/en/deployment/docker) for more information.
 
-# here we go
+## Authentication
+
+This project uses [Clerk](https://clerk.com) for authentication and user management. Clerk provides:
+
+- Email and password authentication
+- Social login providers
+- User profile management
+- Session management
+- Role-based access control (RBAC)
+- Organization management
+
+### Protected Routes
+
+To protect routes and components, you can use Clerk's built-in components and helpers:
+
+```typescript
+// Server-side
+import { auth } from "@clerk/nextjs";
+
+const { userId, sessionId, orgId } = await auth();
+
+// Client-side
+import { useUser, useAuth } from "@clerk/nextjs";
+
+const { user } = useUser();
+const { userId, sessionId } = useAuth();
+
+
