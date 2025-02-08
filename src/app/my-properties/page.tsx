@@ -18,7 +18,12 @@ export default async function MyPropertiesPage() {
     orderBy: (properties, { desc }) => [desc(properties.createdAt)],
   });
 
-  console.log("Found properties:", JSON.stringify(userProperties, null, 2));
+  console.log("Properties before rendering:", 
+    userProperties.map(p => ({
+      id: p.id,
+      imageUrls: p.imageUrls
+    }))
+  );
 
   return (
     <main className="flex min-h-screen flex-col items-center bg-background">

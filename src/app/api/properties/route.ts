@@ -19,6 +19,10 @@ export async function POST(req: Request) {
       return new NextResponse("Missing required fields", { status: 400 });
     }
 
+    // Parse JSON strings if they're already stringified
+    const amenities = typeof data.amenities === 'string' ? data.amenities : JSON.stringify(data.amenities || []);
+    const imageUrls = typeof data.imageUrls === 'string' ? data.imageUrls : JSON.stringify(data.imageUrls || []);
+
     // Create property in database
     const [property] = await db
       .insert(properties)
@@ -33,9 +37,9 @@ export async function POST(req: Request) {
         yearBuilt: data.yearBuilt ? parseInt(data.yearBuilt) : null,
         totalUnits: parseInt(data.totalUnits) || 1,
         propertyType: data.propertyType,
-        amenities: JSON.stringify(data.amenities || []),
+        amenities: amenities,
         parkingAvailable: Boolean(data.parkingAvailable),
-        imageUrls: Array.isArray(data.imageUrls) ? JSON.stringify(data.imageUrls) : "[]",
+        imageUrls: imageUrls,
       })
       .returning();
 
@@ -60,6 +64,8 @@ export async function GET(req: Request) {
     const userProperties = await db.query.properties.findMany({
       where: eq(properties.userId, userId),
     });
+
+    console.log("API response properties:", userProperties);
 
     return NextResponse.json(userProperties);
   } catch (error) {

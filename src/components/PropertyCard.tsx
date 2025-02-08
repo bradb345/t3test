@@ -38,7 +38,14 @@ interface PropertyCardProps {
 export function PropertyCard({ property }: PropertyCardProps) {
   const router = useRouter();
   const [isDeleting, setIsDeleting] = useState(false);
-  const imageUrls = JSON.parse(property.imageUrls ?? "[]") as string[];
+  
+  let imageUrls: string[] = [];
+  try {
+    imageUrls = property.imageUrls ? JSON.parse(property.imageUrls) : [];
+  } catch (error) {
+    console.error("Error parsing imageUrls:", error);
+  }
+  
   const firstImage = imageUrls[0] ?? "/placeholder-property.jpg";
 
   const handleDelete = async () => {
