@@ -27,11 +27,11 @@ import {
 
 interface PropertyCardProps {
   property: {
-    id: number;
+    id: string;
     name: string;
     address: string;
-    propertyType: string;
     imageUrls: string | null;
+    propertyType: string;
   };
 }
 
@@ -41,7 +41,7 @@ export function PropertyCard({ property }: PropertyCardProps) {
   
   let imageUrls: string[] = [];
   try {
-    imageUrls = property.imageUrls ? JSON.parse(property.imageUrls) : [];
+    imageUrls = property.imageUrls ? JSON.parse(property.imageUrls) as string[] : [];
   } catch (error) {
     console.error("Error parsing imageUrls:", error);
   }
@@ -74,15 +74,17 @@ export function PropertyCard({ property }: PropertyCardProps) {
   return (
     <Card className="overflow-hidden">
       <div className="aspect-video relative">
-        <Image
-          src={firstImage}
-          alt={property.name}
-          fill
-          className="object-cover"
-          loading="lazy"
-          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-          onError={(e) => console.error("Image failed to load:", firstImage)}
-        />
+        <Link href={`/my-properties/${property.id}`}>
+          <Image
+            src={firstImage}
+            alt={property.name}
+            fill
+            className="object-cover"
+            loading="lazy"
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+            onError={(e) => console.error("Image failed to load:", firstImage)}
+          />
+        </Link>
         <div className="absolute top-2 right-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -97,20 +99,17 @@ export function PropertyCard({ property }: PropertyCardProps) {
               </DropdownMenuItem>
               <AlertDialog>
                 <AlertDialogTrigger asChild>
-                  <DropdownMenuItem
-                    className="text-destructive focus:text-destructive"
-                    onSelect={(e) => e.preventDefault()}
-                  >
+                  <DropdownMenuItem className="text-destructive focus:text-destructive">
                     <Trash2 className="mr-2 h-4 w-4" />
                     Delete
                   </DropdownMenuItem>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
-                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                     <AlertDialogDescription>
-                      This action cannot be undone. This will permanently delete your
-                      property listing and remove all associated data.
+                      This action cannot be undone. This will permanently delete
+                      your property from our servers.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
@@ -155,4 +154,4 @@ export function PropertyCard({ property }: PropertyCardProps) {
       </div>
     </Card>
   );
-} 
+}
