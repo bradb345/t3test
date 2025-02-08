@@ -4,6 +4,21 @@ import { db } from "~/server/db";
 import { properties } from "~/server/db/schema";
 import { eq } from "drizzle-orm";
 
+interface PropertyData {
+  name: string;
+  address: string;
+  propertyType: string;
+  latitude: number;
+  longitude: number;
+  country?: string;
+  description?: string;
+  yearBuilt?: string;
+  totalUnits?: string;
+  amenities: string | string[] | undefined;
+  imageUrls: string | string[] | undefined;
+  parkingAvailable?: boolean;
+}
+
 export async function POST(req: Request) {
   try {
     const { userId } = await auth();
@@ -11,7 +26,7 @@ export async function POST(req: Request) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    const data = await req.json();
+    const data = await req.json() as PropertyData;
     console.log("Received property data:", data);
 
     // Validate required fields
