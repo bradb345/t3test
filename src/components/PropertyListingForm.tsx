@@ -8,7 +8,7 @@ import { Input } from "~/components/ui/input";
 import { Card } from "~/components/ui/card";
 import { useUploadThing } from "~/utils/uploadthing";
 import { Loader2 } from "lucide-react";
-import GooglePlacesAutocomplete from 'react-google-places-autocomplete';
+import GooglePlacesAutocomplete from "react-google-places-autocomplete";
 import { MultiSelect } from "~/components/ui/multi-select";
 import { toast } from "sonner";
 
@@ -59,7 +59,10 @@ interface FormData {
   imageUrls: string[];
 }
 
-export function PropertyListingForm({ initialData, mode = "create" }: PropertyListingFormProps) {
+export function PropertyListingForm({
+  initialData,
+  mode = "create",
+}: PropertyListingFormProps) {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -87,8 +90,11 @@ export function PropertyListingForm({ initialData, mode = "create" }: PropertyLi
   const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
   const [selectedPlace, setSelectedPlace] = useState<any>(
     mode === "edit" && initialData?.address
-      ? { label: initialData.address, value: { description: initialData.address } }
-      : null
+      ? {
+          label: initialData.address,
+          value: { description: initialData.address },
+        }
+      : null,
   );
 
   const handlePlaceSelect = async (place: any) => {
@@ -97,21 +103,23 @@ export function PropertyListingForm({ initialData, mode = "create" }: PropertyLi
     try {
       // Get place details using the Places API
       const response = await fetch(
-        `https://maps.googleapis.com/maps/api/geocode/json?place_id=${place.value.place_id}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`
+        `https://maps.googleapis.com/maps/api/geocode/json?place_id=${place.value.place_id}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`,
       );
       const data: GeocodingResponse = await response.json();
 
       if (data.status === "OK" && data.results[0]) {
         const { lat, lng } = data.results[0].geometry.location;
         const countryComponent = data.results[0].address_components?.find(
-          (component) => component.types.includes("country")
+          (component) => component.types.includes("country"),
         );
         const countryCode = countryComponent?.short_name || "US";
 
-        setFormData(prev => ({
+        setFormData((prev) => ({
           ...prev,
           address: data.results[0].formatted_address || "",
           country: countryCode,
+          latitude: lat,
+          longitude: lng,
         }));
 
         setSelectedPlace(place);
@@ -172,18 +180,34 @@ export function PropertyListingForm({ initialData, mode = "create" }: PropertyLi
     setIsSubmitting(true);
 
     try {
-      const endpoint = mode === "create" 
-        ? "/api/properties" 
-        : `/api/properties/${initialData.id}`;
-      
+      // Get coordinates before submitting
+      const coordinates = await getCoordinates(formData.address);
+      if (!coordinates) {
+        throw new Error("Failed to get coordinates for address");
+      }
+
+      const endpoint =
+        mode === "create"
+          ? "/api/properties"
+          : `/api/properties/${initialData.id}`;
+
       const method = mode === "create" ? "POST" : "PATCH";
 
       // Prepare the data for submission
       const submitData = {
         ...formData,
+        // Add latitude and longitude
+        latitude: coordinates.lat,
+        longitude: coordinates.lng,
         // Convert arrays to strings for storage if in create mode
-        amenities: mode === "create" ? JSON.stringify(formData.amenities) : formData.amenities,
-        imageUrls: mode === "create" ? JSON.stringify(formData.imageUrls) : formData.imageUrls,
+        amenities:
+          mode === "create"
+            ? JSON.stringify(formData.amenities)
+            : formData.amenities,
+        imageUrls:
+          mode === "create"
+            ? JSON.stringify(formData.imageUrls)
+            : formData.imageUrls,
       };
 
       const response = await fetch(endpoint, {
@@ -195,19 +219,22 @@ export function PropertyListingForm({ initialData, mode = "create" }: PropertyLi
       });
 
       if (!response.ok) {
-        throw new Error("Failed to save property");
+        const errorData = await response.text();
+        throw new Error(`Failed to save property: ${errorData}`);
       }
 
       toast.success(
-        mode === "create" 
-          ? "Property created successfully" 
-          : "Property updated successfully"
+        mode === "create"
+          ? "Property created successfully"
+          : "Property updated successfully",
       );
       router.push("/my-properties");
       router.refresh();
     } catch (error) {
       console.error("Error saving property:", error);
-      toast.error("Failed to save property");
+      toast.error(
+        error instanceof Error ? error.message : "Failed to save property",
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -255,20 +282,25 @@ export function PropertyListingForm({ initialData, mode = "create" }: PropertyLi
                   styles: {
                     control: (provided) => ({
                       ...provided,
-                      borderRadius: '0.375rem',
-                      borderColor: 'hsl(var(--input))',
-                      backgroundColor: 'transparent',
-                      minHeight: '2.25rem',
-                      boxShadow: 'var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)',
+                      borderRadius: "0.375rem",
+                      borderColor: "hsl(var(--input))",
+                      backgroundColor: "transparent",
+                      minHeight: "2.25rem",
+                      boxShadow:
+                        "var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)",
                     }),
                     input: (provided) => ({
                       ...provided,
-                      color: 'inherit',
+                      color: "inherit",
                     }),
                     option: (provided, state) => ({
                       ...provided,
-                      backgroundColor: state.isFocused ? 'hsl(var(--accent))' : 'transparent',
-                      color: state.isFocused ? 'hsl(var(--accent-foreground))' : 'inherit',
+                      backgroundColor: state.isFocused
+                        ? "hsl(var(--accent))"
+                        : "transparent",
+                      color: state.isFocused
+                        ? "hsl(var(--accent-foreground))"
+                        : "inherit",
                     }),
                   },
                 }}
@@ -287,7 +319,9 @@ export function PropertyListingForm({ initialData, mode = "create" }: PropertyLi
                   onChange={(e) =>
                     setFormData((prev) => ({
                       ...prev,
-                      totalUnits: e.target.value ? parseInt(e.target.value) : "",
+                      totalUnits: e.target.value
+                        ? parseInt(e.target.value)
+                        : "",
                     }))
                   }
                   placeholder="e.g., 1"
@@ -352,8 +386,8 @@ export function PropertyListingForm({ initialData, mode = "create" }: PropertyLi
             </div>
           </div>
           <div className="mt-6 flex justify-end">
-            <Button 
-              type="button" 
+            <Button
+              type="button"
               onClick={() => setCurrentStep(2)}
               disabled={!isStepOneComplete()}
             >
@@ -449,8 +483,10 @@ export function PropertyListingForm({ initialData, mode = "create" }: PropertyLi
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     {mode === "create" ? "Creating..." : "Updating..."}
                   </>
+                ) : mode === "create" ? (
+                  "Create Listing"
                 ) : (
-                  mode === "create" ? "Create Listing" : "Update Listing"
+                  "Update Listing"
                 )}
               </Button>
             </div>

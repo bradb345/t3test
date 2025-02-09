@@ -4,6 +4,21 @@ import { db } from "~/server/db";
 import { properties } from "~/server/db/schema";
 import { eq } from "drizzle-orm";
 
+interface PropertyData {
+  name: string;
+  address: string;
+  propertyType: string;
+  latitude: number;
+  longitude: number;
+  country?: string;
+  description?: string;
+  yearBuilt?: string;
+  totalUnits?: string;
+  amenities: string | string[] | undefined;
+  imageUrls: string | string[] | undefined;
+  parkingAvailable?: boolean;
+}
+
 export async function POST(req: Request) {
   try {
     const { userId } = await auth();
@@ -11,13 +26,17 @@ export async function POST(req: Request) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    const data = await req.json();
+    const data = await req.json() as PropertyData;
     console.log("Received property data:", data);
 
     // Validate required fields
     if (!data.name || !data.address || !data.propertyType || !data.latitude || !data.longitude) {
       return new NextResponse("Missing required fields", { status: 400 });
     }
+
+    // Parse JSON strings if they're already stringified
+    const amenities = typeof data.amenities === 'string' ? data.amenities : JSON.stringify(data.amenities || []);
+    const imageUrls = typeof data.imageUrls === 'string' ? data.imageUrls : JSON.stringify(data.imageUrls || []);
 
     // Create property in database
     const [property] = await db
@@ -33,9 +52,9 @@ export async function POST(req: Request) {
         yearBuilt: data.yearBuilt ? parseInt(data.yearBuilt) : null,
         totalUnits: parseInt(data.totalUnits) || 1,
         propertyType: data.propertyType,
-        amenities: JSON.stringify(data.amenities || []),
+        amenities: amenities,
         parkingAvailable: Boolean(data.parkingAvailable),
-        imageUrls: Array.isArray(data.imageUrls) ? JSON.stringify(data.imageUrls) : "[]",
+        imageUrls: imageUrls,
       })
       .returning();
 
@@ -60,6 +79,8 @@ export async function GET(req: Request) {
     const userProperties = await db.query.properties.findMany({
       where: eq(properties.userId, userId),
     });
+
+    console.log("API response properties:", userProperties);
 
     return NextResponse.json(userProperties);
   } catch (error) {
