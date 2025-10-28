@@ -12,6 +12,12 @@ import GooglePlacesAutocomplete from "react-google-places-autocomplete";
 import { MultiSelect } from "~/components/ui/multi-select";
 import { toast } from "sonner";
 
+type AddressComponent = {
+  long_name: string;
+  short_name: string;
+  types: string[];
+};
+
 type GeocodingResponse = {
   results: {
     geometry: {
@@ -20,6 +26,8 @@ type GeocodingResponse = {
         lng: number;
       };
     };
+    formatted_address?: string;
+    address_components?: AddressComponent[];
   }[];
   status: string;
 };
@@ -39,8 +47,32 @@ const AMENITY_OPTIONS = [
   "Pet Friendly",
 ];
 
+type initialData = {
+  name: string;
+  address: string;
+  country: string;
+  latitude: number;
+  longitude: number;
+  description: string;
+  yearBuilt: string | number;
+  totalUnits: string | number;
+  propertyType: string;
+  amenities: string[];
+  parkingAvailable: boolean;
+  imageUrls: string[];
+  id: string;
+};
+
+type PlaceOption = {
+  label: string;
+  value: {
+    description: string;
+    place_id?: string;
+  };
+} | null;
+
 interface PropertyListingFormProps {
-  initialData?: any; // Type this properly based on your property schema
+  initialData?: initialData;
   mode?: "create" | "edit";
 }
 
@@ -79,16 +111,16 @@ export function PropertyListingForm({
     yearBuilt: initialData?.yearBuilt ?? "",
     totalUnits: initialData?.totalUnits ?? "",
     propertyType: initialData?.propertyType ?? "",
-    amenities: initialData?.amenities ? JSON.parse(initialData.amenities) : [],
+    amenities: initialData?.amenities ?? [],
     parkingAvailable: initialData?.parkingAvailable ?? false,
-    imageUrls: initialData?.imageUrls ? JSON.parse(initialData.imageUrls) : [],
+    imageUrls: initialData?.imageUrls ?? [],
   });
 
   const { startUpload } = useUploadThing("imageUploader");
 
-  const addressInputRef = useRef<HTMLInputElement>(null);
-  const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
-  const [selectedPlace, setSelectedPlace] = useState<any>(
+  // const addressInputRef = useRef<HTMLInputElement>(null);
+  // const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
+  const [selectedPlace, setSelectedPlace] = useState<PlaceOption | null>(
     mode === "edit" && initialData?.address
       ? {
           label: initialData.address,
@@ -97,36 +129,39 @@ export function PropertyListingForm({
       : null,
   );
 
-  const handlePlaceSelect = async (place: any) => {
+  const handlePlaceSelect = (place: PlaceOption | null) => {
     if (!place?.value?.place_id) return;
 
-    try {
-      // Get place details using the Places API
-      const response = await fetch(
-        `https://maps.googleapis.com/maps/api/geocode/json?place_id=${place.value.place_id}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`,
-      );
-      const data: GeocodingResponse = await response.json();
-
-      if (data.status === "OK" && data.results[0]) {
-        const { lat, lng } = data.results[0].geometry.location;
-        const countryComponent = data.results[0].address_components?.find(
-          (component) => component.types.includes("country"),
+    // Handle async operation without returning a promise
+    void (async () => {
+      try {
+        // Get place details using the Places API
+        const response = await fetch(
+          `https://maps.googleapis.com/maps/api/geocode/json?place_id=${place.value.place_id}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`,
         );
-        const countryCode = countryComponent?.short_name || "US";
+        const data = await response.json() as GeocodingResponse;
 
-        setFormData((prev) => ({
-          ...prev,
-          address: data.results[0].formatted_address || "",
-          country: countryCode,
-          latitude: lat,
-          longitude: lng,
-        }));
+        if (data.status === "OK" && data.results[0]) {
+          const { lat, lng } = data.results[0].geometry.location;
+          const countryComponent = data.results[0].address_components?.find(
+            (component) => component.types.includes("country"),
+          );
+          const countryCode = countryComponent?.short_name ?? "US";
 
-        setSelectedPlace(place);
+          setFormData((prev) => ({
+            ...prev,
+            address: data.results[0]?.formatted_address ?? "",
+            country: countryCode,
+            latitude: lat,
+            longitude: lng,
+          }));
+
+          setSelectedPlace(place);
+        }
+      } catch (error) {
+        console.error("Error fetching place details:", error);
       }
-    } catch (error) {
-      console.error("Error fetching place details:", error);
-    }
+    })();
   };
 
   const getCoordinates = async (
@@ -139,7 +174,7 @@ export function PropertyListingForm({
         )}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`,
       );
 
-      const data: GeocodingResponse = await response.json();
+      const data = await response.json() as GeocodingResponse;
 
       if (data.status === "OK" && data.results[0]) {
         const { lat, lng } = data.results[0].geometry.location;
@@ -189,7 +224,7 @@ export function PropertyListingForm({
       const endpoint =
         mode === "create"
           ? "/api/properties"
-          : `/api/properties/${initialData.id}`;
+          : `/api/properties/${initialData?.id}`;
 
       const method = mode === "create" ? "POST" : "PATCH";
 
