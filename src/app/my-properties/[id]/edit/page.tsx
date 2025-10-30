@@ -31,6 +31,20 @@ export default async function EditPropertyPage({
     redirect("/my-properties");
   }
 
+  // Parse JSON fields that are stored as strings in the database
+  const parsedProperty = {
+    ...property,
+    id: property.id.toString(),
+    latitude: parseFloat(property.latitude),
+    longitude: parseFloat(property.longitude),
+    description: property.description ?? "",
+    yearBuilt: property.yearBuilt ?? "",
+    totalUnits: property.totalUnits ?? "",
+    parkingAvailable: property.parkingAvailable ?? false,
+    amenities: property.amenities ? JSON.parse(property.amenities) as string[] : [],
+    imageUrls: property.imageUrls ? JSON.parse(property.imageUrls) as string[] : [],
+  };
+
   return (
     <main className="flex min-h-screen flex-col items-center bg-background">
       <div className="w-full max-w-3xl px-4 pt-32 pb-16">
@@ -43,7 +57,7 @@ export default async function EditPropertyPage({
           </p>
         </div>
 
-        <PropertyListingForm initialData={property} mode="edit" />
+        <PropertyListingForm initialData={parsedProperty} mode="edit" />
       </div>
     </main>
   );
