@@ -134,11 +134,11 @@ export function PropertyListingForm({
   // const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
   const [selectedPlace, setSelectedPlace] = useState<PlaceOption | null>(
     mode === "edit" && initialData?.address
-      ? {
-          label: initialData.address,
-          value: { description: initialData.address },
-        }
-      : null,
+    ? {
+      label: initialData.address,
+      value: { description: initialData.address },
+    }
+    : null,
   );
 
   const handlePlaceSelect = (place: PlaceOption | null) => {
@@ -162,7 +162,7 @@ export function PropertyListingForm({
 
           setFormData((prev) => ({
             ...prev,
-            address: data.results[0]?.formatted_address ?? "",
+            address: place.label ?? "",
             country: countryCode,
             latitude: lat,
             longitude: lng,
