@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Button } from "~/components/ui/button";
@@ -11,6 +11,17 @@ import { Loader2 } from "lucide-react";
 import GooglePlacesAutocomplete from "react-google-places-autocomplete";
 import { MultiSelect } from "~/components/ui/multi-select";
 import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "~/components/ui/alert-dialog";
 
 type AddressComponent = {
   long_name: string;
@@ -100,6 +111,7 @@ export function PropertyListingForm({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [showDiscardDialog, setShowDiscardDialog] = useState(false);
 
   const [formData, setFormData] = useState<FormData>({
     name: initialData?.name ?? "",
@@ -122,11 +134,11 @@ export function PropertyListingForm({
   // const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
   const [selectedPlace, setSelectedPlace] = useState<PlaceOption | null>(
     mode === "edit" && initialData?.address
-      ? {
-          label: initialData.address,
-          value: { description: initialData.address },
-        }
-      : null,
+    ? {
+      label: initialData.address,
+      value: { description: initialData.address },
+    }
+    : null,
   );
 
   const handlePlaceSelect = (place: PlaceOption | null) => {
@@ -150,7 +162,7 @@ export function PropertyListingForm({
 
           setFormData((prev) => ({
             ...prev,
-            address: data.results[0]?.formatted_address ?? "",
+            address: place.label ?? "",
             country: countryCode,
             latitude: lat,
             longitude: lng,
@@ -275,6 +287,10 @@ export function PropertyListingForm({
     }
   };
 
+  const handleDiscardChanges = () => {
+    router.push("/my-properties");
+  };
+
   const isStepOneComplete = () => {
     return (
       formData.name.trim() !== "" &&
@@ -285,8 +301,40 @@ export function PropertyListingForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-8">
-      {currentStep === 1 && (
+    <div className="relative">
+      {/* Discard Changes Button - Positioned under navbar */}
+      <div className="absolute top-0 right-0 z-10">
+        <AlertDialog open={showDiscardDialog} onOpenChange={setShowDiscardDialog}>
+          <AlertDialogTrigger asChild>
+            <Button
+              type="button"
+              variant="destructive"
+              size="sm"
+              disabled={isSubmitting || isUploading}
+            >
+              Discard Changes
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Discard Changes?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to discard all changes? This action cannot be undone and you will lose all unsaved data.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleDiscardChanges}>
+                Yes, Discard Changes
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
+
+      {/* Form Content */}
+      <form onSubmit={handleSubmit} className="space-y-8">
+        {currentStep === 1 && (
         <Card className="p-6">
           <h2 className="mb-4 text-xl font-semibold">Basic Information</h2>
           <div className="space-y-4">
@@ -528,6 +576,7 @@ export function PropertyListingForm({
           </div>
         </Card>
       )}
-    </form>
+      </form>
+    </div>
   );
 }
