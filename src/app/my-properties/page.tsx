@@ -19,10 +19,7 @@ export default async function MyPropertiesPage() {
   });
 
   console.log("Properties before rendering:", 
-    userProperties.map(p => ({
-      id: p.id,
-      imageUrls: p.imageUrls
-    }))
+    userProperties
   );
 
   return (
@@ -46,7 +43,7 @@ export default async function MyPropertiesPage() {
         {userProperties.length === 0 && (
           <div className="text-center mt-8">
             <p className="text-muted-foreground">
-              You haven't listed any properties yet.
+              You haven&apos;t listed any properties yet.
             </p>
           </div>
         )}

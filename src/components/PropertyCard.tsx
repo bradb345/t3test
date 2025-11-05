@@ -27,7 +27,7 @@ import {
 
 interface PropertyCardProps {
   property: {
-    id: string;
+    id: number;
     name: string;
     address: string;
     imageUrls: string | null;
