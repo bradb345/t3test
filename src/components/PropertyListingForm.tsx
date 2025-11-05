@@ -212,7 +212,7 @@ export function PropertyListingForm({
 
       setFormData((prev) => ({
         ...prev,
-        imageUrls: [...prev.imageUrls, ...uploadedImages.map((img) => img.url)],
+        imageUrls: [...prev.imageUrls, ...uploadedImages.map((img) => img.ufsUrl)],
       }));
     } catch (error) {
       console.error("Error uploading images:", error);
@@ -256,6 +256,8 @@ export function PropertyListingForm({
             ? JSON.stringify(formData.imageUrls)
             : formData.imageUrls,
       };
+
+      console.log("Submitting property data:", submitData);
 
       const response = await fetch(endpoint, {
         method,
