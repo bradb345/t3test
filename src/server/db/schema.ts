@@ -159,6 +159,7 @@ export const units = createTable(
       .notNull()
       .references(() => properties.id),
     unitNumber: varchar("unit_number", { length: 50 }).notNull(),
+    description: text("description"),
     floorPlan: varchar("floor_plan", { length: 50 }),
     squareFeet: integer("square_feet"),
     numBedrooms: integer("num_bedrooms").notNull(),
