@@ -257,8 +257,6 @@ export function PropertyListingForm({
             : formData.imageUrls,
       };
 
-      console.log("Submitting property data:", submitData);
-
       const response = await fetch(endpoint, {
         method,
         headers: {
