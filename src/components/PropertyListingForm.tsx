@@ -212,7 +212,7 @@ export function PropertyListingForm({
 
       setFormData((prev) => ({
         ...prev,
-        imageUrls: [...prev.imageUrls, ...uploadedImages.map((img) => img.url)],
+        imageUrls: [...prev.imageUrls, ...uploadedImages.map((img) => img.ufsUrl)],
       }));
     } catch (error) {
       console.error("Error uploading images:", error);
@@ -295,8 +295,8 @@ export function PropertyListingForm({
     return (
       formData.name.trim() !== "" &&
       formData.address.trim() !== "" &&
-      formData.propertyType !== "" &&
-      formData.totalUnits !== ""
+      formData.propertyType !== ""
+      // formData.totalUnits !== ""
     );
   };
 
@@ -389,8 +389,8 @@ export function PropertyListingForm({
                 }}
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
+            <div className="grid grid-cols-1 gap-4">
+              {/* <div>
                 <label className="mb-1 block text-sm font-medium">
                   Total Units <span className="text-red-500">*</span>
                 </label>
@@ -409,7 +409,7 @@ export function PropertyListingForm({
                   }
                   placeholder="e.g., 1"
                 />
-              </div>
+              </div> */}
               <div>
                 <label className="mb-1 block text-sm font-medium">
                   Year Built
@@ -453,7 +453,7 @@ export function PropertyListingForm({
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium">
-                Amenities <span className="text-red-500">*</span>
+                Amenities
               </label>
               <MultiSelect
                 options={AMENITY_OPTIONS}
@@ -501,7 +501,12 @@ export function PropertyListingForm({
               />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium">Images</label>
+                <div>
+                <label className="mb-1 block text-sm font-medium">Property Photos</label>
+                <p className="mb-2 text-sm text-muted-foreground">
+                  Upload photos of the main property building, common areas, and amenities. Do not include photos of individual units.
+                </p>
+                </div>
               <Input
                 type="file"
                 accept="image/*"

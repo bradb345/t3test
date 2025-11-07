@@ -106,7 +106,7 @@ export const properties = createTable(
     longitude: decimal("longitude", { precision: 11, scale: 8 }).notNull(),
     description: text("description"),
     yearBuilt: integer("year_built"),
-    totalUnits: integer("total_units").notNull(),
+    totalUnits: integer("total_units"),
     propertyType: varchar("property_type", { length: 50 }).notNull(),
     amenities: text("amenities"),
     parkingAvailable: boolean("parking_available").default(false),
@@ -159,6 +159,7 @@ export const units = createTable(
       .notNull()
       .references(() => properties.id),
     unitNumber: varchar("unit_number", { length: 50 }).notNull(),
+    description: text("description"),
     floorPlan: varchar("floor_plan", { length: 50 }),
     squareFeet: integer("square_feet"),
     numBedrooms: integer("num_bedrooms").notNull(),
