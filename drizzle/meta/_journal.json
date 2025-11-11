@@ -43,6 +43,13 @@
       "when": 1762530885919,
       "tag": "0005_faithful_colleen_wing",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1762870757786,
+      "tag": "0006_overrated_meltdown",
+      "breakpoints": true
     }
   ]
 }
