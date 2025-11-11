@@ -13,7 +13,7 @@ const config = {
     ignoreDuringBuilds: true,
   },
   images: {
-    domains: ['utfs.io'],
+    domains: ['utfs.io', '6ocmn4xpbd.ufs.sh'],
   },
 };
 
