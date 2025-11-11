@@ -1,13 +1,17 @@
 "use client";
 
+import { useState } from "react";
 import { Badge } from "~/components/ui/badge";
 import { Card } from "~/components/ui/card";
+import { Switch } from "~/components/ui/switch";
+import { toast } from "sonner";
 
 interface UnitCardProps {
   unit: {
     id: number;
     unitNumber: string;
     isAvailable: boolean | null;
+    isVisible: boolean | null;
     activeLease?: {
       tenant: {
         first_name: string;
@@ -21,6 +25,34 @@ interface UnitCardProps {
 }
 
 export function UnitCard({ unit, propertyId }: UnitCardProps) {
+  const [isVisible, setIsVisible] = useState(unit.isVisible ?? false);
+  const [isUpdating, setIsUpdating] = useState(false);
+
+  const handleVisibilityToggle = async (checked: boolean) => {
+    setIsUpdating(true);
+    try {
+      const response = await fetch(`/api/properties/${propertyId}/units/${unit.id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ isVisible: checked }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to update visibility");
+      }
+
+      setIsVisible(checked);
+      toast.success(`Unit is now ${checked ? "visible" : "hidden"} in search`);
+    } catch (error) {
+      console.error("Error updating visibility:", error);
+      toast.error("Failed to update visibility");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
   // Determine unit status
   const getStatus = () => {
     if (unit.hasPendingMaintenance) {
@@ -75,6 +107,17 @@ export function UnitCard({ unit, propertyId }: UnitCardProps) {
           ) : (
             <p className="text-muted-foreground">Vacant</p>
           )}
+          
+          <div className="flex items-center gap-2 mt-3">
+            <Switch
+              checked={isVisible}
+              onCheckedChange={handleVisibilityToggle}
+              disabled={isUpdating}
+            />
+            <label className="text-sm text-muted-foreground">
+              {isVisible ? "Visible in search" : "Hidden from search"}
+            </label>
+          </div>
         </div>
 
         <div className="flex gap-2">

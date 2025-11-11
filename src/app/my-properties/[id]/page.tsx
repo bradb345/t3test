@@ -96,9 +96,12 @@ export default async function PropertyDetailPage({
             <button className="px-4 py-2 border border-input rounded-md text-sm font-medium hover:bg-accent">
               Download
             </button>
-            <button className="px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90">
+            <a 
+              href={`/my-properties/${propertyId}/units/create`}
+              className="px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90"
+            >
               Add New Unit
-            </button>
+            </a>
           </div>
         </div>
 
