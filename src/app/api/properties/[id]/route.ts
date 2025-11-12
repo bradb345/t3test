@@ -2,7 +2,7 @@ import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { db } from "~/server/db";
 import { properties, units, leases } from "~/server/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import { UTApi } from "uploadthing/server";
 
 // Initialize the UploadThing API
@@ -60,17 +60,15 @@ export async function DELETE(
     if (propertyUnits.length > 0) {
       const unitIds = propertyUnits.map(unit => unit.id);
       
-      const activeLeases = await db
+      const occupiedUnits = await db
         .select()
         .from(leases)
         .where(
-          eq(leases.status, 'active')
+          and(
+            eq(leases.status, 'active'),
+            inArray(leases.unitId, unitIds)
+          )
         );
-
-      // Filter active leases that belong to this property's units
-      const occupiedUnits = activeLeases.filter(lease => 
-        unitIds.includes(lease.unitId)
-      );
 
       if (occupiedUnits.length > 0) {
         return new NextResponse(
