@@ -35,6 +35,10 @@ interface PropertyCardProps {
   };
 }
 
+interface ErrorResponse {
+  error?: string;
+}
+
 export function PropertyCard({ property }: PropertyCardProps) {
   const router = useRouter();
   const [isDeleting, setIsDeleting] = useState(false);
@@ -56,9 +60,16 @@ export function PropertyCard({ property }: PropertyCardProps) {
       const response = await fetch(`/api/properties/${property.id}`, {
         method: "DELETE",
       });
-
+      
       if (!response.ok) {
-        throw new Error("Failed to delete property");
+        if (response.status === 400) {
+          // Handle occupied units error
+          const errorData = await response.json() as ErrorResponse;
+          toast.error(errorData.error ?? "Cannot delete property with occupied units");
+        } else {
+          throw new Error("Failed to delete property");
+        }
+        return;
       }
 
       toast.success("Property deleted successfully");
@@ -114,7 +125,8 @@ export function PropertyCard({ property }: PropertyCardProps) {
                     <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                     <AlertDialogDescription>
                       This action cannot be undone. This will permanently delete
-                      your property from our servers.
+                      your property and all associated units from our servers.
+                      All units must be vacant (no active leases) before deletion.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
