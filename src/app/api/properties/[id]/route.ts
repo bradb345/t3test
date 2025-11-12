@@ -64,9 +64,7 @@ export async function DELETE(
         .select()
         .from(leases)
         .where(
-          and(
-            eq(leases.status, 'active')
-          )
+          eq(leases.status, 'active')
         );
 
       // Filter active leases that belong to this property's units
