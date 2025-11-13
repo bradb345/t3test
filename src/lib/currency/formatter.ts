@@ -164,6 +164,10 @@ export function parseCurrency(value: string): number | null {
   // Remove all non-numeric characters except decimal point and minus sign
   const cleaned = value.replace(/[^0-9.-]/g, "");
 
+  // Validate: only one decimal point, minus sign only at the start (if present)
+  if ((cleaned.match(/\./g) || []).length > 1 || (cleaned.indexOf('-') > 0) || (cleaned.split('-').length > 2)) {
+    return null;
+  }
   const parsed = parseFloat(cleaned);
   return isNaN(parsed) ? null : parsed;
 }
