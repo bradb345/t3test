@@ -50,6 +50,13 @@
       "when": 1762870757786,
       "tag": "0006_overrated_meltdown",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1763036764375,
+      "tag": "0007_ancient_jack_power",
+      "breakpoints": true
     }
   ]
 }

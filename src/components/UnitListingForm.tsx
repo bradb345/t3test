@@ -10,6 +10,7 @@ import { useUploadThing } from "~/utils/uploadthing";
 import { Loader2 } from "lucide-react";
 import { MultiSelect } from "~/components/ui/multi-select";
 import { toast } from "sonner";
+import { getCurrencySymbol } from "~/lib/currency";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -56,6 +57,7 @@ type InitialData = {
 
 interface UnitListingFormProps {
   propertyId: number;
+  currency?: string;
   initialData?: InitialData;
   mode?: "create" | "edit";
 }
@@ -78,6 +80,7 @@ interface FormData {
 
 export function UnitListingForm({
   propertyId,
+  currency = "USD",
   initialData,
   mode = "create",
 }: UnitListingFormProps) {
@@ -87,6 +90,8 @@ export function UnitListingForm({
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [showDiscardDialog, setShowDiscardDialog] = useState(false);
+
+  const currencySymbol = getCurrencySymbol(currency);
 
   const parseJsonField = (field: string | undefined): string[] => {
     if (!field) return [];
@@ -340,7 +345,7 @@ export function UnitListingForm({
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="mb-1 block text-sm font-medium">
-                    Monthly Rent <span className="text-red-500">*</span>
+                    Monthly Rent ({currencySymbol}) <span className="text-red-500">*</span>
                   </label>
                   <Input
                     required
@@ -359,7 +364,7 @@ export function UnitListingForm({
                 </div>
                 <div>
                   <label className="mb-1 block text-sm font-medium">
-                    Security Deposit
+                    Security Deposit ({currencySymbol})
                   </label>
                   <Input
                     type="number"
