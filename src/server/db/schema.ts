@@ -104,7 +104,7 @@ export const properties = createTable(
     country: varchar("country", { length: 2 }).notNull(),
     latitude: decimal("latitude", { precision: 10, scale: 8 }).notNull(),
     longitude: decimal("longitude", { precision: 11, scale: 8 }).notNull(),
-    currency: varchar("currency", { length: 3 }).notNull().default("USD"),
+    currency: varchar("currency", { length: 3 }).notNull().default("KYD"),
     description: text("description"),
     yearBuilt: integer("year_built"),
     totalUnits: integer("total_units"),
