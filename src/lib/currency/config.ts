@@ -45,7 +45,7 @@ export const CURRENCIES: Record<string, Currency> = {
 /**
  * Default currency to use when property is outside supported regions
  */
-export const DEFAULT_CURRENCY: Currency = CURRENCIES.USD!;
+export const DEFAULT_CURRENCY: Currency = CURRENCIES.KYD!;
 
 /**
  * Supported countries with their geographic boundaries
