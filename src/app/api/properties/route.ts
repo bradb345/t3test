@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { db } from "~/server/db";
 import { properties } from "~/server/db/schema";
 import { eq } from "drizzle-orm";
+import { detectCurrencyFromCoordinates } from "~/lib/currency";
 
 interface PropertyData {
   name: string;
@@ -38,6 +39,9 @@ export async function POST(req: Request) {
     const amenities = typeof data.amenities === 'string' ? data.amenities : JSON.stringify(data.amenities ?? []);
     const imageUrls = typeof data.imageUrls === 'string' ? data.imageUrls : JSON.stringify(data.imageUrls ?? []);
 
+    // Detect currency based on property coordinates
+    const currency = detectCurrencyFromCoordinates(data.latitude, data.longitude);
+
     // Create property in database
     const [property] = await db
       .insert(properties)
@@ -46,8 +50,9 @@ export async function POST(req: Request) {
         name: data.name,
         address: data.address,
         country: data.country ?? "US",
-        latitude: data.latitude,
-        longitude: data.longitude,
+        latitude: data.latitude.toString(),
+        longitude: data.longitude.toString(),
+        currency: currency.code,
         description: data.description ?? "",
         yearBuilt: data.yearBuilt ? parseInt(data.yearBuilt) : null,
         totalUnits: 0,
@@ -69,7 +74,7 @@ export async function POST(req: Request) {
   }
 }
 
-export async function GET(req: Request) {
+export async function GET(_req: Request) {
   try {
     const { userId } = await auth();
     if (!userId) {

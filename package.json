@@ -21,6 +21,7 @@
     "@radix-ui/react-slot": "^1.1.0",
     "@radix-ui/react-switch": "^1.2.6",
     "@t3-oss/env-nextjs": "^0.10.1",
+    "@turf/turf": "^7.2.0",
     "@uploadthing/react": "^7.3.3",
     "@vercel/postgres": "^0.10.0",
     "class-variance-authority": "^0.7.1",

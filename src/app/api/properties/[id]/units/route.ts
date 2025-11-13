@@ -58,6 +58,9 @@ export async function POST(
     const imageUrls = typeof data.imageUrls === 'string' ? data.imageUrls : JSON.stringify(data.imageUrls ?? []);
     const floorPlan = typeof data.floorPlan === 'string' ? data.floorPlan : JSON.stringify(data.floorPlan ?? []);
 
+    // Inherit currency from the property
+    const propertyCurrency = property.currency ?? "USD";
+
     // Create unit in database
     const [unit] = await db
       .insert(units)
@@ -71,6 +74,7 @@ export async function POST(
         numBathrooms: String(data.numBathrooms),
         monthlyRent: String(data.monthlyRent),
         deposit: data.deposit ? String(data.deposit) : null,
+        currency: propertyCurrency,
         isAvailable: Boolean(data.isAvailable ?? true),
         isVisible: Boolean(data.isVisible ?? false),
         availableFrom: data.availableFrom ? new Date(data.availableFrom) : null,

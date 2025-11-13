@@ -43,7 +43,7 @@ export default async function CreateUnitPage({
           </p>
         </div>
 
-        <UnitListingForm propertyId={propertyId} />
+        <UnitListingForm propertyId={propertyId} currency={property.currency ?? "USD"} />
       </div>
     </main>
   );
