@@ -6,7 +6,7 @@
  */
 
 import booleanPointInPolygon from "@turf/boolean-point-in-polygon";
-import { point, polygon } from "@turf/helpers";
+import { point, polygon } from "@turf/turf";
 import { SUPPORTED_COUNTRIES, DEFAULT_CURRENCY, type Currency } from "./config";
 
 /**
