@@ -21,17 +21,15 @@ export default async function EditUnitPage({
 
   // Verify property exists and belongs to user
   const property = await db.query.properties.findFirst({
-    where: eq(properties.id, propertyId),
+    where: and(
+      eq(properties.id, propertyId),
+      eq(properties.userId, userId)
+    ),
   });
 
   if (!property) {
     redirect("/my-properties");
   }
-
-  if (property.userId !== userId) {
-    redirect("/my-properties");
-  }
-
   // Fetch the unit to edit
   const unit = await db.query.units.findFirst({
     where: and(
