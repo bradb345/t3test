@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { db } from "~/server/db";
 import { properties } from "~/server/db/schema";
 import { eq } from "drizzle-orm";
+import { detectCurrencyFromCoordinates } from "~/lib/currency";
 
 interface PropertyData {
   name: string;
@@ -13,7 +14,7 @@ interface PropertyData {
   country?: string;
   description?: string;
   yearBuilt?: string;
-  totalUnits?: string;
+  totalUnits: string;
   amenities: string | string[] | undefined;
   imageUrls: string | string[] | undefined;
   parkingAvailable?: boolean;
@@ -35,8 +36,11 @@ export async function POST(req: Request) {
     }
 
     // Parse JSON strings if they're already stringified
-    const amenities = typeof data.amenities === 'string' ? data.amenities : JSON.stringify(data.amenities || []);
-    const imageUrls = typeof data.imageUrls === 'string' ? data.imageUrls : JSON.stringify(data.imageUrls || []);
+    const amenities = typeof data.amenities === 'string' ? data.amenities : JSON.stringify(data.amenities ?? []);
+    const imageUrls = typeof data.imageUrls === 'string' ? data.imageUrls : JSON.stringify(data.imageUrls ?? []);
+
+    // Detect currency based on property coordinates
+    const currency = detectCurrencyFromCoordinates(data.latitude, data.longitude);
 
     // Create property in database
     const [property] = await db
@@ -45,12 +49,13 @@ export async function POST(req: Request) {
         userId: userId,
         name: data.name,
         address: data.address,
-        country: data.country || "US",
-        latitude: data.latitude,
-        longitude: data.longitude,
-        description: data.description || "",
+        country: data.country ?? "US",
+        latitude: data.latitude.toString(),
+        longitude: data.longitude.toString(),
+        currency: currency.code,
+        description: data.description ?? "",
         yearBuilt: data.yearBuilt ? parseInt(data.yearBuilt) : null,
-        totalUnits: parseInt(data.totalUnits) || 1,
+        totalUnits: 0,
         propertyType: data.propertyType,
         amenities: amenities,
         parkingAvailable: Boolean(data.parkingAvailable),
@@ -69,7 +74,7 @@ export async function POST(req: Request) {
   }
 }
 
-export async function GET(req: Request) {
+export async function GET(_req: Request) {
   try {
     const { userId } = await auth();
     if (!userId) {

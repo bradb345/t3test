@@ -2,6 +2,70 @@
 
 This is a [T3 Stack](https://create.t3.gg/) project bootstrapped with `create-t3-app`.
 
+## Getting Started
+
+### Prerequisites
+
+- Node.js (v18 or later)
+- npm or yarn
+- PostgreSQL database
+
+### Installation
+
+1. Clone the repository:
+```bash
+git clone <repository-url>
+cd t3test
+```
+
+2. Install dependencies:
+```bash
+npm install
+```
+
+3. Set up environment variables:
+Create a `.env` file in the root directory with the following variables:
+```env
+# Database
+DATABASE_URL="postgresql://user:password@localhost:5432/database_name"
+
+# Clerk Authentication
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=your_clerk_publishable_key
+CLERK_SECRET_KEY=your_clerk_secret_key
+
+# UploadThing
+UPLOADTHING_SECRET=your_uploadthing_secret
+UPLOADTHING_APP_ID=your_uploadthing_app_id
+```
+
+4. Start the database (if using Docker):
+```bash
+./start-database.sh
+```
+
+5. Run database migrations:
+```bash
+npm run db:push
+# or
+npm run db:migrate
+```
+
+6. Start the development server:
+```bash
+npm run dev
+```
+
+The application should now be running at [http://localhost:3000](http://localhost:3000).
+
+### Available Scripts
+
+- `npm run dev` - Start the development server
+- `npm run build` - Build the application for production
+- `npm run start` - Start the production server
+- `npm run lint` - Run ESLint
+- `npm run db:push` - Push database schema changes
+- `npm run db:studio` - Open Drizzle Studio for database management
+
 ## What's next? How do I make an app with this?
 
 We try to keep this project as simple as possible, so you can start with just the scaffolding we set up for you, and add additional things later when they become necessary.
