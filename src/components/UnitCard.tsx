@@ -5,6 +5,13 @@ import { Badge } from "~/components/ui/badge";
 import { Card } from "~/components/ui/card";
 import { Switch } from "~/components/ui/switch";
 import { toast } from "sonner";
+import { MoreVertical, Edit, Copy } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "~/components/ui/dropdown-menu";
 
 interface UnitCardProps {
   unit: {
@@ -27,6 +34,7 @@ interface UnitCardProps {
 export function UnitCard({ unit, propertyId }: UnitCardProps) {
   const [isVisible, setIsVisible] = useState(unit.isVisible ?? false);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [isDuplicating, setIsDuplicating] = useState(false);
 
   const handleVisibilityToggle = async (checked: boolean) => {
     setIsUpdating(true);
@@ -50,6 +58,34 @@ export function UnitCard({ unit, propertyId }: UnitCardProps) {
       toast.error("Failed to update visibility");
     } finally {
       setIsUpdating(false);
+    }
+  };
+
+  const handleDuplicate = async () => {
+    setIsDuplicating(true);
+    try {
+      const response = await fetch(`/api/properties/${propertyId}/units/${unit.id}/duplicate`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to duplicate unit");
+      }
+
+      const duplicatedUnit = await response.json() as { id: number };
+      toast.success("Unit duplicated successfully! Redirecting to edit...");
+      
+      // Redirect to edit page for the new duplicate
+      setTimeout(() => {
+        window.location.href = `/my-properties/${propertyId}/units/${duplicatedUnit.id}/edit`;
+      }, 1000);
+    } catch (error) {
+      console.error("Error duplicating unit:", error);
+      toast.error("Failed to duplicate unit");
+      setIsDuplicating(false);
     }
   };
 
@@ -124,21 +160,38 @@ export function UnitCard({ unit, propertyId }: UnitCardProps) {
           <button 
             className="px-4 py-2 border border-input rounded-md text-sm font-medium hover:bg-accent"
             onClick={() => {
-              // TODO: Navigate to edit page
-              window.location.href = `/my-properties/${propertyId}/units/${unit.id}/edit`;
-            }}
-          >
-            Edit
-          </button>
-          <button 
-            className="px-4 py-2 border border-input rounded-md text-sm font-medium hover:bg-accent"
-            onClick={() => {
-              // TODO: Navigate to view page
               window.location.href = `/my-properties/${propertyId}/units/${unit.id}`;
             }}
           >
             View
           </button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button 
+                className="px-3 py-2 border border-input rounded-md text-sm font-medium hover:bg-accent"
+                disabled={isDuplicating}
+              >
+                <MoreVertical className="h-4 w-4" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                onClick={() => {
+                  window.location.href = `/my-properties/${propertyId}/units/${unit.id}/edit`;
+                }}
+              >
+                <Edit className="mr-2 h-4 w-4" />
+                Edit
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={handleDuplicate}
+                disabled={isDuplicating}
+              >
+                <Copy className="mr-2 h-4 w-4" />
+                {isDuplicating ? "Duplicating..." : "Duplicate"}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
     </Card>
