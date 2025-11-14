@@ -41,8 +41,8 @@ const FEATURE_OPTIONS = [
 type InitialData = {
   id: number;
   unitNumber: string;
-  description: string;
-  floorPlan: string;
+  description: string | null;
+  floorPlan: string | null;
   squareFeet: number | null;
   numBedrooms: number;
   numBathrooms: string;
@@ -51,8 +51,8 @@ type InitialData = {
   isAvailable: boolean | null;
   isVisible: boolean | null;
   availableFrom: Date | null;
-  features: string;
-  imageUrls: string;
+  features: string | null;
+  imageUrls: string | null;
 };
 
 interface UnitListingFormProps {
@@ -93,7 +93,7 @@ export function UnitListingForm({
 
   const currencySymbol = getCurrencySymbol(currency);
 
-  const parseJsonField = (field: string | undefined): string[] => {
+  const parseJsonField = (field: string | null | undefined): string[] => {
     if (!field) return [];
     try {
       const parsed = JSON.parse(field) as unknown;
