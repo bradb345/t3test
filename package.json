@@ -35,6 +35,7 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-google-places-autocomplete": "^4.1.0",
+    "resend": "^6.4.2",
     "sonner": "^1.7.1",
     "svix": "^1.42.0",
     "tailwind-merge": "^2.5.5",
