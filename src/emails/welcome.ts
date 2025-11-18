@@ -2,7 +2,18 @@
  * Welcome Email Template
  * A simple welcome email to demonstrate email structure
  */
-export function welcomeEmail(userName: string): string {
+
+function escapeHtml(unsafe: string): string {
+  return unsafe
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+export function welcomeEmail(userName: string, baseUrl: string): string {
+  const safeUserName = escapeHtml(userName);
   return `
 <!DOCTYPE html>
 <html lang="en">
@@ -41,9 +52,6 @@ export function welcomeEmail(userName: string): string {
       margin-top: 20px;
     }
     .footer {
-      text-align: center;
-      margin-top: 30px;
-      color: #6b7280;
       font-size: 14px;
     }
   </style>
@@ -53,10 +61,10 @@ export function welcomeEmail(userName: string): string {
     <h1>Welcome to Rentr!</h1>
   </div>
   <div class="content">
-    <p>Hello ${userName},</p>
+    <p>Hello ${safeUserName},</p>
     <p>Thank you for joining Rentr! We're excited to have you on board.</p>
     <p>You can now start listing your properties and connecting with potential renters.</p>
-    <a href="https://yourapp.com/my-properties" class="button">Get Started</a>
+    <a href="${baseUrl}/my-properties" class="button">Get Started</a>
   </div>
   <div class="footer">
     <p>If you have any questions, feel free to reach out to our support team.</p>

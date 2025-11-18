@@ -2,12 +2,22 @@
  * Property Inquiry Email Template
  * Sent when a potential renter inquires about a property
  */
+function escapeHtml(unsafe: string): string {
+  return unsafe
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 export function propertyInquiryEmail(
   propertyOwnerName: string,
   propertyAddress: string,
   inquirerName: string,
   inquirerEmail: string,
-  message: string
+  message: string,
+  baseUrl: string
 ): string {
   return `
 <!DOCTYPE html>
@@ -62,8 +72,6 @@ export function propertyInquiryEmail(
     .footer {
       text-align: center;
       margin-top: 30px;
-      color: #6b7280;
-      font-size: 14px;
     }
   </style>
 </head>
@@ -72,26 +80,26 @@ export function propertyInquiryEmail(
     <h1>New Property Inquiry</h1>
   </div>
   <div class="content">
-    <p>Hello ${propertyOwnerName},</p>
+    <p>Hello ${escapeHtml(propertyOwnerName)},</p>
     <p>You have received a new inquiry for your property:</p>
     
     <div class="info-box">
       <div class="label">Property Address</div>
-      <div>${propertyAddress}</div>
+      <div>${escapeHtml(propertyAddress)}</div>
     </div>
 
     <div class="info-box">
       <div class="label">From</div>
-      <div>${inquirerName}</div>
-      <div style="color: #6b7280; font-size: 14px;">${inquirerEmail}</div>
+      <div>${escapeHtml(inquirerName)}</div>
+      <div style="color: #6b7280; font-size: 14px;">${escapeHtml(inquirerEmail)}</div>
     </div>
 
     <div class="info-box">
       <div class="label">Message</div>
-      <div>${message}</div>
+      <div>${escapeHtml(message)}</div>
     </div>
 
-    <a href="https://yourapp.com/messages" class="button">View Messages</a>
+    <a href="${escapeHtml(baseUrl)}/messages" class="button">View Messages</a>
   </div>
   <div class="footer">
     <p>&copy; ${new Date().getFullYear()} Rentr. All rights reserved.</p>
