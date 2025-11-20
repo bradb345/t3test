@@ -160,7 +160,7 @@ export function UnitCard({ unit, propertyId }: UnitCardProps) {
           <button 
             className="px-4 py-2 border border-input rounded-md text-sm font-medium hover:bg-accent"
             onClick={() => {
-              window.location.href = `/units/${unit.id}`;
+              window.open(`/units/${unit.id}`, '_blank');
             }}
           >
             View
