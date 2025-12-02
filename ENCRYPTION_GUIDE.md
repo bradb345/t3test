@@ -133,7 +133,8 @@ import { tenantProfiles } from "~/server/db/schema";
 // Encrypt SSN before storage
 const ssn = "123-45-6789";
 const ssnEncrypted = encryptSSN(ssn);
-const ssnLast4 = ssn.slice(-4); // "6789"
+const digitsOnly = ssn.replace(/[^0-9]/g, "");
+const ssnLast4 = digitsOnly.slice(-4); // "6789"
 
 await db.insert(tenantProfiles).values({
   userId: userId,

@@ -194,13 +194,15 @@ export async function PATCH(request: NextRequest) {
         const encryptedSSN = encryptSSN(personal.ssn);
         const last4 = cleanSSN.slice(-4);
         
+        // Remove plaintext SSN from personal data
+        const { ssn, ...personalWithoutSSN } = personal;
+        
         processedStepData = {
           ...body.stepData,
           personal: {
-            ...personal,
+            ...personalWithoutSSN,
             ssnEncrypted: encryptedSSN,
             ssnLast4: last4,
-            ssn: undefined, // Remove plaintext SSN
           },
         };
       }
