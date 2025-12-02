@@ -1,4 +1,3 @@
-import { Resend } from 'resend';
 
 interface TenantInvitationEmailProps {
   tenantName: string;
