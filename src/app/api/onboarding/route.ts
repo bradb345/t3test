@@ -203,13 +203,20 @@ export async function PATCH(request: NextRequest) {
       .where(eq(tenantOnboardingProgress.id, currentProgress.id))
       .returning();
 
+    if (!updatedProgress) {
+      return NextResponse.json(
+        { error: "Failed to update onboarding progress" },
+        { status: 404 }
+      );
+    }
+
     return NextResponse.json({
       success: true,
       progress: {
-        id: updatedProgress!.id,
-        currentStep: updatedProgress!.currentStep,
+        id: updatedProgress.id,
+        currentStep: updatedProgress.currentStep,
         completedSteps: updatedCompletedSteps,
-        status: updatedProgress!.status,
+        status: updatedProgress.status,
         data: updatedData,
       },
     });
