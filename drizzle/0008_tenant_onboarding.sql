@@ -49,7 +49,8 @@ CREATE TABLE IF NOT EXISTS "t3test_tenant_profile" (
   "id" SERIAL PRIMARY KEY,
   "user_id" INTEGER NOT NULL UNIQUE REFERENCES "t3test_user"("id"),
   "date_of_birth" TIMESTAMP WITH TIME ZONE,
-  "ssn" VARCHAR(256), -- Should be encrypted
+  "ssn_encrypted" TEXT, -- Encrypted using AES-256-GCM, format: iv:authTag:ciphertext
+  "ssn_last4" VARCHAR(4), -- Last 4 digits for display purposes only
   "drivers_license_number" VARCHAR(50),
   "drivers_license_state" VARCHAR(2),
   "marital_status" VARCHAR(20),
