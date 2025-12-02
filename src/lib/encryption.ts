@@ -7,11 +7,10 @@
  * - Generate key with: openssl rand -hex 32
  */
 
-import crypto from "crypto";
+import * as crypto from "crypto";
 
 const ALGORITHM = "aes-256-gcm";
 const IV_LENGTH = 16; // 128 bits for GCM
-const AUTH_TAG_LENGTH = 16; // 128 bits for GCM
 const KEY_LENGTH = 32; // 256 bits
 
 /**
