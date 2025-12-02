@@ -1,9 +1,10 @@
-import { NextRequest, NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import { db } from "~/server/db";
 import { tenantInvitations, tenantOnboardingProgress, units, properties, user, notifications, leases } from "~/server/db/schema";
 import { eq, and, gt } from "drizzle-orm";
 import { sendEmail } from "~/lib/email";
 import { getOnboardingCompleteEmailHtml, getOnboardingCompleteEmailSubject } from "~/emails/onboarding-complete";
+import { encryptSSN } from "~/lib/encryption";
 
 // GET /api/onboarding?token=xxx
 export async function GET(request: NextRequest) {
@@ -69,6 +70,19 @@ export async function GET(request: NextRequest) {
     const data = progress.data 
       ? (JSON.parse(progress.data) as Record<string, unknown>)
       : {};
+
+    // Return masked SSN for security (only last 4 digits)
+    // Never return the encrypted or decrypted full SSN to the client
+    if (data.personal && typeof data.personal === 'object') {
+      const personal = data.personal as Record<string, unknown>;
+      if (personal.ssnLast4 && typeof personal.ssnLast4 === 'string') {
+        // Replace with masked version using last 4 digits
+        personal.ssn = `***-**-${personal.ssnLast4}`;
+        // Remove encrypted data from response
+        delete personal.ssnEncrypted;
+        delete personal.ssnLast4;
+      }
+    }
 
     return NextResponse.json({
       invitation: {
@@ -160,10 +174,44 @@ export async function PATCH(request: NextRequest) {
       ? (JSON.parse(currentProgress.completedSteps) as string[])
       : [];
 
+    // Encrypt SSN if present in personal info before storing
+    let processedStepData = body.stepData;
+    if (body.stepData?.personal && typeof body.stepData.personal === 'object') {
+      const personal = body.stepData.personal as Record<string, unknown>;
+      if (personal.ssn && typeof personal.ssn === 'string') {
+        // Validate and clean SSN
+        const cleanSSN = personal.ssn.replace(/[^0-9]/g, '');
+        
+        // Validate SSN has exactly 9 digits
+        if (cleanSSN.length !== 9) {
+          return NextResponse.json(
+            { error: "Invalid SSN format. SSN must contain exactly 9 digits." },
+            { status: 400 }
+          );
+        }
+        
+        // Encrypt SSN and store encrypted version
+        const encryptedSSN = encryptSSN(personal.ssn);
+        const last4 = cleanSSN.slice(-4);
+        
+        // Remove plaintext SSN from personal data
+        const { ssn, ...personalWithoutSSN } = personal;
+        
+        processedStepData = {
+          ...body.stepData,
+          personal: {
+            ...personalWithoutSSN,
+            ssnEncrypted: encryptedSSN,
+            ssnLast4: last4,
+          },
+        };
+      }
+    }
+
     // Merge new step data with existing data
     const updatedData = {
       ...existingData,
-      ...(body.stepData ?? {}),
+      ...(processedStepData ?? {}),
     };
 
     // Add completed step if provided
@@ -210,6 +258,19 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
+    // Prepare response data with masked SSN
+    const responseData = { ...updatedData };
+    if (responseData.personal && typeof responseData.personal === 'object') {
+      const personal = responseData.personal as Record<string, unknown>;
+      if (personal.ssnLast4 && typeof personal.ssnLast4 === 'string') {
+        // Replace with masked version using last 4 digits
+        personal.ssn = `***-**-${personal.ssnLast4}`;
+        // Remove encrypted data from response
+        delete personal.ssnEncrypted;
+        delete personal.ssnLast4;
+      }
+    }
+
     return NextResponse.json({
       success: true,
       progress: {
@@ -217,7 +278,7 @@ export async function PATCH(request: NextRequest) {
         currentStep: updatedProgress.currentStep,
         completedSteps: updatedCompletedSteps,
         status: updatedProgress.status,
-        data: updatedData,
+        data: responseData,
       },
     });
   } catch (error) {

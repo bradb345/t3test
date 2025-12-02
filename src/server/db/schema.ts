@@ -485,7 +485,8 @@ export const tenantOnboardingProgress = createTable(
   id: 1,
   userId: 42,
   dateOfBirth: "1990-05-15",
-  ssn: "encrypted_value",
+  ssnEncrypted: "base64_iv:base64_authTag:base64_ciphertext",
+  ssnLast4: "6789",
   driversLicenseNumber: "D12345678",
   driversLicenseState: "CA",
   maritalStatus: "single",
@@ -505,7 +506,8 @@ export const tenantProfiles = createTable(
       .unique()
       .references(() => user.id),
     dateOfBirth: timestamp("date_of_birth", { withTimezone: true }),
-    ssn: varchar("ssn", { length: 256 }), // Should be encrypted
+    ssnEncrypted: text("ssn_encrypted"), // Encrypted using AES-256-GCM
+    ssnLast4: varchar("ssn_last4", { length: 4 }), // Last 4 digits for display only
     driversLicenseNumber: varchar("drivers_license_number", { length: 50 }),
     driversLicenseState: varchar("drivers_license_state", { length: 2 }),
     maritalStatus: varchar("marital_status", { length: 20 }),
