@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { SignInButton, UserButton, useAuth } from "@clerk/nextjs";
 import { Button } from "~/components/ui/button";
-import { useEffect, useState } from "react";
+import { NotificationBell } from "~/components/NotificationBell";
+import { useEffect, useState, useRef } from "react";
+import { useSearchParams } from "next/navigation";
 
 interface Property {
   id: number;
@@ -13,6 +15,8 @@ interface Property {
 export function Navbar() {
   const { isSignedIn } = useAuth();
   const [hasProperties, setHasProperties] = useState(false);
+  const searchParams = useSearchParams();
+  const signInButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     if (isSignedIn) {
@@ -27,6 +31,14 @@ export function Navbar() {
         });
     }
   }, [isSignedIn]);
+
+  // Auto-open sign-in modal if sign-in=true in URL
+  useEffect(() => {
+    if (!isSignedIn && searchParams?.get("sign-in") === "true") {
+      // Trigger click on sign-in button to open modal
+      signInButtonRef.current?.click();
+    }
+  }, [isSignedIn, searchParams]);
 
   return (
     <div className="border-b">
@@ -59,6 +71,7 @@ export function Navbar() {
               >
                 Messages
               </Link>
+              <NotificationBell />
             </>
           )}
           {isSignedIn ? (
@@ -72,8 +85,13 @@ export function Navbar() {
                 List Your Property
               </Link>
               
-              <SignInButton mode="modal">
-                <Button variant="default">Sign In</Button>
+              <SignInButton
+                mode="modal"
+                forceRedirectUrl={searchParams?.get("redirect_url") ?? undefined}
+              >
+                <Button variant="default" ref={signInButtonRef}>
+                  Sign In
+                </Button>
               </SignInButton>
             </>
           )}
