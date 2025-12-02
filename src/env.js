@@ -12,7 +12,7 @@ export const env = createEnv({
       .enum(["development", "test", "production"])
       .default("development"),
     RESEND_API_KEY: z.string().min(1),
-    ENCRYPTION_KEY: z.string().length(64, "ENCRYPTION_KEY must be 64 hex characters (32 bytes)"),
+    ENCRYPTION_KEY: z.string().regex(/^[0-9a-fA-F]{64}$/, "ENCRYPTION_KEY must be 64 hexadecimal characters (32 bytes)"),
   },
 
   /**

@@ -84,9 +84,14 @@ export function decrypt(encryptedData: string): string {
       throw new Error("Invalid encrypted data format");
     }
     
-    const iv = Buffer.from(parts[0]!, "base64");
-    const authTag = Buffer.from(parts[1]!, "base64");
-    const ciphertext = parts[2]!;
+    // Validate that all parts are non-empty strings
+    if (!parts[0] || !parts[1] || !parts[2]) {
+      throw new Error("Invalid encrypted data format: empty component");
+    }
+    
+    const iv = Buffer.from(parts[0], "base64");
+    const authTag = Buffer.from(parts[1], "base64");
+    const ciphertext = parts[2];
     
     const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
     decipher.setAuthTag(authTag);
@@ -104,13 +109,22 @@ export function decrypt(encryptedData: string): string {
 /**
  * Mask SSN to show only last 4 digits
  * Example: "123-45-6789" -> "***-**-6789"
+ * Only works with valid SSN formats (9 digits with optional dashes)
  */
 export function maskSSN(ssn: string): string {
-  if (!ssn || ssn.length < 4) {
+  if (!ssn) {
     return "***-**-****";
   }
   
-  const last4 = ssn.slice(-4);
+  // Remove any non-digit characters
+  const digitsOnly = ssn.replace(/[^0-9]/g, "");
+  
+  // Validate SSN has exactly 9 digits
+  if (digitsOnly.length !== 9) {
+    return "***-**-****";
+  }
+  
+  const last4 = digitsOnly.slice(-4);
   return `***-**-${last4}`;
 }
 
@@ -142,7 +156,12 @@ export function getMaskedSSN(encryptedSSN: string): string {
   try {
     const decrypted = decryptSSN(encryptedSSN);
     return maskSSN(decrypted);
-  } catch {
+  } catch (error) {
+    // Log error for debugging without exposing sensitive data
+    console.error("Failed to decrypt SSN for masking (data may be corrupted):", {
+      error: error instanceof Error ? error.message : "Unknown error",
+      encryptedLength: encryptedSSN.length,
+    });
     return "***-**-****";
   }
 }

@@ -179,9 +179,20 @@ export async function PATCH(request: NextRequest) {
     if (body.stepData?.personal && typeof body.stepData.personal === 'object') {
       const personal = body.stepData.personal as Record<string, unknown>;
       if (personal.ssn && typeof personal.ssn === 'string') {
+        // Validate and clean SSN
+        const cleanSSN = personal.ssn.replace(/[^0-9]/g, '');
+        
+        // Validate SSN has exactly 9 digits
+        if (cleanSSN.length !== 9) {
+          return NextResponse.json(
+            { error: "Invalid SSN format. SSN must contain exactly 9 digits." },
+            { status: 400 }
+          );
+        }
+        
         // Encrypt SSN and store encrypted version
         const encryptedSSN = encryptSSN(personal.ssn);
-        const last4 = personal.ssn.replace(/[^0-9]/g, '').slice(-4);
+        const last4 = cleanSSN.slice(-4);
         
         processedStepData = {
           ...body.stepData,
