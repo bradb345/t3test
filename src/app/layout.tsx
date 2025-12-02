@@ -6,6 +6,7 @@ import { ClerkProvider } from "@clerk/nextjs";
 import { Navbar } from "~/components/Navbar";
 import { Footer } from "~/components/Footer";
 import { Toaster } from "sonner";
+import { Suspense } from "react";
 
 export const metadata: Metadata = {
   title: "Test",
@@ -21,7 +22,9 @@ export default function RootLayout({
       <html lang="en" className={`${GeistSans.variable}`}>
         <body>
           <div className="flex min-h-screen flex-col">
-            <Navbar />
+            <Suspense fallback={<div className="h-16 border-b" />}>
+              <Navbar />
+            </Suspense>
             {children}
             <Footer />
             <Toaster />

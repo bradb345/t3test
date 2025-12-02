@@ -5,13 +5,14 @@ import { Badge } from "~/components/ui/badge";
 import { Card } from "~/components/ui/card";
 import { Switch } from "~/components/ui/switch";
 import { toast } from "sonner";
-import { MoreVertical, Edit, Copy } from "lucide-react";
+import { MoreVertical, Edit, Copy, UserPlus } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
+import { TenantInvitationModal } from "~/components/TenantInvitationModal";
 
 interface UnitCardProps {
   unit: {
@@ -35,6 +36,7 @@ export function UnitCard({ unit, propertyId }: UnitCardProps) {
   const [isVisible, setIsVisible] = useState(unit.isVisible ?? false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [isDuplicating, setIsDuplicating] = useState(false);
+  const [showInviteModal, setShowInviteModal] = useState(false);
 
   const handleVisibilityToggle = async (checked: boolean) => {
     setIsUpdating(true);
@@ -126,8 +128,16 @@ export function UnitCard({ unit, propertyId }: UnitCardProps) {
   const status = getStatus();
 
   return (
-    <Card className="p-6 hover:shadow-md transition-shadow">
-      <div className="flex items-center justify-between">
+    <>
+      <TenantInvitationModal
+        unitId={unit.id}
+        unitNumber={unit.unitNumber}
+        open={showInviteModal}
+        onClose={() => setShowInviteModal(false)}
+      />
+      
+      <Card className="p-6 hover:shadow-md transition-shadow">
+        <div className="flex items-center justify-between">
         <div className="flex-1">
           <div className="flex items-center gap-3 mb-2">
             <h3 className="text-lg font-semibold">Unit {unit.unitNumber}</h3>
@@ -190,10 +200,19 @@ export function UnitCard({ unit, propertyId }: UnitCardProps) {
                 <Copy className="mr-2 h-4 w-4" />
                 {isDuplicating ? "Duplicating..." : "Duplicate"}
               </DropdownMenuItem>
+              {!unit.activeLease && (
+                <DropdownMenuItem
+                  onClick={() => setShowInviteModal(true)}
+                >
+                  <UserPlus className="mr-2 h-4 w-4" />
+                  Onboard Tenant
+                </DropdownMenuItem>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
       </div>
     </Card>
+    </>
   );
 }
