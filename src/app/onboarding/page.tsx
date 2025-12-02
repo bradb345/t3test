@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { Check, Loader2, AlertCircle } from "lucide-react";
@@ -27,7 +27,7 @@ const ONBOARDING_STEPS = [
   { id: "review", title: "Review & Submit", description: "Final review" },
 ];
 
-export default function OnboardingPage() {
+function OnboardingContent() {
   const searchParams = useSearchParams();
   const token = searchParams?.get("token");
   const { user, isLoaded: isUserLoaded } = useUser();
@@ -1037,5 +1037,22 @@ export default function OnboardingPage() {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function OnboardingPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center">
+          <div className="text-center">
+            <Loader2 className="mx-auto h-12 w-12 animate-spin text-purple-600" />
+            <p className="mt-4 text-gray-600">Loading your onboarding...</p>
+          </div>
+        </div>
+      }
+    >
+      <OnboardingContent />
+    </Suspense>
   );
 }
