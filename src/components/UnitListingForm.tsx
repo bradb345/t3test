@@ -131,7 +131,7 @@ export function UnitListingForm({
     setUploadProgress(0);
 
     try {
-      const uploadedImages = await startUpload(Array.from(files));
+      const uploadedImages = await startUpload(Array.from(files), { propertyId: String(propertyId) });
       if (!uploadedImages) return;
 
       setFormData((prev) => ({
@@ -155,7 +155,7 @@ export function UnitListingForm({
     setUploadProgress(0);
 
     try {
-      const uploadedImages = await startUpload(Array.from(files));
+      const uploadedImages = await startUpload(Array.from(files), { propertyId: String(propertyId) });
       if (!uploadedImages) return;
 
       setFormData((prev) => ({

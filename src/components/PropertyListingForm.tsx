@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { useUser } from "@clerk/nextjs";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Card } from "~/components/ui/card";
@@ -107,6 +108,7 @@ export function PropertyListingForm({
   mode = "create",
 }: PropertyListingFormProps) {
   const router = useRouter();
+  const { user } = useUser();
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -128,6 +130,8 @@ export function PropertyListingForm({
     imageUrls: initialData?.imageUrls ?? [],
   });
 
+  // Use property ID in edit mode, otherwise use user's auth ID for filename
+  const uploadId = mode === "edit" && initialData?.id ? initialData.id : user?.id;
   const { startUpload } = useUploadThing("imageUploader");
 
   // const addressInputRef = useRef<HTMLInputElement>(null);
@@ -207,7 +211,7 @@ export function PropertyListingForm({
     setUploadProgress(0);
 
     try {
-      const uploadedImages = await startUpload(Array.from(files));
+      const uploadedImages = await startUpload(Array.from(files), { propertyId: uploadId });
       if (!uploadedImages) return;
 
       setFormData((prev) => ({
