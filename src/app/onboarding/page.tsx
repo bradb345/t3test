@@ -9,6 +9,7 @@ import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { cn } from "~/lib/utils";
+import { useUploadThing } from "~/utils/uploadthing";
 
 interface OnboardingData {
   personal?: Record<string, string>;
@@ -41,11 +42,16 @@ function OnboardingContent() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
   const [invitationInfo, setInvitationInfo] = useState<{
     tenantName: string;
     tenantEmail: string;
     unitId: number;
   } | null>(null);
+
+  // UploadThing hooks for different upload types
+  const { startUpload: startPhotoIdUpload } = useUploadThing("photoID");
+  const { startUpload: startDocumentUpload } = useUploadThing("documents");
 
   // Load onboarding progress
   useEffect(() => {
@@ -404,7 +410,7 @@ function OnboardingContent() {
                   <Input
                     id="firstName"
                     type="text"
-                    value={(stepFormData.firstName as string) ?? ""}
+                    value={(stepFormData.firstName!) ?? ""}
                     onChange={(e) =>
                       setStepFormData({
                         ...stepFormData,
@@ -422,7 +428,7 @@ function OnboardingContent() {
                   <Input
                     id="lastName"
                     type="text"
-                    value={(stepFormData.lastName as string) ?? ""}
+                    value={(stepFormData.lastName!) ?? ""}
                     onChange={(e) =>
                       setStepFormData({
                         ...stepFormData,
@@ -441,7 +447,7 @@ function OnboardingContent() {
                 <Input
                   id="email"
                   type="email"
-                  value={(stepFormData.email as string) ?? invitationInfo?.tenantEmail ?? ""}
+                  value={(stepFormData.email!) ?? invitationInfo?.tenantEmail ?? ""}
                   onChange={(e) =>
                     setStepFormData({ ...stepFormData, email: e.target.value })
                   }
@@ -457,7 +463,7 @@ function OnboardingContent() {
                   id="phone"
                   type="tel"
                   placeholder="(555) 123-4567"
-                  value={(stepFormData.phone as string) ?? ""}
+                  value={(stepFormData.phone!) ?? ""}
                   onChange={(e) =>
                     setStepFormData({ ...stepFormData, phone: e.target.value })
                   }
@@ -472,7 +478,7 @@ function OnboardingContent() {
                 <Input
                   id="dateOfBirth"
                   type="date"
-                  value={(stepFormData.dateOfBirth as string) ?? ""}
+                  value={(stepFormData.dateOfBirth!) ?? ""}
                   onChange={(e) =>
                     setStepFormData({
                       ...stepFormData,
@@ -503,7 +509,7 @@ function OnboardingContent() {
                     id="employerName"
                     type="text"
                     placeholder="Company name"
-                    value={(stepFormData.employerName as string) ?? ""}
+                    value={(stepFormData.employerName!) ?? ""}
                     onChange={(e) =>
                       setStepFormData({
                         ...stepFormData,
@@ -522,7 +528,7 @@ function OnboardingContent() {
                     id="employerPhone"
                     type="tel"
                     placeholder="(555) 123-4567"
-                    value={(stepFormData.employerPhone as string) ?? ""}
+                    value={(stepFormData.employerPhone!) ?? ""}
                     onChange={(e) =>
                       setStepFormData({
                         ...stepFormData,
@@ -542,7 +548,7 @@ function OnboardingContent() {
                   id="employerAddress"
                   type="text"
                   placeholder="123 Business St, City, State, ZIP"
-                  value={(stepFormData.employerAddress as string) ?? ""}
+                  value={(stepFormData.employerAddress!) ?? ""}
                   onChange={(e) =>
                     setStepFormData({
                       ...stepFormData,
@@ -562,7 +568,7 @@ function OnboardingContent() {
                     id="supervisorName"
                     type="text"
                     placeholder="Full name"
-                    value={(stepFormData.supervisorName as string) ?? ""}
+                    value={(stepFormData.supervisorName!) ?? ""}
                     onChange={(e) =>
                       setStepFormData({
                         ...stepFormData,
@@ -581,7 +587,7 @@ function OnboardingContent() {
                     id="lengthOfEmployment"
                     type="text"
                     placeholder="e.g., 2 years 3 months"
-                    value={(stepFormData.lengthOfEmployment as string) ?? ""}
+                    value={(stepFormData.lengthOfEmployment!) ?? ""}
                     onChange={(e) =>
                       setStepFormData({
                         ...stepFormData,
@@ -602,7 +608,7 @@ function OnboardingContent() {
                     id="salary"
                     type="text"
                     placeholder="$0.00"
-                    value={(stepFormData.salary as string) ?? ""}
+                    value={(stepFormData.salary!) ?? ""}
                     onChange={(e) =>
                       setStepFormData({
                         ...stepFormData,
@@ -620,7 +626,7 @@ function OnboardingContent() {
                   <select
                     id="workPermit"
                     className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                    value={(stepFormData.workPermit as string) ?? ""}
+                    value={(stepFormData.workPermit!) ?? ""}
                     onChange={(e) =>
                       setStepFormData({
                         ...stepFormData,
@@ -657,45 +663,63 @@ function OnboardingContent() {
                     type="file"
                     accept="image/*,.pdf"
                     className="hidden"
-                    onChange={(e) => {
+                    disabled={isUploading}
+                    onChange={async (e) => {
                       const file = e.target.files?.[0];
                       if (file) {
-                        setStepFormData({
-                          ...stepFormData,
-                          proofOfAddressFileName: file.name,
-                        });
+                        setIsUploading(true);
+                        setError(null);
+                        try {
+                          const uploadedFiles = await startDocumentUpload([file]);
+                          if (uploadedFiles?.[0]) {
+                            setStepFormData({
+                              ...stepFormData,
+                              proofOfAddressFileName: file.name,
+                              proofOfAddressUrl: uploadedFiles[0].url,
+                            });
+                          }
+                        } catch (err) {
+                          console.error("Error uploading document:", err);
+                          setError("Failed to upload document. Please try again.");
+                        } finally {
+                          setIsUploading(false);
+                        }
                       }
                     }}
                   />
                   <label
                     htmlFor="proofOfAddress"
-                    className="cursor-pointer"
+                    className={cn("cursor-pointer", isUploading && "pointer-events-none opacity-50")}
                   >
                     <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-purple-100">
-                      <svg
-                        className="h-6 w-6 text-purple-600"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-                        />
-                      </svg>
+                      {isUploading ? (
+                        <Loader2 className="h-6 w-6 animate-spin text-purple-600" />
+                      ) : (
+                        <svg
+                          className="h-6 w-6 text-purple-600"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                          />
+                        </svg>
+                      )}
                     </div>
                     <p className="text-sm font-medium text-gray-900">
-                      Click to upload or drag and drop
+                      {isUploading ? "Uploading..." : "Click to upload or drag and drop"}
                     </p>
                     <p className="mt-1 text-xs text-gray-500">
                       PNG, JPG, or PDF up to 10MB
                     </p>
                   </label>
-                  {stepFormData.proofOfAddressFileName && (
+                  {stepFormData.proofOfAddressFileName && !isUploading && (
                     <p className="mt-4 text-sm text-green-600">
-                      ✓ Selected: {stepFormData.proofOfAddressFileName}
+                      ✓ Uploaded: {stepFormData.proofOfAddressFileName}
                     </p>
                   )}
                 </div>
@@ -721,7 +745,7 @@ function OnboardingContent() {
                     id="emergencyContactName"
                     type="text"
                     placeholder="Full name"
-                    value={(stepFormData.emergencyContactName as string) ?? ""}
+                    value={(stepFormData.emergencyContactName!) ?? ""}
                     onChange={(e) =>
                       setStepFormData({
                         ...stepFormData,
@@ -740,7 +764,7 @@ function OnboardingContent() {
                     id="emergencyContactRelationship"
                     type="text"
                     placeholder="e.g., Parent, Spouse, Sibling"
-                    value={(stepFormData.emergencyContactRelationship as string) ?? ""}
+                    value={(stepFormData.emergencyContactRelationship!) ?? ""}
                     onChange={(e) =>
                       setStepFormData({
                         ...stepFormData,
@@ -761,7 +785,7 @@ function OnboardingContent() {
                     id="emergencyContactPhone"
                     type="tel"
                     placeholder="(555) 123-4567"
-                    value={(stepFormData.emergencyContactPhone as string) ?? ""}
+                    value={(stepFormData.emergencyContactPhone!) ?? ""}
                     onChange={(e) =>
                       setStepFormData({
                         ...stepFormData,
@@ -780,7 +804,7 @@ function OnboardingContent() {
                     id="emergencyContactEmail"
                     type="email"
                     placeholder="email@example.com"
-                    value={(stepFormData.emergencyContactEmail as string) ?? ""}
+                    value={(stepFormData.emergencyContactEmail!) ?? ""}
                     onChange={(e) =>
                       setStepFormData({
                         ...stepFormData,
@@ -812,45 +836,63 @@ function OnboardingContent() {
                     type="file"
                     accept="image/*,.pdf"
                     className="hidden"
-                    onChange={(e) => {
+                    disabled={isUploading}
+                    onChange={async (e) => {
                       const file = e.target.files?.[0];
                       if (file) {
-                        setStepFormData({
-                          ...stepFormData,
-                          photoIdFileName: file.name,
-                        });
+                        setIsUploading(true);
+                        setError(null);
+                        try {
+                          const uploadedFiles = await startPhotoIdUpload([file]);
+                          if (uploadedFiles?.[0]) {
+                            setStepFormData({
+                              ...stepFormData,
+                              photoIdFileName: file.name,
+                              photoIdUrl: uploadedFiles[0].url,
+                            });
+                          }
+                        } catch (err) {
+                          console.error("Error uploading photo ID:", err);
+                          setError("Failed to upload photo ID. Please try again.");
+                        } finally {
+                          setIsUploading(false);
+                        }
                       }
                     }}
                   />
                   <label
                     htmlFor="photoId"
-                    className="cursor-pointer"
+                    className={cn("cursor-pointer", isUploading && "pointer-events-none opacity-50")}
                   >
                     <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-purple-100">
-                      <svg
-                        className="h-6 w-6 text-purple-600"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2"
-                        />
-                      </svg>
+                      {isUploading ? (
+                        <Loader2 className="h-6 w-6 animate-spin text-purple-600" />
+                      ) : (
+                        <svg
+                          className="h-6 w-6 text-purple-600"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2"
+                          />
+                        </svg>
+                      )}
                     </div>
                     <p className="text-sm font-medium text-gray-900">
-                      Click to upload or drag and drop
+                      {isUploading ? "Uploading..." : "Click to upload or drag and drop"}
                     </p>
                     <p className="mt-1 text-xs text-gray-500">
                       PNG, JPG, or PDF up to 10MB
                     </p>
                   </label>
-                  {stepFormData.photoIdFileName && (
+                  {stepFormData.photoIdFileName && !isUploading && (
                     <p className="mt-4 text-sm text-green-600">
-                      ✓ Selected: {stepFormData.photoIdFileName}
+                      ✓ Uploaded: {stepFormData.photoIdFileName}
                     </p>
                   )}
                 </div>
