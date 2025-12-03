@@ -410,7 +410,7 @@ function OnboardingContent() {
                   <Input
                     id="firstName"
                     type="text"
-                    value={(stepFormData.firstName!) ?? ""}
+                    value={stepFormData.firstName ?? ""}
                     onChange={(e) =>
                       setStepFormData({
                         ...stepFormData,
@@ -428,7 +428,7 @@ function OnboardingContent() {
                   <Input
                     id="lastName"
                     type="text"
-                    value={(stepFormData.lastName!) ?? ""}
+                    value={stepFormData.lastName ?? ""}
                     onChange={(e) =>
                       setStepFormData({
                         ...stepFormData,
@@ -447,7 +447,7 @@ function OnboardingContent() {
                 <Input
                   id="email"
                   type="email"
-                  value={(stepFormData.email!) ?? invitationInfo?.tenantEmail ?? ""}
+                  value={stepFormData.email ?? invitationInfo?.tenantEmail ?? ""}
                   onChange={(e) =>
                     setStepFormData({ ...stepFormData, email: e.target.value })
                   }
@@ -463,7 +463,7 @@ function OnboardingContent() {
                   id="phone"
                   type="tel"
                   placeholder="(555) 123-4567"
-                  value={(stepFormData.phone!) ?? ""}
+                  value={stepFormData.phone ?? ""}
                   onChange={(e) =>
                     setStepFormData({ ...stepFormData, phone: e.target.value })
                   }
@@ -478,7 +478,7 @@ function OnboardingContent() {
                 <Input
                   id="dateOfBirth"
                   type="date"
-                  value={(stepFormData.dateOfBirth!) ?? ""}
+                  value={stepFormData.dateOfBirth ?? ""}
                   onChange={(e) =>
                     setStepFormData({
                       ...stepFormData,
@@ -509,7 +509,7 @@ function OnboardingContent() {
                     id="employerName"
                     type="text"
                     placeholder="Company name"
-                    value={(stepFormData.employerName!) ?? ""}
+                    value={stepFormData.employerName ?? ""}
                     onChange={(e) =>
                       setStepFormData({
                         ...stepFormData,
@@ -528,7 +528,7 @@ function OnboardingContent() {
                     id="employerPhone"
                     type="tel"
                     placeholder="(555) 123-4567"
-                    value={(stepFormData.employerPhone!) ?? ""}
+                    value={stepFormData.employerPhone ?? ""}
                     onChange={(e) =>
                       setStepFormData({
                         ...stepFormData,
@@ -548,7 +548,7 @@ function OnboardingContent() {
                   id="employerAddress"
                   type="text"
                   placeholder="123 Business St, City, State, ZIP"
-                  value={(stepFormData.employerAddress!) ?? ""}
+                  value={stepFormData.employerAddress ?? ""}
                   onChange={(e) =>
                     setStepFormData({
                       ...stepFormData,
@@ -568,7 +568,7 @@ function OnboardingContent() {
                     id="supervisorName"
                     type="text"
                     placeholder="Full name"
-                    value={(stepFormData.supervisorName!) ?? ""}
+                    value={stepFormData.supervisorName ?? ""}
                     onChange={(e) =>
                       setStepFormData({
                         ...stepFormData,
@@ -587,7 +587,7 @@ function OnboardingContent() {
                     id="lengthOfEmployment"
                     type="text"
                     placeholder="e.g., 2 years 3 months"
-                    value={(stepFormData.lengthOfEmployment!) ?? ""}
+                    value={stepFormData.lengthOfEmployment ?? ""}
                     onChange={(e) =>
                       setStepFormData({
                         ...stepFormData,
@@ -608,7 +608,7 @@ function OnboardingContent() {
                     id="salary"
                     type="text"
                     placeholder="$0.00"
-                    value={(stepFormData.salary!) ?? ""}
+                    value={stepFormData.salary ?? ""}
                     onChange={(e) =>
                       setStepFormData({
                         ...stepFormData,
@@ -626,7 +626,7 @@ function OnboardingContent() {
                   <select
                     id="workPermit"
                     className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                    value={(stepFormData.workPermit!) ?? ""}
+                    value={stepFormData.workPermit ?? ""}
                     onChange={(e) =>
                       setStepFormData({
                         ...stepFormData,
@@ -714,7 +714,7 @@ function OnboardingContent() {
                       {isUploading ? "Uploading..." : "Click to upload or drag and drop"}
                     </p>
                     <p className="mt-1 text-xs text-gray-500">
-                      PNG, JPG, or PDF up to 10MB
+                      PNG, JPG up to 4MB, or PDF up to 8MB
                     </p>
                   </label>
                   {stepFormData.proofOfAddressFileName && !isUploading && (
@@ -745,7 +745,7 @@ function OnboardingContent() {
                     id="emergencyContactName"
                     type="text"
                     placeholder="Full name"
-                    value={(stepFormData.emergencyContactName!) ?? ""}
+                    value={stepFormData.emergencyContactName ?? ""}
                     onChange={(e) =>
                       setStepFormData({
                         ...stepFormData,
@@ -764,7 +764,7 @@ function OnboardingContent() {
                     id="emergencyContactRelationship"
                     type="text"
                     placeholder="e.g., Parent, Spouse, Sibling"
-                    value={(stepFormData.emergencyContactRelationship!) ?? ""}
+                    value={stepFormData.emergencyContactRelationship ?? ""}
                     onChange={(e) =>
                       setStepFormData({
                         ...stepFormData,
@@ -785,7 +785,7 @@ function OnboardingContent() {
                     id="emergencyContactPhone"
                     type="tel"
                     placeholder="(555) 123-4567"
-                    value={(stepFormData.emergencyContactPhone!) ?? ""}
+                    value={stepFormData.emergencyContactPhone ?? ""}
                     onChange={(e) =>
                       setStepFormData({
                         ...stepFormData,
@@ -804,7 +804,7 @@ function OnboardingContent() {
                     id="emergencyContactEmail"
                     type="email"
                     placeholder="email@example.com"
-                    value={(stepFormData.emergencyContactEmail!) ?? ""}
+                    value={stepFormData.emergencyContactEmail ?? ""}
                     onChange={(e) =>
                       setStepFormData({
                         ...stepFormData,
@@ -887,7 +887,7 @@ function OnboardingContent() {
                       {isUploading ? "Uploading..." : "Click to upload or drag and drop"}
                     </p>
                     <p className="mt-1 text-xs text-gray-500">
-                      PNG, JPG, or PDF up to 10MB
+                      PNG, JPG up to 4MB, or PDF up to 8MB
                     </p>
                   </label>
                   {stepFormData.photoIdFileName && !isUploading && (

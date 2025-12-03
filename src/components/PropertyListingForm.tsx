@@ -131,7 +131,7 @@ export function PropertyListingForm({
   });
 
   // Use property ID in edit mode, otherwise use user's auth ID for filename
-  const uploadId = mode === "edit" && initialData?.id ? initialData.id : user?.id;
+  const uploadId = mode === "edit" && initialData?.id ? initialData.id : user?.id ?? "";
   const { startUpload } = useUploadThing("imageUploader");
 
   // const addressInputRef = useRef<HTMLInputElement>(null);
