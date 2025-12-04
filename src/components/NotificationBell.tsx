@@ -35,7 +35,7 @@ export function NotificationBell() {
   const [isLoading, setIsLoading] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Fetch notifications on mount and periodically
+  // Fetch notifications on mount
   useEffect(() => {
     const fetchNotifications = async () => {
       try {
@@ -54,13 +54,6 @@ export function NotificationBell() {
     };
 
     void fetchNotifications();
-
-    // Poll for new notifications every 30 seconds
-    const interval = setInterval(() => {
-      void fetchNotifications();
-    }, 30000);
-
-    return () => clearInterval(interval);
   }, []);
 
   // Close dropdown when clicking outside
