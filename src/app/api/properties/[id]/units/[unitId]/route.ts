@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { db } from "~/server/db";
 import { units, properties } from "~/server/db/schema";
 import { eq, and } from "drizzle-orm";
+import { indexUnit, removeUnit, buildUnitSearchRecord } from "~/lib/algolia";
 
 interface UnitData {
   unitNumber?: string;
@@ -138,6 +139,18 @@ export async function PATCH(
       ))
       .returning();
 
+    // Sync with Algolia
+    if (updatedUnit) {
+      try {
+        const searchRecord = buildUnitSearchRecord(updatedUnit, property);
+        await indexUnit(searchRecord);
+        console.log("Updated unit in Algolia:", updatedUnit.id);
+      } catch (algoliaError) {
+        // Log but don't fail the request if Algolia sync fails
+        console.error("Failed to sync unit with Algolia:", algoliaError);
+      }
+    }
+
     console.log("Updated unit:", updatedUnit);
     return NextResponse.json(updatedUnit);
   } catch (error) {
@@ -182,6 +195,15 @@ export async function DELETE(
         eq(units.id, unitId),
         eq(units.propertyId, propertyId)
       ));
+
+    // Remove from Algolia
+    try {
+      await removeUnit(unitId);
+      console.log("Removed unit from Algolia:", unitId);
+    } catch (algoliaError) {
+      // Log but don't fail the request if Algolia removal fails
+      console.error("Failed to remove unit from Algolia:", algoliaError);
+    }
 
     // Update property's totalUnits count
     const unitCount = await db.query.units.findMany({
