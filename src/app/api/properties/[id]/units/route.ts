@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { db } from "~/server/db";
 import { units, properties } from "~/server/db/schema";
 import { eq } from "drizzle-orm";
+import { indexUnit, buildUnitSearchRecord } from "~/lib/algolia";
 
 interface UnitData {
   unitNumber: string;
@@ -82,6 +83,18 @@ export async function POST(
         imageUrls: imageUrls,
       })
       .returning();
+
+    // Index in Algolia
+    if (unit) {
+      try {
+        const searchRecord = buildUnitSearchRecord(unit, property);
+        await indexUnit(searchRecord);
+        console.log("Indexed unit in Algolia:", unit.id);
+      } catch (algoliaError) {
+        // Log but don't fail the request if Algolia indexing fails
+        console.error("Failed to index unit in Algolia:", algoliaError);
+      }
+    }
 
     // Update property's totalUnits count
     const unitCount = await db.query.units.findMany({

@@ -1,9 +1,7 @@
 // import { db } from '~/server/db';
-import { Input } from "~/components/ui/input";
-import { Button } from "~/components/ui/button";
-import { Search } from "lucide-react";
 import { FeaturedProperties } from "~/components/FeaturedProperties";
 import { Testimonials } from "~/components/Testimonials";
+import { HomeSearch } from "~/components/HomeSearch";
 
 export const dynamic = "force-dynamic";
 
@@ -27,18 +25,7 @@ export default async function HomePage() {
           </div>
 
           {/* Search Bar */}
-          <div className="mx-auto mt-8 flex max-w-2xl gap-2">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
-              <Input
-                placeholder="Search for a city, neighborhood, or address..."
-                className="h-12 w-full pl-10"
-              />
-            </div>
-            <Button className="h-12" size="lg">
-              Search
-            </Button>
-          </div>
+          <HomeSearch />
 
           {/* Featured Properties Section */}
           <div className="mt-16">
