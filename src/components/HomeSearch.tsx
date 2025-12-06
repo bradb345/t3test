@@ -43,29 +43,31 @@ async function getUserLocationPlace(): Promise<PlaceOption | null> {
     }
 
     navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        try {
-          const { latitude, longitude } = position.coords;
-          const response = await fetch(
-            `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&result_type=locality|administrative_area_level_1&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`
-          );
-          const data = (await response.json()) as ReverseGeocodingResponse;
+      (position) => {
+        void (async () => {
+          try {
+            const { latitude, longitude } = position.coords;
+            const response = await fetch(
+              `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&result_type=locality|administrative_area_level_1&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`
+            );
+            const data = (await response.json()) as ReverseGeocodingResponse;
 
-          if (data.status === "OK" && data.results[0]) {
-            const result = data.results[0];
-            resolve({
-              label: result.formatted_address,
-              value: {
-                place_id: result.place_id,
-                description: result.formatted_address,
-              },
-            });
-          } else {
+            if (data.status === "OK" && data.results[0]) {
+              const result = data.results[0];
+              resolve({
+                label: result.formatted_address,
+                value: {
+                  place_id: result.place_id,
+                  description: result.formatted_address,
+                },
+              });
+            } else {
+              resolve(null);
+            }
+          } catch {
             resolve(null);
           }
-        } catch {
-          resolve(null);
-        }
+        })();
       },
       () => {
         // User denied geolocation or error occurred

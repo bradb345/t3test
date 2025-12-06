@@ -17,7 +17,7 @@ export function SearchBox({ defaultValue }: { defaultValue?: string }) {
     if (!query) {
       refine(initialValue);
     }
-  }, []);
+  }, [refine, initialValue]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
