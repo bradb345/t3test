@@ -43,6 +43,10 @@ const DEFAULT_LOCATION: PlaceOption = {
 // Cayman Islands bounding box (pre-computed to avoid initial API call)
 const DEFAULT_BOUNDING_BOX = "19.7616,-79.7191,19.2538,-81.4294";
 
+// Impossible bounding box that returns no results - used while loading
+// This is a tiny box in the middle of the ocean
+const LOADING_BOUNDING_BOX = "0.0001,0.0001,0.0000,0.0000";
+
 interface GeoSearchProps {
   initialPlaceId?: string;
   initialPlaceName?: string;
@@ -69,7 +73,12 @@ export function GeoSearch({ initialPlaceId, initialPlaceName }: GeoSearchProps) 
     if (initialPlaceId === DEFAULT_LOCATION.value.place_id) {
       return DEFAULT_BOUNDING_BOX;
     }
-    // For other places or no place, start undefined (will be fetched if needed)
+    // For other places with a placeId, use a loading bounding box until we fetch the real one
+    // This prevents showing all results while waiting for the geocoding response
+    if (initialPlaceId) {
+      return LOADING_BOUNDING_BOX;
+    }
+    // No place selected - no geo filtering
     return undefined;
   };
 
@@ -97,6 +106,8 @@ export function GeoSearch({ initialPlaceId, initialPlaceName }: GeoSearchProps) 
           }
         } catch (error) {
           console.error("Error fetching place details:", error);
+          // On error, clear the loading bounding box to avoid blocking results indefinitely
+          setBoundingBox(undefined);
         }
       })();
     } else if (initialPlaceId === DEFAULT_LOCATION.value.place_id) {
@@ -125,6 +136,9 @@ export function GeoSearch({ initialPlaceId, initialPlaceName }: GeoSearchProps) 
       return;
     }
 
+    // Set loading bounding box to prevent showing all results while fetching
+    setBoundingBox(LOADING_BOUNDING_BOX);
+
     // Get place details including viewport/bounds
     void (async () => {
       try {
@@ -148,6 +162,8 @@ export function GeoSearch({ initialPlaceId, initialPlaceName }: GeoSearchProps) 
         }
       } catch (error) {
         console.error("Error fetching place details:", error);
+        // On error, clear the bounding box to avoid blocking results indefinitely
+        setBoundingBox(undefined);
       }
     })();
   };
