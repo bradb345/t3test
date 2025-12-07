@@ -9,7 +9,7 @@ import { Input } from "~/components/ui/input";
 import { Card } from "~/components/ui/card";
 import { useUploadThing } from "~/utils/uploadthing";
 import { Loader2 } from "lucide-react";
-import GooglePlacesAutocomplete from "react-google-places-autocomplete";
+import GooglePlacesAutocomplete, { geocodeByPlaceId, geocodeByAddress, getLatLng } from "react-google-places-autocomplete";
 import { MultiSelect } from "~/components/ui/multi-select";
 import { toast } from "sonner";
 import {
@@ -23,26 +23,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "~/components/ui/alert-dialog";
-
-type AddressComponent = {
-  long_name: string;
-  short_name: string;
-  types: string[];
-};
-
-type GeocodingResponse = {
-  results: {
-    geometry: {
-      location: {
-        lat: number;
-        lng: number;
-      };
-    };
-    formatted_address?: string;
-    address_components?: AddressComponent[];
-  }[];
-  status: string;
-};
 
 const AMENITY_OPTIONS = [
   "Pool",
@@ -148,31 +128,34 @@ export function PropertyListingForm({
   const handlePlaceSelect = (place: PlaceOption | null) => {
     if (!place?.value?.place_id) return;
 
+    // Update the selected place immediately so the input doesn't go blank
+    setSelectedPlace(place);
+    
+    // Update the address in formData immediately so validation works
+    setFormData((prev) => ({
+      ...prev,
+      address: place.label ?? "",
+    }));
+
     // Handle async operation without returning a promise
     void (async () => {
       try {
-        // Get place details using the Places API
-        const response = await fetch(
-          `https://maps.googleapis.com/maps/api/geocode/json?place_id=${place.value.place_id}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`,
-        );
-        const data = await response.json() as GeocodingResponse;
-
-        if (data.status === "OK" && data.results[0]) {
-          const { lat, lng } = data.results[0].geometry.location;
-          const countryComponent = data.results[0].address_components?.find(
+        // Use the library's built-in geocoding utilities
+        const results = await geocodeByPlaceId(place.value.place_id!);
+        
+        if (results[0]) {
+          const { lat, lng } = await getLatLng(results[0]);
+          const countryComponent = results[0].address_components?.find(
             (component) => component.types.includes("country"),
           );
           const countryCode = countryComponent?.short_name ?? "US";
 
           setFormData((prev) => ({
             ...prev,
-            address: place.label ?? "",
             country: countryCode,
             latitude: lat,
             longitude: lng,
           }));
-
-          setSelectedPlace(place);
         }
       } catch (error) {
         console.error("Error fetching place details:", error);
@@ -184,16 +167,9 @@ export function PropertyListingForm({
     address: string,
   ): Promise<{ lat: number; lng: number } | null> => {
     try {
-      const response = await fetch(
-        `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
-          address,
-        )}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`,
-      );
-
-      const data = await response.json() as GeocodingResponse;
-
-      if (data.status === "OK" && data.results[0]) {
-        const { lat, lng } = data.results[0].geometry.location;
+      const results = await geocodeByAddress(address);
+      if (results[0]) {
+        const { lat, lng } = await getLatLng(results[0]);
         return { lat, lng };
       }
       return null;
@@ -231,10 +207,15 @@ export function PropertyListingForm({
     setIsSubmitting(true);
 
     try {
-      // Get coordinates before submitting
-      const coordinates = await getCoordinates(formData.address);
-      if (!coordinates) {
-        throw new Error("Failed to get coordinates for address");
+      // Use stored coordinates, or fetch them if not available
+      let coordinates = { lat: formData.latitude, lng: formData.longitude };
+      
+      if (!coordinates.lat || !coordinates.lng) {
+        const fetchedCoordinates = await getCoordinates(formData.address);
+        if (!fetchedCoordinates) {
+          throw new Error("Failed to get coordinates for address");
+        }
+        coordinates = fetchedCoordinates;
       }
 
       const endpoint =
