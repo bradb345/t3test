@@ -1,13 +1,8 @@
 import { Testimonials } from "~/components/Testimonials";
 import { HowRentrWorks } from "~/components/HowRentrWorks";
-import { Button } from "~/components/ui/button";
-import { auth } from "@clerk/nextjs/server";
-import Link from "next/link";
-import { SignInButton } from "@clerk/nextjs";
+import { StartListingButton } from "./StartListingButton";
 
 export default async function ListPropertyPage() {
-  const { userId } = await auth();
-
   return (
     <main className="flex min-h-screen flex-col items-center bg-background">
       <div className="w-full max-w-6xl px-4 pb-16 pt-32">
@@ -21,15 +16,7 @@ export default async function ListPropertyPage() {
             ease
           </p>
           <div className="pt-4">
-            {userId ? (
-              <Link href="/list-property/create">
-                <Button size="lg">Start Listing</Button>
-              </Link>
-            ) : (
-              <SignInButton mode="modal">
-                <Button size="lg">Start Listing</Button>
-              </SignInButton>
-            )}
+            <StartListingButton />
           </div>
         </div>
 
