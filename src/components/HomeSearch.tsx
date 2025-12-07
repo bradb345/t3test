@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Input } from "~/components/ui/input";
 import { Button } from "~/components/ui/button";
 import { Search } from "lucide-react";
 import GooglePlacesAutocomplete from "react-google-places-autocomplete";
@@ -79,7 +78,6 @@ async function getUserLocationPlace(): Promise<PlaceOption | null> {
 }
 
 export function HomeSearch() {
-  const [searchQuery, setSearchQuery] = useState("");
   const [selectedPlace, setSelectedPlace] = useState<PlaceOption | null>(null);
   const [userLocation, setUserLocation] = useState<PlaceOption | null>(null);
   const router = useRouter();
@@ -114,10 +112,6 @@ export function HomeSearch() {
     e.preventDefault();
     const params = new URLSearchParams();
     
-    if (searchQuery.trim()) {
-      params.set("q", searchQuery.trim());
-    }
-    
     // Apply effective location (user selection > geolocation > fallback)
     const effectiveLocation = getEffectiveLocation();
     if (effectiveLocation.value.place_id) {
@@ -129,23 +123,15 @@ export function HomeSearch() {
   };
 
   return (
-    <form onSubmit={handleSearch} className="mx-auto mt-8 flex max-w-3xl flex-col gap-3 sm:flex-row sm:gap-2">
+    <form onSubmit={handleSearch} className="mx-auto mt-8 flex max-w-2xl flex-col gap-3 sm:flex-row sm:gap-2">
       <div className="relative flex-1">
         <Search className="absolute left-3 top-3 z-10 h-5 w-5 text-muted-foreground" />
-        <Input
-          placeholder="Search for properties..."
-          className="h-12 w-full pl-10"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-        />
-      </div>
-      <div className="w-full sm:w-72">
         <GooglePlacesAutocomplete
           apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}
           selectProps={{
             value: selectedPlace,
             onChange: handlePlaceSelect,
-            placeholder: "Type a location...",
+            placeholder: "Search by city, neighborhood, or address...",
             isClearable: true,
             className: "w-full",
             components: {
@@ -160,6 +146,7 @@ export function HomeSearch() {
                 backgroundColor: "transparent",
                 minHeight: "3rem",
                 height: "3rem",
+                paddingLeft: "2rem",
               }),
               input: (provided) => ({
                 ...provided,
@@ -195,6 +182,7 @@ export function HomeSearch() {
         />
       </div>
       <Button type="submit" className="h-12" size="lg">
+        <Search className="mr-2 h-4 w-4" />
         Search
       </Button>
     </form>
