@@ -1,17 +1,25 @@
 "use client";
 
-import { InstantSearch, Configure } from "react-instantsearch";
+import { InstantSearch } from "react-instantsearch";
 import { searchClient, UNITS_INDEX } from "~/lib/algolia-client";
-import { SearchBox } from "./SearchBox";
+import { SearchFilters } from "./SearchFilters";
 import { SearchHits } from "./SearchHits";
 import { GeoSearch } from "./GeoSearch";
 import { useSearchParams } from "next/navigation";
 
 export function InstantSearchWrapper() {
   const searchParams = useSearchParams();
-  const initialQuery = searchParams.get("q") ?? "";
   const initialPlaceId = searchParams.get("placeId") ?? undefined;
   const initialPlaceName = searchParams.get("placeName") ?? undefined;
+  
+  // Parse filter params from URL
+  const initialFilters = {
+    minPrice: searchParams.get("minPrice") ? Number(searchParams.get("minPrice")) : undefined,
+    maxPrice: searchParams.get("maxPrice") ? Number(searchParams.get("maxPrice")) : undefined,
+    bedrooms: searchParams.get("beds") ? Number(searchParams.get("beds")) : undefined,
+    bathrooms: searchParams.get("baths") ? Number(searchParams.get("baths")) : undefined,
+    propertyTypes: searchParams.get("types")?.split(",").filter(Boolean) ?? [],
+  };
 
   return (
     <InstantSearch
@@ -21,16 +29,11 @@ export function InstantSearchWrapper() {
         preserveSharedStateOnUnmount: true,
       }}
     >
-      <Configure
-        filters="isVisible:true"
-        hitsPerPage={20}
-      />
-      
       <div className="mb-8">
         <h1 className="mb-4 text-2xl font-bold">Search Properties</h1>
-        <div className="flex flex-col gap-3 sm:flex-row sm:gap-2">
-          <SearchBox defaultValue={initialQuery} />
+        <div className="flex flex-wrap items-center gap-2">
           <GeoSearch initialPlaceId={initialPlaceId} initialPlaceName={initialPlaceName} />
+          <SearchFilters initialFilters={initialFilters} />
         </div>
       </div>
 

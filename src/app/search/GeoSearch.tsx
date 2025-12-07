@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useConfigure } from "react-instantsearch";
+import { MapPin } from "lucide-react";
 import GooglePlacesAutocomplete from "react-google-places-autocomplete";
 
 interface PlaceOption {
@@ -152,13 +153,14 @@ export function GeoSearch({ initialPlaceId, initialPlaceName }: GeoSearchProps) 
   };
 
   return (
-    <div className="w-full sm:w-72">
+    <div className="relative w-64">
+      <MapPin className="absolute left-3 top-3 z-10 h-5 w-5 text-muted-foreground" />
       <GooglePlacesAutocomplete
         apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}
         selectProps={{
           value: selectedPlace,
           onChange: handlePlaceSelect,
-          placeholder: "Type a location...",
+          placeholder: "City or address...",
           isClearable: true,
           className: "w-full",
           components: {
@@ -173,6 +175,7 @@ export function GeoSearch({ initialPlaceId, initialPlaceName }: GeoSearchProps) 
               backgroundColor: "transparent",
               minHeight: "3rem",
               height: "3rem",
+              paddingLeft: "2rem",
             }),
             input: (provided) => ({
               ...provided,
