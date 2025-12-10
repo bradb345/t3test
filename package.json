@@ -14,8 +14,9 @@
     "start": "next start",
     "cy:open": "cypress open",
     "cy:run": "cypress run",
-    "test:e2e": "start-server-and-test dev http://localhost:3000 cy:run",
-    "test:e2e:open": "start-server-and-test dev http://localhost:3000 cy:open"
+    "cy:clean": "npx tsx scripts/cypress-cleanup.ts",
+    "test:e2e": "npm run cy:clean && start-server-and-test dev http://localhost:3000 cy:run",
+    "test:e2e:open": "npm run cy:clean && start-server-and-test dev http://localhost:3000 cy:open"
   },
   "dependencies": {
     "@clerk/nextjs": "^6.5.1",

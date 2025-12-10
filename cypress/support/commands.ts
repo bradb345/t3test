@@ -49,6 +49,8 @@ Cypress.Commands.add("clerkLogin", (options?: { userType?: UserType }) => {
   
   // Wait for successful authentication - modal should close
   cy.get(".cl-card", { timeout: 15000 }).should("not.exist");
+
+  cy.wait(3000); // Small wait to ensure session is fully established
 });
 
 export {};
