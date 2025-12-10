@@ -10,6 +10,42 @@ type Hit = UnitSearchRecord & {
   __queryID?: string;
 };
 
+/**
+ * Generates a random offset position within a circle around the original coordinates.
+ * This hides the exact property location for privacy/safety and prevents overlapping pins.
+ * 
+ * @param lat - Original latitude
+ * @param lng - Original longitude
+ * @param radiusMeters - Radius of the circle in meters (default: 200m)
+ * @returns New coordinates with random offset
+ */
+function getRandomOffsetPosition(
+  lat: number,
+  lng: number,
+  radiusMeters: number = 200
+): { lat: number; lng: number } {
+  // Generate random angle (0 to 2π)
+  const randomAngle = Math.random() * 2 * Math.PI;
+  
+  // Generate random distance within the radius (using square root for uniform distribution)
+  const randomDistance = Math.sqrt(Math.random()) * radiusMeters;
+  
+  // Earth's radius in meters
+  const earthRadius = 6371000;
+  
+  // Calculate offset in degrees
+  // Latitude: 1 degree ≈ 111,320 meters
+  const latOffset = (randomDistance * Math.cos(randomAngle)) / 111320;
+  
+  // Longitude: varies by latitude, 1 degree ≈ 111,320 * cos(latitude) meters
+  const lngOffset = (randomDistance * Math.sin(randomAngle)) / (111320 * Math.cos(lat * Math.PI / 180));
+  
+  return {
+    lat: lat + latOffset,
+    lng: lng + lngOffset,
+  };
+}
+
 export function SearchMap() {
   const { items: hits } = useHits<Hit>();
   const { status } = useInstantSearch();
@@ -113,7 +149,8 @@ export function SearchMap() {
     hits.forEach((hit) => {
       if (!hit._geoloc?.lat || !hit._geoloc?.lng) return;
 
-      const position = { lat: hit._geoloc.lat, lng: hit._geoloc.lng };
+      // Get randomized position within ~200m radius for privacy and to prevent overlapping pins
+      const position = getRandomOffsetPosition(hit._geoloc.lat, hit._geoloc.lng, 200);
       bounds.extend(position);
 
       // Get the formatted price for the marker

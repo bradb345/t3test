@@ -11,19 +11,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
-import { MoreHorizontal, Pencil, Trash2, Loader2 } from "lucide-react";
+import { MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "~/components/ui/alert-dialog";
+import { DeleteConfirmationDialog } from "~/components/DeleteConfirmationDialog";
 
 interface PropertyCardProps {
   property: {
@@ -42,6 +32,7 @@ interface ErrorResponse {
 export function PropertyCard({ property }: PropertyCardProps) {
   const router = useRouter();
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   
   let imageUrls: string[] = [];
   try {
@@ -108,51 +99,25 @@ export function PropertyCard({ property }: PropertyCardProps) {
                 <Pencil className="mr-2 h-4 w-4" />
                 Edit
               </DropdownMenuItem>
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <DropdownMenuItem
-                    onSelect={(e) => {
-                      e.preventDefault();
-                    }}
-                    className="text-destructive focus:text-destructive"
-                  >
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Delete
-                  </DropdownMenuItem>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      This action cannot be undone. This will permanently delete
-                      your property and all associated units from our servers.
-                      All units must be vacant (no active leases) before deletion.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={async (e) => {
-                        e.preventDefault(); // Prevent form submission
-                        await handleDelete();
-                      }}
-                      disabled={isDeleting}
-                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                    >
-                      {isDeleting ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Deleting...
-                        </>
-                      ) : (
-                        "Delete"
-                      )}
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
+              <DropdownMenuItem
+                onClick={() => setShowDeleteModal(true)}
+                disabled={isDeleting}
+                className="text-destructive focus:text-destructive"
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+
+          <DeleteConfirmationDialog
+            open={showDeleteModal}
+            onOpenChange={setShowDeleteModal}
+            onConfirm={handleDelete}
+            title="Are you absolutely sure?"
+            description="This action cannot be undone. This will permanently delete your property and all associated units from our servers. All units must be vacant (no active leases) before deletion."
+            isDeleting={isDeleting}
+          />
         </div>
       </div>
       <div className="p-4">

@@ -4,6 +4,49 @@ import { db } from "~/server/db";
 import { units, properties } from "~/server/db/schema";
 import { eq, and } from "drizzle-orm";
 import { indexUnit, removeUnit, buildUnitSearchRecord } from "~/lib/algolia";
+import { UTApi } from "uploadthing/server";
+
+// Initialize the UploadThing API
+const utapi = new UTApi();
+
+/**
+ * Extract file key from UploadThing URL
+ * URLs can be in formats like:
+ * - https://utfs.io/f/{fileKey}
+ * - https://{appId}.ufs.sh/f/{fileKey}
+ * - https://uploadthing.com/f/{fileKey}
+ */
+function extractFileKey(url: string): string | null {
+  try {
+    const urlObj = new URL(url);
+    const pathParts = urlObj.pathname.split('/');
+    // The file key is typically the last part after /f/
+    const fIndex = pathParts.indexOf('f');
+    if (fIndex !== -1 && fIndex < pathParts.length - 1) {
+      return pathParts[fIndex + 1] ?? null;
+    }
+    // Fallback: return the last part of the path
+    return pathParts[pathParts.length - 1] ?? null;
+  } catch {
+    // If URL parsing fails, try simple split
+    return url.split('/').pop() ?? null;
+  }
+}
+
+/**
+ * Delete files from UploadThing given an array of URLs
+ */
+async function deleteFilesFromUploadThing(urls: string[], context: string): Promise<void> {
+  const fileKeys = urls
+    .map(url => extractFileKey(url))
+    .filter((key): key is string => key !== null && key.length > 0);
+  
+  if (fileKeys.length > 0) {
+    console.log(`Deleting ${fileKeys.length} files from UploadThing (${context}):`, fileKeys);
+    await utapi.deleteFiles(fileKeys);
+    console.log(`Successfully deleted files from UploadThing (${context})`);
+  }
+}
 
 interface UnitData {
   unitNumber?: string;
@@ -186,6 +229,40 @@ export async function DELETE(
 
     if (property.userId !== userId) {
       return new NextResponse("Unauthorized", { status: 401 });
+    }
+
+    // Get the unit first to retrieve image URLs
+    const unit = await db.query.units.findFirst({
+      where: and(
+        eq(units.id, unitId),
+        eq(units.propertyId, propertyId)
+      ),
+    });
+
+    if (!unit) {
+      return new NextResponse("Unit not found", { status: 404 });
+    }
+
+    // Delete images from UploadThing if they exist
+    if (unit.imageUrls) {
+      try {
+        const imageUrls = JSON.parse(unit.imageUrls) as string[];
+        await deleteFilesFromUploadThing(imageUrls, `unit ${unitId} images`);
+      } catch (error) {
+        console.error("Error deleting unit images from UploadThing:", error);
+        // Continue with unit deletion even if image deletion fails
+      }
+    }
+
+    // Delete floor plan images from UploadThing if they exist
+    if (unit.floorPlan) {
+      try {
+        const floorPlanUrls = JSON.parse(unit.floorPlan) as string[];
+        await deleteFilesFromUploadThing(floorPlanUrls, `unit ${unitId} floor plan`);
+      } catch (error) {
+        console.error("Error deleting unit floor plan from UploadThing:", error);
+        // Continue with unit deletion even if floor plan deletion fails
+      }
     }
 
     // Delete unit

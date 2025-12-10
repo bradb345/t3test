@@ -5,13 +5,15 @@ import { Badge } from "~/components/ui/badge";
 import { Card } from "~/components/ui/card";
 import { Switch } from "~/components/ui/switch";
 import { toast } from "sonner";
-import { MoreVertical, Edit, Copy, UserPlus } from "lucide-react";
+import { MoreVertical, Edit, Copy, UserPlus, Trash2 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
+import { DeleteConfirmationDialog } from "~/components/DeleteConfirmationDialog";
+import { ConfirmationDialog } from "~/components/ConfirmationDialog";
 import { TenantInvitationModal } from "~/components/TenantInvitationModal";
 
 interface UnitCardProps {
@@ -36,7 +38,10 @@ export function UnitCard({ unit, propertyId }: UnitCardProps) {
   const [isVisible, setIsVisible] = useState(unit.isVisible ?? false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [isDuplicating, setIsDuplicating] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showDuplicateModal, setShowDuplicateModal] = useState(false);
 
   const handleVisibilityToggle = async (checked: boolean) => {
     setIsUpdating(true);
@@ -88,6 +93,29 @@ export function UnitCard({ unit, propertyId }: UnitCardProps) {
       console.error("Error duplicating unit:", error);
       toast.error("Failed to duplicate unit");
       setIsDuplicating(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    setIsDeleting(true);
+    try {
+      const response = await fetch(`/api/properties/${propertyId}/units/${unit.id}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete unit");
+      }
+
+      toast.success("Unit deleted successfully");
+      
+      // Refresh the page to update the unit list
+      window.location.reload();
+    } catch (error) {
+      console.error("Error deleting unit:", error);
+      toast.error("Failed to delete unit");
+      setIsDeleting(false);
+      setShowDeleteModal(false);
     }
   };
 
@@ -179,7 +207,7 @@ export function UnitCard({ unit, propertyId }: UnitCardProps) {
             <DropdownMenuTrigger asChild>
               <button 
                 className="px-3 py-2 border border-input rounded-md text-sm font-medium hover:bg-accent"
-                disabled={isDuplicating}
+                disabled={isDuplicating || isDeleting}
               >
                 <MoreVertical className="h-4 w-4" />
               </button>
@@ -194,7 +222,7 @@ export function UnitCard({ unit, propertyId }: UnitCardProps) {
                 Edit
               </DropdownMenuItem>
               <DropdownMenuItem
-                onClick={handleDuplicate}
+                onClick={() => setShowDuplicateModal(true)}
                 disabled={isDuplicating}
               >
                 <Copy className="mr-2 h-4 w-4" />
@@ -208,8 +236,38 @@ export function UnitCard({ unit, propertyId }: UnitCardProps) {
                   Onboard Tenant
                 </DropdownMenuItem>
               )}
+              {!unit.activeLease && (
+                <DropdownMenuItem
+                  onClick={() => setShowDeleteModal(true)}
+                  disabled={isDeleting}
+                  className="text-red-600 focus:text-red-600"
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  {isDeleting ? "Deleting..." : "Delete"}
+                </DropdownMenuItem>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
+
+          <DeleteConfirmationDialog
+            open={showDeleteModal}
+            onOpenChange={setShowDeleteModal}
+            onConfirm={handleDelete}
+            title={`Delete Unit ${unit.unitNumber}?`}
+            description="This action cannot be undone. This will permanently delete the unit, all associated images, and remove it from search results."
+            isDeleting={isDeleting}
+          />
+
+          <ConfirmationDialog
+            open={showDuplicateModal}
+            onOpenChange={setShowDuplicateModal}
+            onConfirm={handleDuplicate}
+            title={`Duplicate Unit ${unit.unitNumber}?`}
+            description="This will create a copy of this unit with the same details. You'll be redirected to edit the new unit after it's created."
+            confirmLabel="Duplicate"
+            confirmingLabel="Duplicating..."
+            isLoading={isDuplicating}
+          />
         </div>
       </div>
     </Card>
