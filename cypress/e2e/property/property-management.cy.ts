@@ -44,7 +44,7 @@ describe("Property and Unit Management", () => {
     cy.viewport(1440, 900);
     cy.visit("/");
     cy.clerkLogin({ userType: "landlord" });
-    // viewport for mac laptop
+
     // Wait for authentication to complete
     cy.get(".cl-userButtonTrigger", { timeout: 15000 }).should("be.visible");
   });
@@ -59,7 +59,6 @@ describe("Property and Unit Management", () => {
 
     // Click Add New Property button
     cy.contains("button", "Add New Property").click({ force: true });
-    cy.wait(1000);
 
     // Verify we're on the property creation page
     cy.url().should("include", "/list-property/create");
@@ -371,9 +370,6 @@ describe("Property and Unit Management", () => {
 
     // Confirm deletion
     cy.get('[role="alertdialog"]').contains("button", "Delete").click();
-
-    // Wait for page to reload
-    cy.wait(2000);
 
     // Verify only one unit card remains
     cy.contains("h3", `Unit ${testUnit.unitNumber}`).should("be.visible");

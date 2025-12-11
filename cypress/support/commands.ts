@@ -11,6 +11,7 @@ const TEST_USERS = {
 type UserType = keyof typeof TEST_USERS;
 
 declare global {
+  // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace Cypress {
     interface Chainable {
       /**
@@ -50,7 +51,6 @@ Cypress.Commands.add("clerkLogin", (options?: { userType?: UserType }) => {
   // Wait for successful authentication - modal should close
   cy.get(".cl-card", { timeout: 15000 }).should("not.exist");
 
-  cy.wait(3000); // Small wait to ensure session is fully established
 });
 
 export {};

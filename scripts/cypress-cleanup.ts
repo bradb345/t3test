@@ -5,7 +5,7 @@
  * It deletes all properties (and associated units) that have names starting with "Cypress Test Property".
  * 
  * Run with: npx tsx scripts/cypress-cleanup.ts
- * Or before Cypress: npm run cypress:clean && npx cypress open
+ * Or before Cypress: npm run cy:clean && npx cypress open
  */
 
 import { config } from 'dotenv';
@@ -13,7 +13,7 @@ import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import { like, eq } from 'drizzle-orm';
 import { algoliasearch } from 'algoliasearch';
-import { UTApi } from 'uploadthing/server';
+import { extractFileKey, utapi } from '../src/lib/uploadthing';
 
 // Load environment variables
 config();
@@ -117,33 +117,11 @@ if (algoliaAppId && algoliaAdminKey) {
   algoliaClient = algoliasearch(algoliaAppId, algoliaAdminKey);
 }
 
-// UploadThing setup
-const utapi = new UTApi();
-
 /**
- * Extract file key from UploadThing URL
+ * Delete files from UploadThing with error handling for cleanup script
  */
-function extractFileKey(url: string): string | null {
-  try {
-    const urlObj = new URL(url);
-    const pathParts = urlObj.pathname.split('/');
-    const fIndex = pathParts.indexOf('f');
-    if (fIndex !== -1 && fIndex < pathParts.length - 1) {
-      return pathParts[fIndex + 1] ?? null;
-    }
-    return pathParts[pathParts.length - 1] ?? null;
-  } catch {
-    return url.split('/').pop() ?? null;
-  }
-}
-
-/**
- * Delete files from UploadThing
- */
-async function deleteFilesFromUploadThing(urls: string[], context: string): Promise<void> {
-  const fileKeys = urls
-    .map(url => extractFileKey(url))
-    .filter((key): key is string => key !== null && key.length > 0);
+async function deleteFilesFromUploadThingSafe(urls: string[], context: string): Promise<void> {
+  const fileKeys = extractFileKey ? urls.map(extractFileKey).filter((key): key is string => key !== null && key.length > 0) : [];
   
   if (fileKeys.length > 0) {
     console.log(`  📁 Deleting ${fileKeys.length} files from UploadThing (${context})`);
@@ -221,7 +199,7 @@ async function cleanupCypressTestData() {
         if (unit.imageUrls) {
           try {
             const imageUrls = JSON.parse(unit.imageUrls) as string[];
-            await deleteFilesFromUploadThing(imageUrls, `unit ${unit.id} images`);
+            await deleteFilesFromUploadThingSafe(imageUrls, `unit ${unit.id} images`);
           } catch {
             console.warn(`      ⚠️  Failed to parse unit image URLs`);
           }
@@ -231,7 +209,7 @@ async function cleanupCypressTestData() {
         if (unit.floorPlan) {
           try {
             const floorPlanUrls = JSON.parse(unit.floorPlan) as string[];
-            await deleteFilesFromUploadThing(floorPlanUrls, `unit ${unit.id} floor plan`);
+            await deleteFilesFromUploadThingSafe(floorPlanUrls, `unit ${unit.id} floor plan`);
           } catch {
             console.warn(`      ⚠️  Failed to parse floor plan URLs`);
           }
@@ -242,7 +220,7 @@ async function cleanupCypressTestData() {
       if (property.imageUrls) {
         try {
           const imageUrls = JSON.parse(property.imageUrls) as string[];
-          await deleteFilesFromUploadThing(imageUrls, `property ${property.id} images`);
+          await deleteFilesFromUploadThingSafe(imageUrls, `property ${property.id} images`);
         } catch {
           console.warn(`   ⚠️  Failed to parse property image URLs`);
         }
