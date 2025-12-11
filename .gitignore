@@ -8,6 +8,12 @@
 # testing
 /coverage
 
+# cypress
+cypress.env.json
+cypress/videos
+cypress/screenshots
+cypress/downloads
+
 # database
 /prisma/db.sqlite
 /prisma/db.sqlite-journal

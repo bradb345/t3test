@@ -3,10 +3,8 @@ import { NextResponse } from "next/server";
 import { db } from "~/server/db";
 import { properties, units, leases } from "~/server/db/schema";
 import { eq, and, inArray } from "drizzle-orm";
-import { UTApi } from "uploadthing/server";
-
-// Initialize the UploadThing API
-const utapi = new UTApi();
+import { removeUnit } from "~/lib/algolia";
+import { deleteFilesFromUploadThing } from "~/lib/uploadthing";
 
 interface PropertyUpdateBody {
   name?: string;
@@ -86,36 +84,46 @@ export async function DELETE(
       }
     }
 
-    // Delete images from uploadthing if they exist
+    // Delete property images from UploadThing if they exist
     if (property.imageUrls) {
       try {
         const imageUrls = JSON.parse(property.imageUrls) as string[];
-        // Extract fileKeys from URLs (assuming URLs are in format: https://uploadthing.com/f/fileKey)
-        const fileKeys = imageUrls.map(url => url.split('/').pop()!);
-        
-        // Delete files from uploadthing if there are any fileKeys
-        if (fileKeys.length > 0) {
-          await utapi.deleteFiles(fileKeys);
-        }
+        await deleteFilesFromUploadThing(imageUrls, `property ${propertyId} images`);
       } catch (error) {
-        console.error("Error deleting images:", error);
+        console.error("Error deleting property images:", error);
         // Continue with property deletion even if image deletion fails
       }
     }
 
-    // Delete all units associated with this property (and their images)
+    // Delete all units associated with this property (and their images/floor plans)
     for (const unit of propertyUnits) {
+      // Remove unit from Algolia
+      try {
+        await removeUnit(unit.id);
+      } catch (error) {
+        console.error(`Error removing unit ${unit.id} from Algolia:`, error);
+        // Continue with deletion even if Algolia removal fails
+      }
+
+      // Delete unit images from UploadThing
       if (unit.imageUrls) {
         try {
           const unitImageUrls = JSON.parse(unit.imageUrls) as string[];
-          const fileKeys = unitImageUrls.map(url => url.split('/').pop()!);
-          
-          if (fileKeys.length > 0) {
-            await utapi.deleteFiles(fileKeys);
-          }
+          await deleteFilesFromUploadThing(unitImageUrls, `unit ${unit.id} images`);
         } catch (error) {
           console.error(`Error deleting images for unit ${unit.id}:`, error);
           // Continue with deletion even if image deletion fails
+        }
+      }
+
+      // Delete floor plan images from UploadThing
+      if (unit.floorPlan) {
+        try {
+          const floorPlanUrls = JSON.parse(unit.floorPlan) as string[];
+          await deleteFilesFromUploadThing(floorPlanUrls, `unit ${unit.id} floor plan`);
+        } catch (error) {
+          console.error(`Error deleting floor plan for unit ${unit.id}:`, error);
+          // Continue with deletion even if floor plan deletion fails
         }
       }
     }
@@ -185,8 +193,7 @@ export async function PATCH(
         const removedUrls = oldUrls.filter(url => !newUrls.includes(url));
         
         if (removedUrls.length > 0) {
-          const fileKeys = removedUrls.map(url => url.split('/').pop()!);
-          await utapi.deleteFiles(fileKeys);
+          await deleteFilesFromUploadThing(removedUrls, "property image update");
         }
       } catch (error) {
         console.error("Error deleting old images:", error);

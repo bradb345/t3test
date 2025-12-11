@@ -42,14 +42,14 @@ export async function POST(
       return new NextResponse("Unit not found", { status: 404 });
     }
 
-    // Create a duplicate unit with empty unitNumber and imageUrls
+    // Create a duplicate unit with empty unitNumber, imageUrls, and floorPlan
     const [duplicatedUnit] = await db
       .insert(units)
       .values({
         propertyId: propertyId,
         unitNumber: "", // Empty unit number as per requirement
         description: originalUnit.description,
-        floorPlan: originalUnit.floorPlan,
+        floorPlan: null, // Empty floor plan as per requirement
         squareFeet: originalUnit.squareFeet,
         numBedrooms: originalUnit.numBedrooms,
         numBathrooms: originalUnit.numBathrooms,
