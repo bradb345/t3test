@@ -381,21 +381,6 @@ export function UnitListingForm({
                   />
                 </div>
               </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium">
-                  Available From
-                </label>
-                <Input
-                  type="date"
-                  value={formData.availableFrom}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      availableFrom: e.target.value,
-                    }))
-                  }
-                />
-              </div>
               <div className="flex items-center space-x-2">
                 <input
                   type="checkbox"

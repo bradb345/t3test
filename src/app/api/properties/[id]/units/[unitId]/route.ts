@@ -4,6 +4,7 @@ import { db } from "~/server/db";
 import { units, properties } from "~/server/db/schema";
 import { eq, and } from "drizzle-orm";
 import { indexUnit, removeUnit, buildUnitSearchRecord } from "~/lib/algolia";
+import { deleteFilesFromUploadThing } from "~/lib/uploadthing";
 
 interface UnitData {
   unitNumber?: string;
@@ -186,6 +187,40 @@ export async function DELETE(
 
     if (property.userId !== userId) {
       return new NextResponse("Unauthorized", { status: 401 });
+    }
+
+    // Get the unit first to retrieve image URLs
+    const unit = await db.query.units.findFirst({
+      where: and(
+        eq(units.id, unitId),
+        eq(units.propertyId, propertyId)
+      ),
+    });
+
+    if (!unit) {
+      return new NextResponse("Unit not found", { status: 404 });
+    }
+
+    // Delete images from UploadThing if they exist
+    if (unit.imageUrls) {
+      try {
+        const imageUrls = JSON.parse(unit.imageUrls) as string[];
+        await deleteFilesFromUploadThing(imageUrls, `unit ${unitId} images`);
+      } catch (error) {
+        console.error("Error deleting unit images from UploadThing:", error);
+        // Continue with unit deletion even if image deletion fails
+      }
+    }
+
+    // Delete floor plan images from UploadThing if they exist
+    if (unit.floorPlan) {
+      try {
+        const floorPlanUrls = JSON.parse(unit.floorPlan) as string[];
+        await deleteFilesFromUploadThing(floorPlanUrls, `unit ${unitId} floor plan`);
+      } catch (error) {
+        console.error("Error deleting unit floor plan from UploadThing:", error);
+        // Continue with unit deletion even if floor plan deletion fails
+      }
     }
 
     // Delete unit
