@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useId } from "react";
 import { Search, MapPin, X, type LucideIcon } from "lucide-react";
 import { Input } from "~/components/ui/input";
 import { cn } from "~/lib/utils";
@@ -44,51 +44,68 @@ export function LocationInput({
   const [predictions, setPredictions] = useState<Prediction[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
+  const [error, setError] = useState<string | null>(null);
   
   const autocompleteService = useRef<google.maps.places.AutocompleteService | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const debounceTimeout = useRef<NodeJS.Timeout | null>(null);
 
   const Icon = iconMap[icon];
+  const dropdownId = useId();
+  const getOptionId = (index: number) => `${dropdownId}-option-${index}`;
 
   // Initialize Google Places Autocomplete Service
   useEffect(() => {
-    const loadGoogleMapsScript = () => {
-      // Check if script is already loaded
+    // Check if script is already loaded
+    if (window.google?.maps?.places) {
+      autocompleteService.current = new window.google.maps.places.AutocompleteService();
+      return;
+    }
+
+    // Check if script is already being loaded
+    const existingScript = document.querySelector<HTMLScriptElement>(
+      'script[src*="maps.googleapis.com/maps/api/js"]'
+    );
+    
+    if (existingScript) {
+      // Script exists, check if it's already loaded
       if (window.google?.maps?.places) {
         autocompleteService.current = new window.google.maps.places.AutocompleteService();
-        return;
-      }
-
-      // Check if script is already being loaded
-      const existingScript = document.querySelector(
-        'script[src*="maps.googleapis.com/maps/api/js"]'
-      );
-      
-      if (existingScript) {
-        // Script exists, wait for it to load
-        existingScript.addEventListener("load", () => {
-          if (window.google?.maps?.places) {
-            autocompleteService.current = new window.google.maps.places.AutocompleteService();
-          }
-        });
-        return;
-      }
-
-      // Load the script
-      const script = document.createElement("script");
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=places`;
-      script.async = true;
-      script.defer = true;
-      script.onload = () => {
+      } else if (existingScript.readyState === "complete") {
+        // Script has finished loading
         if (window.google?.maps?.places) {
           autocompleteService.current = new window.google.maps.places.AutocompleteService();
         }
-      };
-      document.head.appendChild(script);
-    };
+      } else {
+        // Script not loaded yet, wait for it to load
+        const handleLoad = () => {
+          if (window.google?.maps?.places) {
+            autocompleteService.current = new window.google.maps.places.AutocompleteService();
+          }
+        };
+        
+        existingScript.addEventListener("load", handleLoad);
+        
+        // Cleanup function to remove event listener
+        return () => {
+          existingScript.removeEventListener("load", handleLoad);
+        };
+      }
+      return;
+    }
 
-    loadGoogleMapsScript();
+    // Load the script
+    const script = document.createElement("script");
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=places`;
+    script.async = true;
+    script.defer = true;
+    script.onload = () => {
+      if (window.google?.maps?.places) {
+        autocompleteService.current = new window.google.maps.places.AutocompleteService();
+      }
+    };
+    document.head.appendChild(script);
   }, []);
 
   // Sync input value when external value changes
@@ -102,28 +119,53 @@ export function LocationInput({
     setInputValue(newValue);
     setSelectedIndex(-1);
 
+    // Clear existing timeout
+    if (debounceTimeout.current) {
+      clearTimeout(debounceTimeout.current);
+    }
+
     if (!newValue.trim()) {
       setPredictions([]);
       setShowDropdown(false);
+      setError(null);
       onChange(null);
       return;
     }
 
-    // Fetch predictions from Google Places API
-    if (autocompleteService.current) {
-      void autocompleteService.current.getPlacePredictions(
-        { input: newValue },
-        (results, status) => {
-          if (status === window.google.maps.places.PlacesServiceStatus.OK && results) {
-            setPredictions(results);
-            setShowDropdown(true);
-          } else {
-            setPredictions([]);
-            setShowDropdown(false);
+    // Debounce API call by 300ms
+    debounceTimeout.current = setTimeout(() => {
+      // Fetch predictions from Google Places API
+      if (autocompleteService.current) {
+        void autocompleteService.current.getPlacePredictions(
+          { input: newValue },
+          (results, status) => {
+            if (status === window.google.maps.places.PlacesServiceStatus.OK && results) {
+              setPredictions(results);
+              setShowDropdown(true);
+              setError(null);
+            } else if (status === window.google.maps.places.PlacesServiceStatus.ZERO_RESULTS) {
+              setPredictions([]);
+              setShowDropdown(false);
+              setError(null);
+            } else if (status === window.google.maps.places.PlacesServiceStatus.REQUEST_DENIED) {
+              setPredictions([]);
+              setShowDropdown(false);
+              setError("Location search unavailable. Please check API configuration.");
+            } else if (status === window.google.maps.places.PlacesServiceStatus.OVER_QUERY_LIMIT) {
+              setPredictions([]);
+              setShowDropdown(false);
+              setError("Location search temporarily unavailable. Please try again later.");
+            } else {
+              setPredictions([]);
+              setShowDropdown(false);
+              setError("Unable to search locations. Please try again.");
+            }
           }
-        }
-      );
-    }
+        );
+      } else {
+        setError("Location search is loading...");
+      }
+    }, 300);
   };
 
   // Handle selecting a prediction
@@ -176,8 +218,31 @@ export function LocationInput({
     onChange(null);
     setPredictions([]);
     setShowDropdown(false);
+    setError(null);
     inputRef.current?.focus();
   };
+
+  // Scroll selected item into view
+  useEffect(() => {
+    if (selectedIndex >= 0 && dropdownRef.current) {
+      const selectedElement = dropdownRef.current.querySelector(
+        `[data-index="${selectedIndex}"]`
+      );
+      selectedElement?.scrollIntoView({
+        block: "nearest",
+        behavior: "smooth",
+      });
+    }
+  }, [selectedIndex]);
+
+  // Cleanup debounce timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceTimeout.current) {
+        clearTimeout(debounceTimeout.current);
+      }
+    };
+  }, []);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -198,7 +263,7 @@ export function LocationInput({
 
   return (
     <div className={cn("relative", className)}>
-      <Icon className="absolute left-3 top-1/2 z-10 h-15 w-15 -translate-y-1/2 text-muted-foreground" />
+      <Icon className="absolute left-3 top-1/2 z-10 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
       <Input
         ref={inputRef}
         type="text"
@@ -207,6 +272,11 @@ export function LocationInput({
         onKeyDown={handleKeyDown}
         placeholder={placeholder}
         className="h-12 pl-10 pr-10 text-base md:text-lg"
+        role="combobox"
+        aria-autocomplete="list"
+        aria-controls={dropdownId}
+        aria-expanded={showDropdown && predictions.length > 0}
+        aria-activedescendant={selectedIndex >= 0 ? getOptionId(selectedIndex) : undefined}
       />
       {inputValue && (
         <button
@@ -218,16 +288,29 @@ export function LocationInput({
         </button>
       )}
 
+      {/* Error message */}
+      {error && (
+        <div className="absolute top-full z-50 mt-1 w-full rounded-md border border-destructive bg-destructive/10 px-4 py-2 text-sm text-destructive">
+          {error}
+        </div>
+      )}
+
       {/* Dropdown with predictions */}
       {showDropdown && predictions.length > 0 && (
         <div
           ref={dropdownRef}
+          id={dropdownId}
+          role="listbox"
           className="absolute top-full z-50 mt-1 w-full rounded-md border border-border bg-background shadow-lg"
         >
           {predictions.map((prediction, index) => (
             <button
               key={prediction.place_id}
               type="button"
+              role="option"
+              id={getOptionId(index)}
+              data-index={index}
+              aria-selected={selectedIndex === index}
               onClick={() => handleSelectPrediction(prediction)}
               className={cn(
                 "w-full cursor-pointer px-4 py-2 text-left text-base md:text-lg hover:bg-accent",
