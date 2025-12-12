@@ -4,15 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "~/components/ui/button";
 import { Search } from "lucide-react";
-import GooglePlacesAutocomplete from "react-google-places-autocomplete";
-
-interface PlaceOption {
-  label: string;
-  value: {
-    place_id?: string;
-    description?: string;
-  };
-}
+import { LocationInput, type PlaceOption } from "~/components/LocationInput";
 
 // Default fallback location: Cayman Islands (used when no location selected and no geolocation available)
 const DEFAULT_FALLBACK_LOCATION: PlaceOption = {
@@ -92,11 +84,6 @@ export function HomeSearch() {
     })();
   }, []);
 
-  const handlePlaceSelect = (place: PlaceOption | null) => {
-    // Allow clearing - default will be applied on search submit
-    setSelectedPlace(place?.value?.place_id ? place : null);
-  };
-
   // Get the effective location: selected place > user's geolocation > fallback (Cayman Islands)
   const getEffectiveLocation = useCallback((): PlaceOption => {
     if (selectedPlace?.value?.place_id) {
@@ -124,63 +111,13 @@ export function HomeSearch() {
 
   return (
     <form onSubmit={handleSearch} className="mx-auto mt-8 flex max-w-2xl flex-col gap-3 sm:flex-row sm:gap-2">
-      <div className="relative flex-1">
-        <Search className="absolute left-3 top-3 z-10 h-5 w-5 text-muted-foreground" />
-        <GooglePlacesAutocomplete
-          apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}
-          selectProps={{
-            value: selectedPlace,
-            onChange: handlePlaceSelect,
-            placeholder: "Search by city, neighborhood, or address...",
-            isClearable: true,
-            className: "w-full",
-            components: {
-              DropdownIndicator: () => null,
-              IndicatorSeparator: () => null,
-            },
-            styles: {
-              control: (provided) => ({
-                ...provided,
-                borderRadius: "0.375rem",
-                borderColor: "hsl(var(--input))",
-                backgroundColor: "transparent",
-                minHeight: "3rem",
-                height: "3rem",
-                paddingLeft: "2rem",
-              }),
-              input: (provided) => ({
-                ...provided,
-                color: "inherit",
-              }),
-              placeholder: (provided) => ({
-                ...provided,
-                color: "hsl(var(--muted-foreground))",
-              }),
-              singleValue: (provided) => ({
-                ...provided,
-                color: "inherit",
-              }),
-              menu: (provided) => ({
-                ...provided,
-                backgroundColor: "hsl(var(--background))",
-                border: "1px solid hsl(var(--border))",
-                zIndex: 50,
-              }),
-              option: (provided, state) => ({
-                ...provided,
-                backgroundColor: state.isFocused
-                  ? "hsl(var(--accent))"
-                  : "transparent",
-                color: "inherit",
-                cursor: "pointer",
-              }),
-            },
-          }}
-          autocompletionRequest={{
-            types: ["(regions)"],
-          }}
-        />
-      </div>
+      <LocationInput
+        value={selectedPlace}
+        onChange={setSelectedPlace}
+        placeholder="Search by city, neighborhood, or address..."
+        icon="search"
+        className="flex-1"
+      />
       <Button type="submit" className="h-12" size="lg">
         <Search className="mr-2 h-4 w-4" />
         Search
