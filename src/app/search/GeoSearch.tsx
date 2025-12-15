@@ -2,16 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useConfigure } from "react-instantsearch";
-import { MapPin } from "lucide-react";
-import GooglePlacesAutocomplete from "react-google-places-autocomplete";
-
-interface PlaceOption {
-  label: string;
-  value: {
-    place_id?: string;
-    description?: string;
-  };
-}
+import { LocationInput, type PlaceOption } from "~/components/LocationInput";
 
 interface GeometryViewport {
   northeast: { lat: number; lng: number };
@@ -169,63 +160,13 @@ export function GeoSearch({ initialPlaceId, initialPlaceName }: GeoSearchProps) 
   };
 
   return (
-    <div className="relative w-64">
-      <MapPin className="absolute left-3 top-3 z-10 h-5 w-5 text-muted-foreground" />
-      <GooglePlacesAutocomplete
-        apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}
-        selectProps={{
-          value: selectedPlace,
-          onChange: handlePlaceSelect,
-          placeholder: "City or address...",
-          isClearable: true,
-          className: "w-full",
-          components: {
-            DropdownIndicator: () => null,
-            IndicatorSeparator: () => null,
-          },
-          styles: {
-            control: (provided) => ({
-              ...provided,
-              borderRadius: "0.375rem",
-              borderColor: "hsl(var(--input))",
-              backgroundColor: "transparent",
-              minHeight: "3rem",
-              height: "3rem",
-              paddingLeft: "2rem",
-            }),
-            input: (provided) => ({
-              ...provided,
-              color: "inherit",
-            }),
-            placeholder: (provided) => ({
-              ...provided,
-              color: "hsl(var(--muted-foreground))",
-            }),
-            singleValue: (provided) => ({
-              ...provided,
-              color: "inherit",
-            }),
-            menu: (provided) => ({
-              ...provided,
-              backgroundColor: "hsl(var(--background))",
-              border: "1px solid hsl(var(--border))",
-              zIndex: 50,
-            }),
-            option: (provided, state) => ({
-              ...provided,
-              backgroundColor: state.isFocused
-                ? "hsl(var(--accent))"
-                : "transparent",
-              color: "inherit",
-              cursor: "pointer",
-            }),
-          },
-        }}
-        autocompletionRequest={{
-          types: ["(regions)"],
-        }}
-      />
-    </div>
+    <LocationInput
+      value={selectedPlace}
+      onChange={handlePlaceSelect}
+      placeholder="City or address..."
+      icon="map-pin"
+      className="w-64"
+    />
   );
 }
 
