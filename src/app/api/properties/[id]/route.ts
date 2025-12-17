@@ -95,38 +95,40 @@ export async function DELETE(
       }
     }
 
-    // Delete all units associated with this property (and their images/floor plans)
-    for (const unit of propertyUnits) {
-      // Remove unit from Algolia
-      try {
-        await removeUnit(unit.id);
-      } catch (error) {
-        console.error(`Error removing unit ${unit.id} from Algolia:`, error);
-        // Continue with deletion even if Algolia removal fails
-      }
-
-      // Delete unit images from UploadThing
-      if (unit.imageUrls) {
+    // Delete all units associated with this property (and their images/floor plans) in parallel
+    await Promise.allSettled(
+      propertyUnits.map(async (unit) => {
+        // Remove unit from Algolia
         try {
-          const unitImageUrls = JSON.parse(unit.imageUrls) as string[];
-          await deleteFilesFromUploadThing(unitImageUrls, `unit ${unit.id} images`);
+          await removeUnit(unit.id);
         } catch (error) {
-          console.error(`Error deleting images for unit ${unit.id}:`, error);
-          // Continue with deletion even if image deletion fails
+          console.error(`Error removing unit ${unit.id} from Algolia:`, error);
+          // Continue with deletion even if Algolia removal fails
         }
-      }
 
-      // Delete floor plan images from UploadThing
-      if (unit.floorPlan) {
-        try {
-          const floorPlanUrls = JSON.parse(unit.floorPlan) as string[];
-          await deleteFilesFromUploadThing(floorPlanUrls, `unit ${unit.id} floor plan`);
-        } catch (error) {
-          console.error(`Error deleting floor plan for unit ${unit.id}:`, error);
-          // Continue with deletion even if floor plan deletion fails
+        // Delete unit images from UploadThing
+        if (unit.imageUrls) {
+          try {
+            const unitImageUrls = JSON.parse(unit.imageUrls) as string[];
+            await deleteFilesFromUploadThing(unitImageUrls, `unit ${unit.id} images`);
+          } catch (error) {
+            console.error(`Error deleting images for unit ${unit.id}:`, error);
+            // Continue with deletion even if image deletion fails
+          }
         }
-      }
-    }
+
+        // Delete floor plan images from UploadThing
+        if (unit.floorPlan) {
+          try {
+            const floorPlanUrls = JSON.parse(unit.floorPlan) as string[];
+            await deleteFilesFromUploadThing(floorPlanUrls, `unit ${unit.id} floor plan`);
+          } catch (error) {
+            console.error(`Error deleting floor plan for unit ${unit.id}:`, error);
+            // Continue with deletion even if floor plan deletion fails
+          }
+        }
+      })
+    );
 
     // Delete all units for this property
     if (propertyUnits.length > 0) {

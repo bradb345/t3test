@@ -13,7 +13,16 @@ const config = {
     ignoreDuringBuilds: true,
   },
   images: {
-    domains: ['utfs.io', '6ocmn4xpbd.ufs.sh'],
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'utfs.io',
+      },
+      {
+        protocol: 'https',
+        hostname: '6ocmn4xpbd.ufs.sh',
+      },
+    ],
   },
 };
 

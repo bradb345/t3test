@@ -33,6 +33,9 @@ interface Prediction {
   place_id: string;
 }
 
+// Track script loading state globally to prevent duplicate script tags
+let isGoogleMapsScriptLoading = false;
+
 export function LocationInput({
   value,
   onChange,
@@ -95,15 +98,34 @@ export function LocationInput({
       return;
     }
 
+    // Prevent duplicate script creation if another component instance is already loading it
+    if (isGoogleMapsScriptLoading) {
+      // Wait for the script to load by polling
+      const checkInterval = setInterval(() => {
+        if (window.google?.maps?.places) {
+          autocompleteService.current = new window.google.maps.places.AutocompleteService();
+          clearInterval(checkInterval);
+        }
+      }, 100);
+      
+      return () => clearInterval(checkInterval);
+    }
+
     // Load the script
+    isGoogleMapsScriptLoading = true;
     const script = document.createElement("script");
     script.src = `https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=places`;
     script.async = true;
     script.defer = true;
     script.onload = () => {
+      isGoogleMapsScriptLoading = false;
       if (window.google?.maps?.places) {
         autocompleteService.current = new window.google.maps.places.AutocompleteService();
       }
+    };
+    script.onerror = () => {
+      isGoogleMapsScriptLoading = false;
+      console.error("Failed to load Google Maps API script");
     };
     document.head.appendChild(script);
   }, []);
@@ -283,6 +305,7 @@ export function LocationInput({
           type="button"
           onClick={handleClear}
           className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+          aria-label="Clear location input"
         >
           <X className="h-4 w-4" />
         </button>
