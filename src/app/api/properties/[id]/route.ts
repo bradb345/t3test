@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { db } from "~/server/db";
 import { properties, units, leases } from "~/server/db/schema";
 import { eq, and, inArray } from "drizzle-orm";
-import { removeUnit } from "~/lib/algolia";
+import { removeUnit, buildUnitSearchRecord, indexUnits } from "~/lib/algolia";
 import { deleteFilesFromUploadThing } from "~/lib/uploadthing";
 
 interface PropertyUpdateBody {
@@ -204,7 +204,7 @@ export async function PATCH(
     }
 
     // Update the property
-    await db
+    const [updatedProperty] = await db
       .update(properties)
       .set({
         name: body.name,
@@ -226,7 +226,42 @@ export async function PATCH(
           eq(properties.id, parseInt(params.id)),
           eq(properties.userId, userId)
         )
-      );
+      )
+      .returning();
+
+    // Check if property fields that affect unit search records were updated
+    const propertyFieldsChanged = 
+      body.name !== undefined ||
+      body.address !== undefined ||
+      body.country !== undefined ||
+      body.latitude !== undefined ||
+      body.longitude !== undefined ||
+      body.propertyType !== undefined;
+
+    // If property fields used in unit search records changed, re-index all units
+    if (propertyFieldsChanged && updatedProperty) {
+      try {
+        // Fetch all units for this property
+        const propertyUnits = await db
+          .select()
+          .from(units)
+          .where(eq(units.propertyId, parseInt(params.id)));
+
+        if (propertyUnits.length > 0) {
+          // Build search records for all units with updated property data
+          const searchRecords = propertyUnits.map(unit => 
+            buildUnitSearchRecord(unit, updatedProperty)
+          );
+          
+          // Re-index all units in Algolia
+          await indexUnits(searchRecords);
+          console.log(`Re-indexed ${propertyUnits.length} units in Algolia after property update`);
+        }
+      } catch (algoliaError) {
+        // Log but don't fail the request if Algolia sync fails
+        console.error("Failed to re-index units in Algolia:", algoliaError);
+      }
+    }
 
     return new NextResponse(null, { status: 200 });
   } catch (error) {
