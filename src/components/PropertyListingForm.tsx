@@ -9,7 +9,7 @@ import { Input } from "~/components/ui/input";
 import { Card } from "~/components/ui/card";
 import { useUploadThing } from "~/utils/uploadthing";
 import { Loader2 } from "lucide-react";
-import GooglePlacesAutocomplete, { geocodeByPlaceId, geocodeByAddress, getLatLng } from "react-google-places-autocomplete";
+import { LocationInput, type PlaceOption } from "~/components/LocationInput";
 import { MultiSelect } from "~/components/ui/multi-select";
 import { toast } from "sonner";
 import {
@@ -55,13 +55,7 @@ type initialData = {
   id: string;
 };
 
-type PlaceOption = {
-  label: string;
-  value: {
-    description: string;
-    place_id?: string;
-  };
-} | null;
+
 
 interface PropertyListingFormProps {
   initialData?: initialData;
@@ -126,7 +120,18 @@ export function PropertyListingForm({
   );
 
   const handlePlaceSelect = (place: PlaceOption | null) => {
-    if (!place?.value?.place_id) return;
+    if (!place?.value?.place_id) {
+      // Clear the form data if place is cleared
+      setSelectedPlace(null);
+      setFormData((prev) => ({
+        ...prev,
+        address: "",
+        country: "",
+        latitude: 0,
+        longitude: 0,
+      }));
+      return;
+    }
 
     // Update the selected place immediately so the input doesn't go blank
     setSelectedPlace(place);
@@ -140,12 +145,18 @@ export function PropertyListingForm({
     // Handle async operation without returning a promise
     void (async () => {
       try {
-        // Use the library's built-in geocoding utilities
-        const results = await geocodeByPlaceId(place.value.place_id!);
+        // Use Google Maps Geocoding API directly
+        if (!window.google?.maps) {
+          console.error("Google Maps not loaded");
+          return;
+        }
+
+        const geocoder = new google.maps.Geocoder();
+        const result = await geocoder.geocode({ placeId: place.value.place_id });
         
-        if (results[0]) {
-          const { lat, lng } = await getLatLng(results[0]);
-          const countryComponent = results[0].address_components?.find(
+        if (result.results[0]) {
+          const location = result.results[0].geometry.location;
+          const countryComponent = result.results[0].address_components?.find(
             (component) => component.types.includes("country"),
           );
           const countryCode = countryComponent?.short_name ?? "US";
@@ -153,8 +164,8 @@ export function PropertyListingForm({
           setFormData((prev) => ({
             ...prev,
             country: countryCode,
-            latitude: lat,
-            longitude: lng,
+            latitude: location.lat(),
+            longitude: location.lng(),
           }));
         }
       } catch (error) {
@@ -167,10 +178,17 @@ export function PropertyListingForm({
     address: string,
   ): Promise<{ lat: number; lng: number } | null> => {
     try {
-      const results = await geocodeByAddress(address);
-      if (results[0]) {
-        const { lat, lng } = await getLatLng(results[0]);
-        return { lat, lng };
+      if (!window.google?.maps) {
+        console.error("Google Maps not loaded");
+        return null;
+      }
+
+      const geocoder = new google.maps.Geocoder();
+      const result = await geocoder.geocode({ address });
+      
+      if (result.results[0]) {
+        const location = result.results[0].geometry.location;
+        return { lat: location.lat(), lng: location.lng() };
       }
       return null;
     } catch (error) {
@@ -340,38 +358,11 @@ export function PropertyListingForm({
               <label className="mb-1 block text-sm font-medium">
                 Address <span className="text-red-500">*</span>
               </label>
-              <GooglePlacesAutocomplete
-                apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}
-                selectProps={{
-                  value: selectedPlace,
-                  onChange: handlePlaceSelect,
-                  placeholder: "Enter address...",
-                  className: "w-full",
-                  styles: {
-                    control: (provided) => ({
-                      ...provided,
-                      borderRadius: "0.375rem",
-                      borderColor: "hsl(var(--input))",
-                      backgroundColor: "transparent",
-                      minHeight: "2.25rem",
-                      boxShadow:
-                        "var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)",
-                    }),
-                    input: (provided) => ({
-                      ...provided,
-                      color: "inherit",
-                    }),
-                    option: (provided, state) => ({
-                      ...provided,
-                      backgroundColor: state.isFocused
-                        ? "hsl(var(--accent))"
-                        : "transparent",
-                      color: state.isFocused
-                        ? "hsl(var(--accent-foreground))"
-                        : "inherit",
-                    }),
-                  },
-                }}
+              <LocationInput
+                value={selectedPlace}
+                onChange={handlePlaceSelect}
+                placeholder="Enter address..."
+                icon="map-pin"
               />
             </div>
             <div className="grid grid-cols-1 gap-4">

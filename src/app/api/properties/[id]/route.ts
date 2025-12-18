@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { db } from "~/server/db";
 import { properties, units, leases } from "~/server/db/schema";
 import { eq, and, inArray } from "drizzle-orm";
-import { removeUnit } from "~/lib/algolia";
+import { removeUnit, buildUnitSearchRecord, indexUnits } from "~/lib/algolia";
 import { deleteFilesFromUploadThing } from "~/lib/uploadthing";
 
 interface PropertyUpdateBody {
@@ -95,38 +95,40 @@ export async function DELETE(
       }
     }
 
-    // Delete all units associated with this property (and their images/floor plans)
-    for (const unit of propertyUnits) {
-      // Remove unit from Algolia
-      try {
-        await removeUnit(unit.id);
-      } catch (error) {
-        console.error(`Error removing unit ${unit.id} from Algolia:`, error);
-        // Continue with deletion even if Algolia removal fails
-      }
-
-      // Delete unit images from UploadThing
-      if (unit.imageUrls) {
+    // Delete all units associated with this property (and their images/floor plans) in parallel
+    await Promise.allSettled(
+      propertyUnits.map(async (unit) => {
+        // Remove unit from Algolia
         try {
-          const unitImageUrls = JSON.parse(unit.imageUrls) as string[];
-          await deleteFilesFromUploadThing(unitImageUrls, `unit ${unit.id} images`);
+          await removeUnit(unit.id);
         } catch (error) {
-          console.error(`Error deleting images for unit ${unit.id}:`, error);
-          // Continue with deletion even if image deletion fails
+          console.error(`Error removing unit ${unit.id} from Algolia:`, error);
+          // Continue with deletion even if Algolia removal fails
         }
-      }
 
-      // Delete floor plan images from UploadThing
-      if (unit.floorPlan) {
-        try {
-          const floorPlanUrls = JSON.parse(unit.floorPlan) as string[];
-          await deleteFilesFromUploadThing(floorPlanUrls, `unit ${unit.id} floor plan`);
-        } catch (error) {
-          console.error(`Error deleting floor plan for unit ${unit.id}:`, error);
-          // Continue with deletion even if floor plan deletion fails
+        // Delete unit images from UploadThing
+        if (unit.imageUrls) {
+          try {
+            const unitImageUrls = JSON.parse(unit.imageUrls) as string[];
+            await deleteFilesFromUploadThing(unitImageUrls, `unit ${unit.id} images`);
+          } catch (error) {
+            console.error(`Error deleting images for unit ${unit.id}:`, error);
+            // Continue with deletion even if image deletion fails
+          }
         }
-      }
-    }
+
+        // Delete floor plan images from UploadThing
+        if (unit.floorPlan) {
+          try {
+            const floorPlanUrls = JSON.parse(unit.floorPlan) as string[];
+            await deleteFilesFromUploadThing(floorPlanUrls, `unit ${unit.id} floor plan`);
+          } catch (error) {
+            console.error(`Error deleting floor plan for unit ${unit.id}:`, error);
+            // Continue with deletion even if floor plan deletion fails
+          }
+        }
+      })
+    );
 
     // Delete all units for this property
     if (propertyUnits.length > 0) {
@@ -202,7 +204,7 @@ export async function PATCH(
     }
 
     // Update the property
-    await db
+    const [updatedProperty] = await db
       .update(properties)
       .set({
         name: body.name,
@@ -224,7 +226,42 @@ export async function PATCH(
           eq(properties.id, parseInt(params.id)),
           eq(properties.userId, userId)
         )
-      );
+      )
+      .returning();
+
+    // Check if property fields that affect unit search records were updated
+    const propertyFieldsChanged = 
+      body.name !== undefined ||
+      body.address !== undefined ||
+      body.country !== undefined ||
+      body.latitude !== undefined ||
+      body.longitude !== undefined ||
+      body.propertyType !== undefined;
+
+    // If property fields used in unit search records changed, re-index all units
+    if (propertyFieldsChanged && updatedProperty) {
+      try {
+        // Fetch all units for this property
+        const propertyUnits = await db
+          .select()
+          .from(units)
+          .where(eq(units.propertyId, parseInt(params.id)));
+
+        if (propertyUnits.length > 0) {
+          // Build search records for all units with updated property data
+          const searchRecords = propertyUnits.map(unit => 
+            buildUnitSearchRecord(unit, updatedProperty)
+          );
+          
+          // Re-index all units in Algolia
+          await indexUnits(searchRecords);
+          console.log(`Re-indexed ${propertyUnits.length} units in Algolia after property update`);
+        }
+      } catch (algoliaError) {
+        // Log but don't fail the request if Algolia sync fails
+        console.error("Failed to re-index units in Algolia:", algoliaError);
+      }
+    }
 
     return new NextResponse(null, { status: 200 });
   } catch (error) {

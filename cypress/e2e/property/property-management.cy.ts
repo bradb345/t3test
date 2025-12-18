@@ -69,15 +69,13 @@ describe("Property and Unit Management", () => {
     // Fill in property name
     cy.get('input[placeholder="e.g., Sunset Towers"]').type(testProperty.name);
 
-    // Fill in address using Google Places Autocomplete
-    cy.get('[class*="GooglePlacesAutocomplete"], [class*="css-"]')
-      .find("input")
-      .first()
+    // Fill in address using LocationInput component
+    cy.get('input[placeholder="Enter address..."]')
       .type(testProperty.address, { delay: 50 });
 
-    // Wait for autocomplete suggestions and select first one
-    cy.get('[class*="menu"]', { timeout: 10000 })
-      .find('[class*="option"]')
+    // Wait for autocomplete dropdown and select first option
+    cy.get('[role="listbox"]', { timeout: 10000 })
+      .find('[role="option"]')
       .first()
       .click();
 

@@ -13,17 +13,20 @@ export const utapi = new UTApi();
 export function extractFileKey(url: string): string | null {
   try {
     const urlObj = new URL(url);
-    const pathParts = urlObj.pathname.split('/');
+    const pathParts = urlObj.pathname.split('/').filter(part => part.length > 0);
     // The file key is typically the last part after /f/
     const fIndex = pathParts.indexOf('f');
     if (fIndex !== -1 && fIndex < pathParts.length - 1) {
       return pathParts[fIndex + 1] ?? null;
     }
-    // Fallback: return the last part of the path
-    return pathParts[pathParts.length - 1] ?? null;
+    // Fallback: return the last part of the path (if non-empty)
+    const lastPart = pathParts[pathParts.length - 1];
+    return lastPart && lastPart.length > 0 ? lastPart : null;
   } catch {
-    // If URL parsing fails, try simple split
-    return url.split('/').pop() ?? null;
+    // If URL parsing fails, try simple split and filter empty parts
+    const parts = url.split('/').filter(part => part.length > 0);
+    const lastPart = parts[parts.length - 1];
+    return lastPart && lastPart.length > 0 ? lastPart : null;
   }
 }
 
