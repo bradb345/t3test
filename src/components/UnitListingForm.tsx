@@ -509,7 +509,7 @@ export function UnitListingForm({
               </div>
               <div>
                 <label className="mb-1 block text-sm font-medium">
-                  Floor Plan Images <span className="text-muted-foreground font-normal">(Optional)</span>
+                  Floor Plan Images <span className="font-normal text-muted-foreground">(Optional)</span>
                 </label>
                 <p className="mb-2 text-sm text-muted-foreground">
                   Upload floor plan images for this unit.
