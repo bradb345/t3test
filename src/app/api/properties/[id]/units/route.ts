@@ -55,9 +55,16 @@ export async function POST(
     }
 
     // Validate required images - at least one unit photo is required
-    const parsedImageUrls = typeof data.imageUrls === 'string'
-      ? JSON.parse(data.imageUrls) as string[]
-      : data.imageUrls ?? [];
+    let parsedImageUrls: string[] = [];
+    if (typeof data.imageUrls === 'string') {
+      try {
+        parsedImageUrls = JSON.parse(data.imageUrls) as string[];
+      } catch {
+        return new NextResponse("Invalid imageUrls format", { status: 400 });
+      }
+    } else {
+      parsedImageUrls = data.imageUrls ?? [];
+    }
 
     if (!Array.isArray(parsedImageUrls) || parsedImageUrls.length === 0) {
       return new NextResponse("At least one unit photo is required", { status: 400 });
