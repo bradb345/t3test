@@ -8,6 +8,7 @@ import { Footer } from "~/components/Footer";
 import { Toaster } from "sonner";
 import { Suspense } from "react";
 import Script from "next/script";
+import { ThemeProvider } from "~/components/theme-provider";
 
 export const metadata: Metadata = {
   title: "Test",
@@ -20,20 +21,22 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <ClerkProvider afterSignOutUrl="/">
-      <html lang="en" className={`${GeistSans.variable}`}>
+      <html lang="en" className={`${GeistSans.variable}`} suppressHydrationWarning>
         <body>
-          <div className="flex min-h-screen flex-col">
-            <Suspense fallback={<div className="h-16 border-b" />}>
-              <Navbar />
-            </Suspense>
-            {children}
-            <Footer />
-            <Toaster />
-            <Script
-              src={`https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=places`}
-              strategy="beforeInteractive"
-            />
-          </div>
+          <ThemeProvider defaultTheme="system" storageKey="theme">
+            <div className="flex min-h-screen flex-col">
+              <Suspense fallback={<div className="h-16 border-b" />}>
+                <Navbar />
+              </Suspense>
+              {children}
+              <Footer />
+              <Toaster />
+              <Script
+                src={`https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=places`}
+                strategy="beforeInteractive"
+              />
+            </div>
+          </ThemeProvider>
         </body>
       </html>
     </ClerkProvider>
