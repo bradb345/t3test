@@ -111,6 +111,17 @@ export async function PATCH(
     const data = await req.json() as UnitData;
     console.log("Received unit update data:", data);
 
+    // Validate required images if imageUrls is being updated
+    if (data.imageUrls !== undefined) {
+      const parsedImageUrls = typeof data.imageUrls === 'string'
+        ? JSON.parse(data.imageUrls) as string[]
+        : data.imageUrls ?? [];
+
+      if (!Array.isArray(parsedImageUrls) || parsedImageUrls.length === 0) {
+        return new NextResponse("At least one unit photo is required", { status: 400 });
+      }
+    }
+
     // Parse JSON strings if they're already stringified
     const features = data.features ? (typeof data.features === 'string' ? data.features : JSON.stringify(data.features)) : undefined;
     const imageUrls = data.imageUrls ? (typeof data.imageUrls === 'string' ? data.imageUrls : JSON.stringify(data.imageUrls)) : undefined;

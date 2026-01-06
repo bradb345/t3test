@@ -448,9 +448,11 @@ export function UnitListingForm({
                 />
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium">Unit Photos</label>
+                <label className="mb-1 block text-sm font-medium">
+                  Unit Photos <span className="text-red-500">*</span>
+                </label>
                 <p className="mb-2 text-sm text-muted-foreground">
-                  Upload photos of the living areas, bedrooms, kitchen, bathrooms, etc.
+                  Upload at least one photo of the living areas, bedrooms, kitchen, bathrooms, etc.
                 </p>
                 <Input
                   type="file"
@@ -473,7 +475,7 @@ export function UnitListingForm({
                     </p>
                   </div>
                 )}
-                {formData.imageUrls.length > 0 && (
+                {formData.imageUrls.length > 0 ? (
                   <div className="mt-2 flex flex-wrap gap-2">
                     {formData.imageUrls.map((url, index) => (
                       <div key={url} className="group relative">
@@ -499,10 +501,16 @@ export function UnitListingForm({
                       </div>
                     ))}
                   </div>
-                )}
+                ) : !isUploading ? (
+                  <p className="mt-2 text-sm text-red-500">
+                    At least one unit photo is required
+                  </p>
+                ) : null}
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium">Floor Plan Images</label>
+                <label className="mb-1 block text-sm font-medium">
+                  Floor Plan Images <span className="text-muted-foreground font-normal">(Optional)</span>
+                </label>
                 <p className="mb-2 text-sm text-muted-foreground">
                   Upload floor plan images for this unit.
                 </p>
@@ -551,7 +559,7 @@ export function UnitListingForm({
                 >
                   Back
                 </Button>
-                <Button type="submit" disabled={isSubmitting || isUploading}>
+                <Button type="submit" disabled={isSubmitting || isUploading || formData.imageUrls.length === 0}>
                   {isSubmitting ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />

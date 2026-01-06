@@ -54,6 +54,15 @@ export async function POST(
       return new NextResponse("Missing required fields", { status: 400 });
     }
 
+    // Validate required images - at least one unit photo is required
+    const parsedImageUrls = typeof data.imageUrls === 'string'
+      ? JSON.parse(data.imageUrls) as string[]
+      : data.imageUrls ?? [];
+
+    if (!Array.isArray(parsedImageUrls) || parsedImageUrls.length === 0) {
+      return new NextResponse("At least one unit photo is required", { status: 400 });
+    }
+
     // Parse JSON strings if they're already stringified
     const features = typeof data.features === 'string' ? data.features : JSON.stringify(data.features ?? []);
     const imageUrls = typeof data.imageUrls === 'string' ? data.imageUrls : JSON.stringify(data.imageUrls ?? []);
