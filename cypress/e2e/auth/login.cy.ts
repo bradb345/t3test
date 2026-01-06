@@ -1,7 +1,16 @@
 describe("Authentication", () => {
   beforeEach(() => {
+    // Clear all session data to ensure fresh unauthenticated state
+    // This is needed because testIsolation is disabled globally for other test suites
+    cy.clearAllCookies();
+    cy.clearAllLocalStorage();
+    cy.clearAllSessionStorage();
+
     // Visit the homepage before each test
     cy.visit("/");
+
+    // Wait for the page to fully load and auth state to settle
+    cy.get("body").should("be.visible");
   });
 
   describe("Login Flow", () => {
