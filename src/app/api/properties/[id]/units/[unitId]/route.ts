@@ -113,9 +113,14 @@ export async function PATCH(
 
     // Validate required images if imageUrls is being updated
     if (data.imageUrls !== undefined) {
-      const parsedImageUrls = typeof data.imageUrls === 'string'
-        ? JSON.parse(data.imageUrls) as string[]
-        : data.imageUrls ?? [];
+      let parsedImageUrls: unknown;
+      try {
+        parsedImageUrls = typeof data.imageUrls === 'string'
+          ? JSON.parse(data.imageUrls)
+          : data.imageUrls ?? [];
+      } catch {
+        return new NextResponse("Invalid imageUrls format", { status: 400 });
+      }
 
       if (!Array.isArray(parsedImageUrls) || parsedImageUrls.length === 0) {
         return new NextResponse("At least one unit photo is required", { status: 400 });
