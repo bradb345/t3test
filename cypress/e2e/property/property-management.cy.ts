@@ -40,13 +40,34 @@ describe("Property and Unit Management", () => {
   };
 
   beforeEach(() => {
-    // Visit homepage and login once before all tests
+    // Set viewport
     cy.viewport(1440, 900);
     cy.visit("/");
-    cy.clerkLogin({ userType: "landlord" });
 
-    // Wait for authentication to complete
-    cy.get(".cl-userButtonTrigger", { timeout: 15000 }).should("be.visible");
+    // Wait for page to load and check auth state
+    // Look for either "Sign In" button (not logged in) or "My Properties" link (logged in)
+    cy.get("body", { timeout: 10000 }).then(($body) => {
+      // If "My Properties" link is present, we're already logged in
+      if ($body.find('a:contains("My Properties")').length > 0) {
+        cy.log("Already logged in, skipping login");
+      } else if ($body.find('button:contains("Sign In")').length > 0) {
+        // Not logged in, perform login
+        cy.clerkLogin({ userType: "landlord" });
+        // Wait for login to complete - "My Properties" link should appear
+        cy.contains("a", "My Properties", { timeout: 15000 }).should("be.visible");
+      } else {
+        // Page still loading, wait a bit and check again
+        cy.wait(1000);
+        cy.get("body").then(($bodyRetry) => {
+          if ($bodyRetry.find('a:contains("My Properties")').length > 0) {
+            cy.log("Already logged in after retry");
+          } else {
+            cy.clerkLogin({ userType: "landlord" });
+            cy.contains("a", "My Properties", { timeout: 15000 }).should("be.visible");
+          }
+        });
+      }
+    });
   });
 
   it("1. should create a new property with images", () => {
@@ -66,23 +87,31 @@ describe("Property and Unit Management", () => {
     // === Step 1: Basic Information ===
     cy.contains("h2", "Basic Information").should("be.visible");
 
-    // Fill in property name
-    cy.get('input[placeholder="e.g., Sunset Towers"]').type(testProperty.name);
+    // Wait for form to be fully interactive (fixes headless race condition)
+    cy.get('input[placeholder="e.g., Sunset Towers"]').should("be.visible").and("be.enabled");
 
-    // Fill in address using Google Places Autocomplete
-    cy.get('[class*="GooglePlacesAutocomplete"], [class*="css-"]')
-      .find("input")
-      .first()
+    // Fill in property name
+    cy.get('input[placeholder="e.g., Sunset Towers"]')
+      .clear()
+      .type(testProperty.name)
+      .should("have.value", testProperty.name);
+
+    // Fill in address using LocationInput component
+    cy.get('input[placeholder="Enter address..."]')
+      .clear()
       .type(testProperty.address, { delay: 50 });
 
-    // Wait for autocomplete suggestions and select first one
-    cy.get('[class*="menu"]', { timeout: 10000 })
-      .find('[class*="option"]')
+    // Wait for autocomplete dropdown and select first option
+    cy.get('[role="listbox"]', { timeout: 10000 })
+      .find('[role="option"]')
       .first()
       .click();
 
     // Fill in year built
-    cy.get('input[placeholder="e.g., 2020"]').type(testProperty.yearBuilt);
+    cy.get('input[placeholder="e.g., 2020"]')
+      .clear()
+      .type(testProperty.yearBuilt)
+      .should("have.value", testProperty.yearBuilt);
 
     // Select property type
     cy.get("select").select(testProperty.propertyType);
@@ -172,23 +201,44 @@ describe("Property and Unit Management", () => {
     // === Step 1: Unit Basic Information ===
     cy.contains("h2", "Basic Information").should("be.visible");
 
-    // Fill in unit number
-    cy.get('input[placeholder="e.g., 4B or 101"]').type(testUnit.unitNumber);
+    // Wait for form to be fully interactive (fixes headless race condition)
+    cy.get('input[placeholder="e.g., 4B or 101"]').should("be.visible").and("be.enabled");
+
+    // Fill in unit number - use clear first and verify input
+    cy.get('input[placeholder="e.g., 4B or 101"]')
+      .clear()
+      .type(testUnit.unitNumber)
+      .should("have.value", testUnit.unitNumber);
 
     // Fill in bedrooms
-    cy.get('input[placeholder="e.g., 2"]').type(testUnit.numBedrooms);
+    cy.get('input[placeholder="e.g., 2"]')
+      .clear()
+      .type(testUnit.numBedrooms)
+      .should("have.value", testUnit.numBedrooms);
 
     // Fill in bathrooms
-    cy.get('input[placeholder="e.g., 1.5"]').type(testUnit.numBathrooms);
+    cy.get('input[placeholder="e.g., 1.5"]')
+      .clear()
+      .type(testUnit.numBathrooms)
+      .should("have.value", testUnit.numBathrooms);
 
     // Fill in square feet
-    cy.get('input[placeholder="e.g., 850"]').type(testUnit.squareFeet);
+    cy.get('input[placeholder="e.g., 850"]')
+      .clear()
+      .type(testUnit.squareFeet)
+      .should("have.value", testUnit.squareFeet);
 
     // Fill in monthly rent
-    cy.get('input[placeholder="e.g., 2500"]').type(testUnit.monthlyRent);
+    cy.get('input[placeholder="e.g., 2500"]')
+      .clear()
+      .type(testUnit.monthlyRent)
+      .should("have.value", testUnit.monthlyRent);
 
     // Fill in security deposit
-    cy.get('input[placeholder="e.g., 5000"]').type(testUnit.deposit);
+    cy.get('input[placeholder="e.g., 5000"]')
+      .clear()
+      .type(testUnit.deposit)
+      .should("have.value", testUnit.deposit);
 
     // Check availability checkbox (should be checked by default)
     cy.get("input#isAvailable").should("be.checked");
@@ -263,15 +313,17 @@ describe("Property and Unit Management", () => {
     // Wait for units to load
     cy.contains("h3", `Unit ${testUnit.unitNumber}`).should("be.visible");
 
-    // Find the unit card and open dropdown
+    // Find the unit card and open dropdown - use force:true for headless stability
     cy.contains("h3", `Unit ${testUnit.unitNumber}`)
       .closest(".p-6")
-      .find('[class*="DropdownMenuTrigger"], button:has(svg)')
+      .find("button")
+      .filter(':has(svg)')
       .last()
-      .click();
+      .click({ force: true });
 
-    // Click Duplicate option
-    cy.contains("Duplicate").click();
+    // Wait for dropdown menu to be visible before clicking option
+    cy.get('[role="menu"], [role="menuitem"]', { timeout: 5000 }).should("exist");
+    cy.contains('[role="menuitem"]', "Duplicate").click();
 
     // Wait for confirmation dialog (AlertDialog)
     cy.get('[role="alertdialog"]', { timeout: 10000 }).should("be.visible");
@@ -298,8 +350,14 @@ describe("Property and Unit Management", () => {
     // Step 1: Update unit number to "2"
     cy.contains("h2", "Basic Information").should("be.visible");
 
-    // Clear the existing unit number and enter "2"
-    cy.get('input[placeholder="e.g., 4B or 101"]').clear().type("2");
+    // Wait for form to be fully interactive (fixes headless race condition)
+    cy.get('input[placeholder="e.g., 4B or 101"]').should("be.visible").and("be.enabled");
+
+    // Clear the existing unit number and enter "2" - verify the value was set
+    cy.get('input[placeholder="e.g., 4B or 101"]')
+      .clear()
+      .type("2")
+      .should("have.value", "2");
 
     // Click Next button to proceed to Photos & Details
     cy.contains("button", "Next").should("not.be.disabled").click();
@@ -357,13 +415,14 @@ describe("Property and Unit Management", () => {
     // Find the duplicated unit (Unit 2) and open its dropdown
     cy.contains("h3", "Unit 2")
       .closest(".p-6")
-      .within(() => {
-        // Open dropdown menu
-        cy.get("button").last().click();
-      });
+      .find("button")
+      .filter(':has(svg)')
+      .last()
+      .click({ force: true });
 
-    // Click Delete option
-    cy.contains("Delete").click();
+    // Wait for dropdown menu to be visible before clicking option
+    cy.get('[role="menu"], [role="menuitem"]', { timeout: 5000 }).should("exist");
+    cy.contains('[role="menuitem"]', "Delete").click();
 
     // Wait for delete confirmation dialog
     cy.contains("Delete Unit").should("be.visible");
@@ -386,15 +445,16 @@ describe("Property and Unit Management", () => {
     // Find the property card
     cy.contains("h3", testProperty.name).should("be.visible");
 
-    // Open the dropdown menu on the property card
+    // Open the dropdown menu on the property card - use force:true for headless stability
     cy.contains("h3", testProperty.name)
       .closest(".overflow-hidden")
       .find("button")
       .first() // The dropdown trigger is the first button
-      .click();
+      .click({ force: true });
 
-    // Click Delete option
-    cy.contains("Delete").click();
+    // Wait for dropdown menu to be visible before clicking option
+    cy.get('[role="menu"], [role="menuitem"]', { timeout: 5000 }).should("exist");
+    cy.contains('[role="menuitem"]', "Delete").click();
 
     // Wait for delete confirmation dialog
     cy.contains("Are you absolutely sure?").should("be.visible");

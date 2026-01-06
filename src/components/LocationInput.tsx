@@ -57,55 +57,12 @@ export function LocationInput({
 
   // Initialize Google Places Autocomplete Service
   useEffect(() => {
-    // Check if script is already loaded
     if (window.google?.maps?.places) {
       autocompleteService.current = new window.google.maps.places.AutocompleteService();
-      return;
+    } else {
+      console.error("Google Maps not available. Ensure script is loaded in layout.");
+      setError("Location search unavailable. Please refresh the page.");
     }
-
-    // Check if script is already being loaded
-    const existingScript = document.querySelector<HTMLScriptElement>(
-      'script[src*="maps.googleapis.com/maps/api/js"]'
-    );
-    
-    if (existingScript) {
-      // Script exists, check if it's already loaded
-      if (window.google?.maps?.places) {
-        autocompleteService.current = new window.google.maps.places.AutocompleteService();
-      } else if (existingScript.readyState === "complete") {
-        // Script has finished loading
-        if (window.google?.maps?.places) {
-          autocompleteService.current = new window.google.maps.places.AutocompleteService();
-        }
-      } else {
-        // Script not loaded yet, wait for it to load
-        const handleLoad = () => {
-          if (window.google?.maps?.places) {
-            autocompleteService.current = new window.google.maps.places.AutocompleteService();
-          }
-        };
-        
-        existingScript.addEventListener("load", handleLoad);
-        
-        // Cleanup function to remove event listener
-        return () => {
-          existingScript.removeEventListener("load", handleLoad);
-        };
-      }
-      return;
-    }
-
-    // Load the script
-    const script = document.createElement("script");
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=places`;
-    script.async = true;
-    script.defer = true;
-    script.onload = () => {
-      if (window.google?.maps?.places) {
-        autocompleteService.current = new window.google.maps.places.AutocompleteService();
-      }
-    };
-    document.head.appendChild(script);
   }, []);
 
   // Sync input value when external value changes
@@ -283,6 +240,7 @@ export function LocationInput({
           type="button"
           onClick={handleClear}
           className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+          aria-label="Clear location input"
         >
           <X className="h-4 w-4" />
         </button>
