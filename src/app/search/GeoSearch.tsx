@@ -34,10 +34,6 @@ const DEFAULT_LOCATION: PlaceOption = {
 // Cayman Islands bounding box (pre-computed to avoid initial API call)
 const DEFAULT_BOUNDING_BOX = "19.7616,-79.7191,19.2538,-81.4294";
 
-// Impossible bounding box that returns no results - used while loading
-// This is a tiny box in the middle of the ocean
-const LOADING_BOUNDING_BOX = "0.0001,0.0001,0.0000,0.0000";
-
 interface GeoSearchProps {
   initialPlaceId?: string;
   initialPlaceName?: string;
@@ -64,58 +60,75 @@ export function GeoSearch({ initialPlaceId, initialPlaceName }: GeoSearchProps) 
     if (initialPlaceId === DEFAULT_LOCATION.value.place_id) {
       return DEFAULT_BOUNDING_BOX;
     }
-    // For other places with a placeId, use a loading bounding box until we fetch the real one
-    // This prevents showing all results while waiting for the geocoding response
-    if (initialPlaceId) {
-      return LOADING_BOUNDING_BOX;
-    }
-    // No place selected - no geo filtering
     return undefined;
   };
 
   const [selectedPlace, setSelectedPlace] = useState<PlaceOption | null>(getInitialPlace);
   const [boundingBox, setBoundingBox] = useState<string | undefined>(getInitialBoundingBox);
+  console.log('boundingBox:', boundingBox)
+  const [searchQuery, setSearchQuery] = useState<string>(initialPlaceName ?? "");
 
   // Fetch bounding box for initial place from URL params
   useEffect(() => {
     if (initialPlaceId && initialPlaceId !== DEFAULT_LOCATION.value.place_id) {
+      console.log('[GeoSearch] Fetching bounding box for placeId:', initialPlaceId);
       void (async () => {
         try {
+          const googleString = `https://maps.googleapis.com/maps/api/geocode/json?place_id=${initialPlaceId}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`
+          console.log('googleString:', googleString)
           const response = await fetch(
             `https://maps.googleapis.com/maps/api/geocode/json?place_id=${initialPlaceId}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`,
           );
           const data = (await response.json()) as GeocodingResponse;
 
+          console.log('[GeoSearch] Geocoding response status:', data.status);
           if (data.status === "OK" && data.results[0]) {
             const geometry = data.results[0].geometry;
             const box = geometry.bounds ?? geometry.viewport;
 
             if (box) {
               const boundingBoxStr = `${box.northeast.lat},${box.northeast.lng},${box.southwest.lat},${box.southwest.lng}`;
+              console.log('[GeoSearch] Setting bounding box:', boundingBoxStr);
               setBoundingBox(boundingBoxStr);
+              // Clear the text query once we have the bounding box
+              setSearchQuery("");
+            } else {
+              console.warn('[GeoSearch] No bounds or viewport in geometry');
+              // Keep using text search if no bounding box available
             }
+          } else {
+            console.error('[GeoSearch] Geocoding failed:', data.status, data);
+            // Keep using text search if geocoding fails
           }
         } catch (error) {
-          console.error("Error fetching place details:", error);
-          // On error, clear the loading bounding box to avoid blocking results indefinitely
-          setBoundingBox(undefined);
+          console.error("[GeoSearch] Error fetching place details:", error);
+          // Keep using text search on error
         }
       })();
     } else if (initialPlaceId === DEFAULT_LOCATION.value.place_id) {
       setBoundingBox(DEFAULT_BOUNDING_BOX);
+      setSearchQuery("");
     }
   }, [initialPlaceId]);
 
-  // Use configure to set the bounding box filter in Algolia
+  // Use configure to set the bounding box filter and/or search query in Algolia
+  useEffect(() => {
+    console.log('[GeoSearch] Applying config - boundingBox:', boundingBox, 'query:', searchQuery);
+  }, [boundingBox, searchQuery]);
+  
   useConfigure({
     insideBoundingBox: boundingBox,
+    query: searchQuery,
   });
 
   const handlePlaceSelect = (place: PlaceOption | null) => {
+    console.log('[GeoSearch] Place selected:', place?.label, place?.value?.place_id);
     if (!place?.value?.place_id) {
       // Clear selection - no default forced (user can search without location filter)
+      console.log('[GeoSearch] Clearing location filter');
       setSelectedPlace(null);
       setBoundingBox(undefined);
+      setSearchQuery("");
       return;
     }
 
@@ -124,11 +137,13 @@ export function GeoSearch({ initialPlaceId, initialPlaceName }: GeoSearchProps) 
     // If selecting the default location, use pre-computed bounding box
     if (place.value.place_id === DEFAULT_LOCATION.value.place_id) {
       setBoundingBox(DEFAULT_BOUNDING_BOX);
+      setSearchQuery("");
       return;
     }
 
-    // Set loading bounding box to prevent showing all results while fetching
-    setBoundingBox(LOADING_BOUNDING_BOX);
+    // Use text search on the location name while fetching bounding box
+    setSearchQuery(place.label);
+    setBoundingBox(undefined);
 
     // Get place details including viewport/bounds
     void (async () => {
@@ -137,6 +152,7 @@ export function GeoSearch({ initialPlaceId, initialPlaceName }: GeoSearchProps) 
           `https://maps.googleapis.com/maps/api/geocode/json?place_id=${place.value.place_id}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`,
         );
         const data = (await response.json()) as GeocodingResponse;
+        console.log('data:', data)
 
         if (data.status === "OK" && data.results[0]) {
           const geometry = data.results[0].geometry;
@@ -149,12 +165,13 @@ export function GeoSearch({ initialPlaceId, initialPlaceName }: GeoSearchProps) 
             const boundingBoxStr = `${box.northeast.lat},${box.northeast.lng},${box.southwest.lat},${box.southwest.lng}`;
             console.log("Setting bounding box:", boundingBoxStr);
             setBoundingBox(boundingBoxStr);
+            // Clear text query once we have the precise bounding box
+            setSearchQuery("");
           }
         }
       } catch (error) {
         console.error("Error fetching place details:", error);
-        // On error, clear the bounding box to avoid blocking results indefinitely
-        setBoundingBox(undefined);
+        // Keep using text search if geocoding fails
       }
     })();
   };
