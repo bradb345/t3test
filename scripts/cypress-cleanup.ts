@@ -13,7 +13,7 @@ import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import { like, eq } from 'drizzle-orm';
 import { algoliasearch } from 'algoliasearch';
-import { extractFileKey, utapi } from '../src/lib/uploadthing';
+import { extractFileKeys, utapi } from '../src/lib/uploadthing';
 
 // Load environment variables
 config();
@@ -121,7 +121,7 @@ if (algoliaAppId && algoliaAdminKey) {
  * Delete files from UploadThing with error handling for cleanup script
  */
 async function deleteFilesFromUploadThingSafe(urls: string[], context: string): Promise<void> {
-  const fileKeys = extractFileKey ? urls.map(extractFileKey).filter((key): key is string => key !== null && key.length > 0) : [];
+  const fileKeys = extractFileKeys(urls)
   
   if (fileKeys.length > 0) {
     console.log(`  📁 Deleting ${fileKeys.length} files from UploadThing (${context})`);

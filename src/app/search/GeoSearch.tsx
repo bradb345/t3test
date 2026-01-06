@@ -34,10 +34,6 @@ const DEFAULT_LOCATION: PlaceOption = {
 // Cayman Islands bounding box (pre-computed to avoid initial API call)
 const DEFAULT_BOUNDING_BOX = "19.7616,-79.7191,19.2538,-81.4294";
 
-// Impossible bounding box that returns no results - used while loading
-// This is a tiny box in the middle of the ocean
-const LOADING_BOUNDING_BOX = "0.0001,0.0001,0.0000,0.0000";
-
 interface GeoSearchProps {
   initialPlaceId?: string;
   initialPlaceName?: string;
@@ -64,17 +60,12 @@ export function GeoSearch({ initialPlaceId, initialPlaceName }: GeoSearchProps) 
     if (initialPlaceId === DEFAULT_LOCATION.value.place_id) {
       return DEFAULT_BOUNDING_BOX;
     }
-    // For other places with a placeId, use a loading bounding box until we fetch the real one
-    // This prevents showing all results while waiting for the geocoding response
-    if (initialPlaceId) {
-      return LOADING_BOUNDING_BOX;
-    }
-    // No place selected - no geo filtering
     return undefined;
   };
 
   const [selectedPlace, setSelectedPlace] = useState<PlaceOption | null>(getInitialPlace);
   const [boundingBox, setBoundingBox] = useState<string | undefined>(getInitialBoundingBox);
+  const [searchQuery, setSearchQuery] = useState<string>(initialPlaceName ?? "");
 
   // Fetch bounding box for initial place from URL params
   useEffect(() => {
@@ -93,22 +84,28 @@ export function GeoSearch({ initialPlaceId, initialPlaceName }: GeoSearchProps) 
             if (box) {
               const boundingBoxStr = `${box.northeast.lat},${box.northeast.lng},${box.southwest.lat},${box.southwest.lng}`;
               setBoundingBox(boundingBoxStr);
+              // Clear the text query once we have the bounding box
+              setSearchQuery("");
             }
+          } else {
+            console.error('[GeoSearch] Geocoding failed:', data.status);
+            // Keep using text search if geocoding fails
           }
         } catch (error) {
-          console.error("Error fetching place details:", error);
-          // On error, clear the loading bounding box to avoid blocking results indefinitely
-          setBoundingBox(undefined);
+          console.error("[GeoSearch] Error fetching place details:", error);
+          // Keep using text search on error
         }
       })();
     } else if (initialPlaceId === DEFAULT_LOCATION.value.place_id) {
       setBoundingBox(DEFAULT_BOUNDING_BOX);
+      setSearchQuery("");
     }
   }, [initialPlaceId]);
 
-  // Use configure to set the bounding box filter in Algolia
+  // Use configure to set the bounding box filter and/or search query in Algolia
   useConfigure({
     insideBoundingBox: boundingBox,
+    query: searchQuery,
   });
 
   const handlePlaceSelect = (place: PlaceOption | null) => {
@@ -116,6 +113,7 @@ export function GeoSearch({ initialPlaceId, initialPlaceName }: GeoSearchProps) 
       // Clear selection - no default forced (user can search without location filter)
       setSelectedPlace(null);
       setBoundingBox(undefined);
+      setSearchQuery("");
       return;
     }
 
@@ -124,11 +122,13 @@ export function GeoSearch({ initialPlaceId, initialPlaceName }: GeoSearchProps) 
     // If selecting the default location, use pre-computed bounding box
     if (place.value.place_id === DEFAULT_LOCATION.value.place_id) {
       setBoundingBox(DEFAULT_BOUNDING_BOX);
+      setSearchQuery("");
       return;
     }
 
-    // Set loading bounding box to prevent showing all results while fetching
-    setBoundingBox(LOADING_BOUNDING_BOX);
+    // Use text search on the location name while fetching bounding box
+    setSearchQuery(place.label);
+    setBoundingBox(undefined);
 
     // Get place details including viewport/bounds
     void (async () => {
@@ -147,14 +147,14 @@ export function GeoSearch({ initialPlaceId, initialPlaceName }: GeoSearchProps) 
             // Algolia insideBoundingBox format: "p1Lat,p1Lng,p2Lat,p2Lng"
             // where p1 and p2 are diagonally opposite corners
             const boundingBoxStr = `${box.northeast.lat},${box.northeast.lng},${box.southwest.lat},${box.southwest.lng}`;
-            console.log("Setting bounding box:", boundingBoxStr);
             setBoundingBox(boundingBoxStr);
+            // Clear text query once we have the precise bounding box
+            setSearchQuery("");
           }
         }
       } catch (error) {
         console.error("Error fetching place details:", error);
-        // On error, clear the bounding box to avoid blocking results indefinitely
-        setBoundingBox(undefined);
+        // Keep using text search if geocoding fails
       }
     })();
   };
