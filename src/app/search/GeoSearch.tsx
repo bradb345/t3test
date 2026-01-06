@@ -65,39 +65,30 @@ export function GeoSearch({ initialPlaceId, initialPlaceName }: GeoSearchProps) 
 
   const [selectedPlace, setSelectedPlace] = useState<PlaceOption | null>(getInitialPlace);
   const [boundingBox, setBoundingBox] = useState<string | undefined>(getInitialBoundingBox);
-  console.log('boundingBox:', boundingBox)
   const [searchQuery, setSearchQuery] = useState<string>(initialPlaceName ?? "");
 
   // Fetch bounding box for initial place from URL params
   useEffect(() => {
     if (initialPlaceId && initialPlaceId !== DEFAULT_LOCATION.value.place_id) {
-      console.log('[GeoSearch] Fetching bounding box for placeId:', initialPlaceId);
       void (async () => {
         try {
-          const googleString = `https://maps.googleapis.com/maps/api/geocode/json?place_id=${initialPlaceId}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`
-          console.log('googleString:', googleString)
           const response = await fetch(
             `https://maps.googleapis.com/maps/api/geocode/json?place_id=${initialPlaceId}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`,
           );
           const data = (await response.json()) as GeocodingResponse;
 
-          console.log('[GeoSearch] Geocoding response status:', data.status);
           if (data.status === "OK" && data.results[0]) {
             const geometry = data.results[0].geometry;
             const box = geometry.bounds ?? geometry.viewport;
 
             if (box) {
               const boundingBoxStr = `${box.northeast.lat},${box.northeast.lng},${box.southwest.lat},${box.southwest.lng}`;
-              console.log('[GeoSearch] Setting bounding box:', boundingBoxStr);
               setBoundingBox(boundingBoxStr);
               // Clear the text query once we have the bounding box
               setSearchQuery("");
-            } else {
-              console.warn('[GeoSearch] No bounds or viewport in geometry');
-              // Keep using text search if no bounding box available
             }
           } else {
-            console.error('[GeoSearch] Geocoding failed:', data.status, data);
+            console.error('[GeoSearch] Geocoding failed:', data.status);
             // Keep using text search if geocoding fails
           }
         } catch (error) {
@@ -112,20 +103,14 @@ export function GeoSearch({ initialPlaceId, initialPlaceName }: GeoSearchProps) 
   }, [initialPlaceId]);
 
   // Use configure to set the bounding box filter and/or search query in Algolia
-  useEffect(() => {
-    console.log('[GeoSearch] Applying config - boundingBox:', boundingBox, 'query:', searchQuery);
-  }, [boundingBox, searchQuery]);
-  
   useConfigure({
     insideBoundingBox: boundingBox,
     query: searchQuery,
   });
 
   const handlePlaceSelect = (place: PlaceOption | null) => {
-    console.log('[GeoSearch] Place selected:', place?.label, place?.value?.place_id);
     if (!place?.value?.place_id) {
       // Clear selection - no default forced (user can search without location filter)
-      console.log('[GeoSearch] Clearing location filter');
       setSelectedPlace(null);
       setBoundingBox(undefined);
       setSearchQuery("");
@@ -152,7 +137,6 @@ export function GeoSearch({ initialPlaceId, initialPlaceName }: GeoSearchProps) 
           `https://maps.googleapis.com/maps/api/geocode/json?place_id=${place.value.place_id}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`,
         );
         const data = (await response.json()) as GeocodingResponse;
-        console.log('data:', data)
 
         if (data.status === "OK" && data.results[0]) {
           const geometry = data.results[0].geometry;
@@ -163,7 +147,6 @@ export function GeoSearch({ initialPlaceId, initialPlaceName }: GeoSearchProps) 
             // Algolia insideBoundingBox format: "p1Lat,p1Lng,p2Lat,p2Lng"
             // where p1 and p2 are diagonally opposite corners
             const boundingBoxStr = `${box.northeast.lat},${box.northeast.lng},${box.southwest.lat},${box.southwest.lng}`;
-            console.log("Setting bounding box:", boundingBoxStr);
             setBoundingBox(boundingBoxStr);
             // Clear text query once we have the precise bounding box
             setSearchQuery("");
