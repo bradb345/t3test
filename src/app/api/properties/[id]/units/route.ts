@@ -54,6 +54,22 @@ export async function POST(
       return new NextResponse("Missing required fields", { status: 400 });
     }
 
+    // Validate required images - at least one unit photo is required
+    let parsedImageUrls: string[] = [];
+    if (typeof data.imageUrls === 'string') {
+      try {
+        parsedImageUrls = JSON.parse(data.imageUrls) as string[];
+      } catch {
+        return new NextResponse("Invalid imageUrls format", { status: 400 });
+      }
+    } else {
+      parsedImageUrls = data.imageUrls ?? [];
+    }
+
+    if (!Array.isArray(parsedImageUrls) || parsedImageUrls.length === 0) {
+      return new NextResponse("At least one unit photo is required", { status: 400 });
+    }
+
     // Parse JSON strings if they're already stringified
     const features = typeof data.features === 'string' ? data.features : JSON.stringify(data.features ?? []);
     const imageUrls = typeof data.imageUrls === 'string' ? data.imageUrls : JSON.stringify(data.imageUrls ?? []);

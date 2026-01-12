@@ -111,6 +111,35 @@ export async function PATCH(
     const data = await req.json() as UnitData;
     console.log("Received unit update data:", data);
 
+    // Validate that the unit will have at least one image after this update
+    let imageUrlsForValidation: string[] = [];
+
+    if (data.imageUrls !== undefined) {
+      // Use incoming imageUrls (may be a JSON string or an array)
+      const parsedImageUrls = typeof data.imageUrls === "string"
+        ? (JSON.parse(data.imageUrls) as string[])
+        : data.imageUrls ?? [];
+
+      if (Array.isArray(parsedImageUrls)) {
+        imageUrlsForValidation = parsedImageUrls;
+      }
+    } else if (existingUnit.imageUrls) {
+      // Fall back to existing unit imageUrls when not updated
+      try {
+        const existing = JSON.parse(existingUnit.imageUrls);
+
+        if (Array.isArray(existing)) {
+          imageUrlsForValidation = existing as string[];
+        }
+      } catch (e) {
+        console.error("Error parsing existing unit imageUrls:", e);
+        imageUrlsForValidation = [];
+      }
+    }
+
+    if (imageUrlsForValidation.length === 0) {
+      return new NextResponse("At least one unit photo is required", { status: 400 });
+    }
     // Parse JSON strings if they're already stringified
     const features = data.features ? (typeof data.features === 'string' ? data.features : JSON.stringify(data.features)) : undefined;
     const imageUrls = data.imageUrls ? (typeof data.imageUrls === 'string' ? data.imageUrls : JSON.stringify(data.imageUrls)) : undefined;
