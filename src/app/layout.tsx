@@ -8,7 +8,7 @@ import { Footer } from "~/components/Footer";
 import { Toaster } from "sonner";
 import { Suspense } from "react";
 import Script from "next/script";
-import { ThemeProvider } from "~/components/theme-provider";
+import { ThemeProvider } from "~/components/ThemeProvider";
 
 export const metadata: Metadata = {
   title: "Test",
@@ -23,6 +23,24 @@ export default function RootLayout({
     <ClerkProvider afterSignOutUrl="/">
       <html lang="en" className={`${GeistSans.variable}`} suppressHydrationWarning>
         <body>
+          <script
+            suppressHydrationWarning
+            dangerouslySetInnerHTML={{
+              __html: `
+                (function() {
+                  try {
+                    var stored = localStorage.getItem('theme');
+                    var theme = (stored === 'light' || stored === 'dark' || stored === 'system') ? stored : 'system';
+                    var resolved = theme;
+                    if (theme === 'system') {
+                      resolved = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                    }
+                    document.documentElement.classList.add(resolved);
+                  } catch (e) {}
+                })();
+              `,
+            }}
+          />
           <ThemeProvider defaultTheme="system" storageKey="theme">
             <div className="flex min-h-screen flex-col">
               <Suspense fallback={<div className="h-16 border-b" />}>

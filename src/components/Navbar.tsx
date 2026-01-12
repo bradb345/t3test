@@ -4,7 +4,7 @@ import Link from "next/link";
 import { SignInButton, UserButton, useAuth } from "@clerk/nextjs";
 import { Button } from "~/components/ui/button";
 import { NotificationBell } from "~/components/NotificationBell";
-import { ThemeToggle } from "~/components/theme-toggle";
+import { ThemeToggle } from "~/components/ThemeToggle";
 import { useEffect, useState, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 

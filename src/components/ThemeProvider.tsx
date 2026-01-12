@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
 
 type Theme = "light" | "dark" | "system";
 
@@ -34,9 +34,14 @@ export function ThemeProvider({
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    const stored = localStorage.getItem(storageKey) as Theme | null;
-    if (stored) {
-      setTheme(stored);
+    try {
+      const stored = localStorage.getItem(storageKey);
+      const validThemes: Theme[] = ["light", "dark", "system"];
+      if (stored && validThemes.includes(stored as Theme)) {
+        setTheme(stored as Theme);
+      }
+    } catch {
+      // localStorage unavailable, use default theme
     }
     setMounted(true);
   }, [storageKey]);
@@ -58,13 +63,34 @@ export function ThemeProvider({
     }
   }, [theme, mounted]);
 
-  const value = {
-    theme,
-    setTheme: (newTheme: Theme) => {
-      localStorage.setItem(storageKey, newTheme);
-      setTheme(newTheme);
-    },
-  };
+  useEffect(() => {
+    if (!mounted || theme !== "system") return;
+
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+    const handleChange = (e: MediaQueryListEvent) => {
+      const root = window.document.documentElement;
+      root.classList.remove("light", "dark");
+      root.classList.add(e.matches ? "dark" : "light");
+    };
+
+    mediaQuery.addEventListener("change", handleChange);
+    return () => mediaQuery.removeEventListener("change", handleChange);
+  }, [theme, mounted]);
+
+  const value = useMemo(
+    () => ({
+      theme,
+      setTheme: (newTheme: Theme) => {
+        try {
+          localStorage.setItem(storageKey, newTheme);
+        } catch {
+          // localStorage unavailable, theme will only persist in memory
+        }
+        setTheme(newTheme);
+      },
+    }),
+    [theme, storageKey]
+  );
 
   return (
     <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
