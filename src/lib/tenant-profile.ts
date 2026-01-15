@@ -218,19 +218,11 @@ export async function persistTenantProfile(
   // Handle document uploads - proof of address
   if (proofOfAddress?.proofOfAddressUrl) {
     // Check if document already exists
-    const [existingDoc] = await db
+    const existingProofOfAddress = await db
       .select()
       .from(tenantDocuments)
       .where(eq(tenantDocuments.tenantProfileId, profileId))
-      .limit(1);
-
-    const existingProofOfAddress = existingDoc
-      ? await db
-          .select()
-          .from(tenantDocuments)
-          .where(eq(tenantDocuments.tenantProfileId, profileId))
-          .then((docs) => docs.find((d) => d.documentType === "proof_of_address"))
-      : null;
+      .then((docs) => docs.find((d) => d.documentType === "proof_of_address"));
 
     if (existingProofOfAddress) {
       // Update existing document
@@ -365,7 +357,8 @@ export async function loadExistingTenantProfile(
       supervisorName: employment.supervisorName ?? undefined,
       employmentType: employment.employmentType ?? undefined,
       salary: monthlyIncome ? `$${monthlyIncome}` : undefined,
-      workPermit: employment.employmentType === "work_permit" ? "yes" : "no",
+      // Note: workPermit is collected during onboarding but not currently persisted to the database
+      workPermit: undefined,
     };
   }
 

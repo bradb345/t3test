@@ -1056,7 +1056,7 @@ function OnboardingContent() {
                       <p><span className="text-gray-500 dark:text-gray-400">Address:</span> {allOnboardingData.employment?.employerAddress}</p>
                       <p><span className="text-gray-500 dark:text-gray-400">Supervisor:</span> {allOnboardingData.employment?.supervisorName ?? "Not provided"}</p>
                       <p><span className="text-gray-500 dark:text-gray-400">Phone:</span> {allOnboardingData.employment?.employerPhone}</p>
-                      <p><span className="text-gray-500 dark:text-gray-400">Type:</span> {allOnboardingData.employment?.employmentType?.replace("_", "-") ?? "Not specified"}</p>
+                      <p><span className="text-gray-500 dark:text-gray-400">Type:</span> {allOnboardingData.employment?.employmentType?.replace(/_/g, "-") ?? "Not specified"}</p>
                       <p><span className="text-gray-500 dark:text-gray-400">Salary:</span> {allOnboardingData.employment?.salary}</p>
                       <p><span className="text-gray-500 dark:text-gray-400">Work Permit:</span> {allOnboardingData.employment?.workPermit === "yes" ? "Yes" : "No"}</p>
                     </div>

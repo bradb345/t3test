@@ -8,6 +8,18 @@ import { encryptSSN } from "~/lib/encryption";
 import { addRoleToUserById } from "~/lib/roles";
 import { persistTenantProfile, loadExistingTenantProfile, type OnboardingData } from "~/lib/tenant-profile";
 
+/**
+ * Merges two optional objects, with the second object's properties taking precedence.
+ * Returns undefined if both inputs are undefined/null.
+ */
+function mergeOnboardingSection<T extends Record<string, unknown>>(
+  existing: T | undefined | null,
+  progress: T | undefined | null
+): T | undefined {
+  if (!existing && !progress) return undefined;
+  return { ...(existing ?? ({} as T)), ...(progress ?? ({} as T)) };
+}
+
 // GET /api/onboarding?token=xxx
 export async function GET(request: NextRequest) {
   try {
@@ -112,12 +124,13 @@ export async function GET(request: NextRequest) {
         if (existingProfile) {
           // Merge existing profile with saved onboarding progress
           // Saved progress takes precedence (allows tenant to update info)
+          const progressData = data as Partial<OnboardingData>;
           data = {
-            personal: { ...(existingProfile.personal ?? {}), ...((data.personal as Record<string, unknown>) ?? {}) },
-            employment: { ...(existingProfile.employment ?? {}), ...((data.employment as Record<string, unknown>) ?? {}) },
-            proofOfAddress: { ...(existingProfile.proofOfAddress ?? {}), ...((data.proofOfAddress as Record<string, unknown>) ?? {}) },
-            emergencyContact: { ...(existingProfile.emergencyContact ?? {}), ...((data.emergencyContact as Record<string, unknown>) ?? {}) },
-            photoId: { ...(existingProfile.photoId ?? {}), ...((data.photoId as Record<string, unknown>) ?? {}) },
+            personal: mergeOnboardingSection(existingProfile.personal, progressData.personal),
+            employment: mergeOnboardingSection(existingProfile.employment, progressData.employment),
+            proofOfAddress: mergeOnboardingSection(existingProfile.proofOfAddress, progressData.proofOfAddress),
+            emergencyContact: mergeOnboardingSection(existingProfile.emergencyContact, progressData.emergencyContact),
+            photoId: mergeOnboardingSection(existingProfile.photoId, progressData.photoId),
           };
         }
       } catch (profileError) {
