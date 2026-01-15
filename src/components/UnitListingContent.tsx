@@ -202,20 +202,20 @@ export function UnitListingContent({ unit, property }: UnitListingContentProps) 
                 e.stopPropagation();
                 handlePreviousImage();
               }}
-              className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white p-3 rounded-full shadow-lg transition-colors z-10"
+              className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/80 dark:bg-white/20 dark:hover:bg-white/30 p-3 rounded-full shadow-lg transition-colors z-10"
               aria-label="Previous image"
             >
-              <ChevronLeft className="h-6 w-6" />
+              <ChevronLeft className="h-6 w-6 text-white" />
             </button>
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 handleNextImage();
               }}
-              className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white p-3 rounded-full shadow-lg transition-colors z-10"
+              className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/80 dark:bg-white/20 dark:hover:bg-white/30 p-3 rounded-full shadow-lg transition-colors z-10"
               aria-label="Next image"
             >
-              <ChevronRight className="h-6 w-6" />
+              <ChevronRight className="h-6 w-6 text-white" />
             </button>
           </>
         )}
@@ -248,7 +248,7 @@ export function UnitListingContent({ unit, property }: UnitListingContentProps) 
 
       {/* Thumbnail Gallery */}
       {displayImages.length > 1 && (
-        <div className="bg-white border-b">
+        <div className="bg-card border-b border-border">
           <div className="max-w-7xl mx-auto px-4 py-4">
             <div className="flex gap-2 overflow-x-auto">
               {displayImages.map((image, index) => (
@@ -258,7 +258,7 @@ export function UnitListingContent({ unit, property }: UnitListingContentProps) 
                   className={`relative flex-shrink-0 w-24 h-16 rounded-md overflow-hidden border-2 transition-all ${
                     currentImageIndex === index
                       ? "border-primary ring-2 ring-primary/20"
-                      : "border-gray-200 hover:border-gray-400"
+                      : "border-border hover:border-muted-foreground"
                   }`}
                 >
                   <Image
@@ -504,7 +504,7 @@ export function UnitListingContent({ unit, property }: UnitListingContentProps) 
                   The map shows the general area. Exact location will be provided after booking.
                 </p>
               </div>
-              <div id="map" className="w-full h-[400px] rounded-lg overflow-hidden bg-gray-100" />
+              <div id="map" className="w-full h-[400px] rounded-lg overflow-hidden bg-muted" />
             </Card>
           </div>
 

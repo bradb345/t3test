@@ -4,6 +4,7 @@ import { db } from "~/server/db";
 import { properties } from "~/server/db/schema";
 import { eq } from "drizzle-orm";
 import { detectCurrencyFromCoordinates } from "~/lib/currency";
+import { addRoleToUserByAuthId } from "~/lib/roles";
 
 interface PropertyData {
   name: string;
@@ -64,6 +65,15 @@ export async function POST(req: Request) {
       .returning();
 
     console.log("Created property:", property);
+
+    // Assign landlord role to the user
+    try {
+      await addRoleToUserByAuthId(userId, "landlord");
+    } catch (roleError) {
+      // Log but don't fail the request - property was created successfully
+      console.error("Error assigning landlord role:", roleError);
+    }
+
     return NextResponse.json(property);
   } catch (error) {
     console.error("Error creating property:", error);

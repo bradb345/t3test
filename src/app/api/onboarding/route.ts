@@ -5,6 +5,20 @@ import { eq, and, gt } from "drizzle-orm";
 import { sendEmail } from "~/lib/email";
 import { getOnboardingCompleteEmailHtml, getOnboardingCompleteEmailSubject } from "~/emails/onboarding-complete";
 import { encryptSSN } from "~/lib/encryption";
+import { addRoleToUserById } from "~/lib/roles";
+import { persistTenantProfile, loadExistingTenantProfile, type OnboardingData } from "~/lib/tenant-profile";
+
+/**
+ * Merges two optional objects, with the second object's properties taking precedence.
+ * Returns undefined if both inputs are undefined/null.
+ */
+function mergeOnboardingSection<T extends Record<string, unknown>>(
+  existing: T | undefined | null,
+  progress: T | undefined | null
+): T | undefined {
+  if (!existing && !progress) return undefined;
+  return { ...(existing ?? ({} as T)), ...(progress ?? ({} as T)) };
+}
 
 // GET /api/onboarding?token=xxx
 export async function GET(request: NextRequest) {
@@ -41,12 +55,43 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Check if already accepted
+    // Check if already accepted - return friendly response with unit info
     if (invitation.status === "accepted" && invitation.acceptedAt) {
-      return NextResponse.json(
-        { error: "Invitation has already been accepted" },
-        { status: 409 }
-      );
+      // Get unit and property info for the completed message
+      const [unit] = await db
+        .select()
+        .from(units)
+        .where(eq(units.id, invitation.unitId))
+        .limit(1);
+
+      let property = null;
+      if (unit) {
+        const [prop] = await db
+          .select()
+          .from(properties)
+          .where(eq(properties.id, unit.propertyId))
+          .limit(1);
+        property = prop;
+      }
+
+      return NextResponse.json({
+        alreadyCompleted: true,
+        invitation: {
+          id: invitation.id,
+          tenantName: invitation.tenantName,
+          tenantEmail: invitation.tenantEmail,
+          acceptedAt: invitation.acceptedAt,
+        },
+        unit: unit ? {
+          id: unit.id,
+          unitNumber: unit.unitNumber,
+        } : null,
+        property: property ? {
+          id: property.id,
+          name: property.name,
+          address: property.address,
+        } : null,
+      });
     }
 
     // Get onboarding progress
@@ -64,12 +109,35 @@ export async function GET(request: NextRequest) {
     }
 
     // Parse stored data
-    const completedSteps = progress.completedSteps 
+    const completedSteps = progress.completedSteps
       ? (JSON.parse(progress.completedSteps) as string[])
       : [];
-    const data = progress.data 
+    let data = progress.data
       ? (JSON.parse(progress.data) as Record<string, unknown>)
       : {};
+
+    // If this is an existing tenant, pre-populate with their profile data
+    // This allows tenants to reuse their information across multiple rentals
+    if (invitation.isExistingTenant && invitation.tenantUserId) {
+      try {
+        const existingProfile = await loadExistingTenantProfile(invitation.tenantUserId);
+        if (existingProfile) {
+          // Merge existing profile with saved onboarding progress
+          // Saved progress takes precedence (allows tenant to update info)
+          const progressData = data as Partial<OnboardingData>;
+          data = {
+            personal: mergeOnboardingSection(existingProfile.personal, progressData.personal),
+            employment: mergeOnboardingSection(existingProfile.employment, progressData.employment),
+            proofOfAddress: mergeOnboardingSection(existingProfile.proofOfAddress, progressData.proofOfAddress),
+            emergencyContact: mergeOnboardingSection(existingProfile.emergencyContact, progressData.emergencyContact),
+            photoId: mergeOnboardingSection(existingProfile.photoId, progressData.photoId),
+          };
+        }
+      } catch (profileError) {
+        console.error("Error loading existing tenant profile:", profileError);
+        // Continue with saved progress data if profile load fails
+      }
+    }
 
     // Return masked SSN for security (only last 4 digits)
     // Never return the encrypted or decrypted full SSN to the client
@@ -92,6 +160,8 @@ export async function GET(request: NextRequest) {
         tenantName: invitation.tenantName,
         status: invitation.status,
         expiresAt: invitation.expiresAt,
+        isExistingTenant: invitation.isExistingTenant,
+        hasExistingProfile: invitation.isExistingTenant && invitation.tenantUserId !== null,
       },
       progress: {
         id: progress.id,
@@ -405,6 +475,13 @@ export async function POST(request: NextRequest) {
           updatedAt: new Date(),
         })
         .where(eq(tenantOnboardingProgress.id, currentProgress.id));
+
+      // Assign tenant role to the user
+      try {
+        await addRoleToUserById(tenantUser.id, "tenant");
+      } catch (roleError) {
+        console.error("Error assigning tenant role:", roleError);
+      }
     }
 
     // Update progress to completed
@@ -417,6 +494,16 @@ export async function POST(request: NextRequest) {
       })
       .where(eq(tenantOnboardingProgress.id, currentProgress.id));
 
+    // If we have a tenant user but they weren't an existing tenant (new signup during onboarding),
+    // still assign the tenant role
+    if (tenantUser && !invitation.invitation.isExistingTenant) {
+      try {
+        await addRoleToUserById(tenantUser.id, "tenant");
+      } catch (roleError) {
+        console.error("Error assigning tenant role for new user:", roleError);
+      }
+    }
+
     // Update invitation status to accepted
     await db
       .update(tenantInvitations)
@@ -426,6 +513,34 @@ export async function POST(request: NextRequest) {
         updatedAt: new Date(),
       })
       .where(eq(tenantInvitations.id, invitation.invitation.id));
+
+    // Persist onboarding data to permanent tenant profile tables
+    if (tenantUser) {
+      try {
+        const onboardingData = currentProgress.data
+          ? (JSON.parse(currentProgress.data) as OnboardingData)
+          : {};
+        await persistTenantProfile(tenantUser.id, onboardingData);
+      } catch (profileError) {
+        // Log but don't fail - onboarding was successful even if profile persistence fails
+        console.error("Error persisting tenant profile:", profileError);
+      }
+
+      // Mark the tenant's invitation notification as read
+      try {
+        await db
+          .update(notifications)
+          .set({ read: true })
+          .where(
+            and(
+              eq(notifications.userId, tenantUser.id),
+              eq(notifications.type, "tenant_invitation")
+            )
+          );
+      } catch (notifError) {
+        console.error("Error marking notification as read:", notifError);
+      }
+    }
 
     // Create in-app notification for landlord
     const notificationMessage = invitation.invitation.isExistingTenant && tenantUser
