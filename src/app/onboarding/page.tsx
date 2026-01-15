@@ -41,6 +41,15 @@ function OnboardingContent() {
   const [isSaving, setIsSaving] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
+  const [alreadyCompleted, setAlreadyCompleted] = useState(false);
+  const [completedInfo, setCompletedInfo] = useState<{
+    tenantName: string;
+    unitNumber: string | null;
+    unitId: number | null;
+    propertyName: string | null;
+    propertyAddress: string | null;
+    acceptedAt: string;
+  } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [invitationInfo, setInvitationInfo] = useState<{
@@ -52,6 +61,32 @@ function OnboardingContent() {
   // UploadThing hooks for different upload types
   const { startUpload: startPhotoIdUpload } = useUploadThing("photoID");
   const { startUpload: startDocumentUpload } = useUploadThing("documents");
+
+  // Check if current step has all required fields filled
+  const isCurrentStepValid = (): boolean => {
+    switch (currentStep) {
+      case 1: {
+        const { firstName, lastName, email, phone, dateOfBirth } = stepFormData;
+        return !!(firstName && lastName && email && phone && dateOfBirth);
+      }
+      case 2: {
+        const { employerName, employerPhone, employerAddress, employmentType, salary, workPermit } = stepFormData;
+        return !!(employerName && employerPhone && employerAddress && employmentType && salary && workPermit);
+      }
+      case 3:
+        return !!stepFormData.proofOfAddressFileName;
+      case 4: {
+        const { emergencyContactName, emergencyContactRelationship, emergencyContactPhone } = stepFormData;
+        return !!(emergencyContactName && emergencyContactRelationship && emergencyContactPhone);
+      }
+      case 5:
+        return !!stepFormData.photoIdFileName;
+      case 6:
+        return true; // Review step is always valid
+      default:
+        return false;
+    }
+  };
 
   // Load onboarding progress
   useEffect(() => {
@@ -70,23 +105,53 @@ function OnboardingContent() {
         }
 
         const data = (await response.json()) as {
+          alreadyCompleted?: boolean;
           invitation: {
             id: number;
-            unitId: number;
+            unitId?: number;
             tenantEmail: string;
             tenantName: string;
+            acceptedAt?: string;
           };
-          progress: {
+          unit?: {
+            id: number;
+            unitNumber: string;
+          } | null;
+          property?: {
+            id: number;
+            name: string;
+            address: string;
+          } | null;
+          progress?: {
             currentStep: number;
             completedSteps: string[];
             data: OnboardingData;
           };
         };
 
+        // Handle already completed onboarding
+        if (data.alreadyCompleted) {
+          setAlreadyCompleted(true);
+          setCompletedInfo({
+            tenantName: data.invitation.tenantName,
+            unitNumber: data.unit?.unitNumber ?? null,
+            unitId: data.unit?.id ?? null,
+            propertyName: data.property?.name ?? null,
+            propertyAddress: data.property?.address ?? null,
+            acceptedAt: data.invitation.acceptedAt ?? new Date().toISOString(),
+          });
+          setIsLoading(false);
+          return;
+        }
+
+        if (!data.progress) {
+          throw new Error("Onboarding progress not found");
+        }
+
         setInvitationInfo({
           tenantName: data.invitation.tenantName,
           tenantEmail: data.invitation.tenantEmail,
-          unitId: data.invitation.unitId,
+          unitId: data.invitation.unitId!,
         });
         setCurrentStep(data.progress.currentStep);
         setCompletedSteps(data.progress.completedSteps);
@@ -237,29 +302,29 @@ function OnboardingContent() {
   // Show success screen after completion
   if (isCompleted) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4">
+      <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4 dark:bg-gray-900">
         <Card className="max-w-lg p-8 text-center">
-          <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-green-100">
-            <Check className="h-10 w-10 text-green-600" />
+          <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-green-100 dark:bg-green-900">
+            <Check className="h-10 w-10 text-green-600 dark:text-green-400" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
             Onboarding Complete! 🎉
           </h1>
-          <p className="mt-4 text-gray-600">
-            Thank you, {invitationInfo?.tenantName}! Your application has been 
-            submitted successfully. Your landlord has been notified and will 
+          <p className="mt-4 text-gray-600 dark:text-gray-400">
+            Thank you, {invitationInfo?.tenantName}! Your application has been
+            submitted successfully. Your landlord has been notified and will
             review your information.
           </p>
-          <div className="mt-6 rounded-lg bg-blue-50 p-4">
-            <p className="text-sm text-blue-800">
+          <div className="mt-6 rounded-lg bg-blue-50 p-4 dark:bg-blue-900/20">
+            <p className="text-sm text-blue-800 dark:text-blue-300">
               <strong>What happens next?</strong>
               <br />
-              Your landlord will review your submitted documents and information. 
+              Your landlord will review your submitted documents and information.
               You&apos;ll receive an email once your application has been processed.
             </p>
           </div>
-          <Button 
-            className="mt-6 w-full" 
+          <Button
+            className="mt-6 w-full"
             onClick={() => window.location.href = "/"}
           >
             Return to Home
@@ -269,12 +334,69 @@ function OnboardingContent() {
     );
   }
 
+  // Show already completed screen
+  if (alreadyCompleted && completedInfo) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4 dark:bg-gray-900">
+        <Card className="max-w-lg p-8 text-center">
+          <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-green-100 dark:bg-green-900">
+            <Check className="h-10 w-10 text-green-600 dark:text-green-400" />
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+            Already Completed
+          </h1>
+          <p className="mt-4 text-gray-600 dark:text-gray-400">
+            Hi {completedInfo.tenantName}! You&apos;ve already completed your onboarding
+            {completedInfo.unitNumber && completedInfo.propertyName && (
+              <> for Unit {completedInfo.unitNumber} at {completedInfo.propertyName}</>
+            )}.
+          </p>
+          {completedInfo.propertyAddress && (
+            <p className="mt-2 text-sm text-gray-500 dark:text-gray-500">
+              {completedInfo.propertyAddress}
+            </p>
+          )}
+          <p className="mt-4 text-sm text-gray-500 dark:text-gray-500">
+            Completed on {new Date(completedInfo.acceptedAt).toLocaleDateString('en-US', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+            })}
+          </p>
+          <div className="mt-6 rounded-lg bg-blue-50 p-4 dark:bg-blue-900/20">
+            <p className="text-sm text-blue-800 dark:text-blue-300">
+              Your landlord has your application on file. If you have any questions,
+              please contact them directly.
+            </p>
+          </div>
+          <div className="mt-6 flex flex-col gap-3">
+            {completedInfo.unitId && (
+              <Button
+                className="w-full"
+                onClick={() => window.location.href = `/units/${completedInfo.unitId}`}
+              >
+                View Property Details
+              </Button>
+            )}
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => window.location.href = "/"}
+            >
+              Return to Home
+            </Button>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
   if (isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="text-center">
           <Loader2 className="mx-auto h-12 w-12 animate-spin text-purple-600" />
-          <p className="mt-4 text-gray-600">Loading your onboarding...</p>
+          <p className="mt-4 text-gray-600 dark:text-gray-400">Loading your onboarding...</p>
         </div>
       </div>
     );
@@ -282,14 +404,14 @@ function OnboardingContent() {
 
   if (error) {
     return (
-      <div className="flex min-h-screen items-center justify-center p-4">
+      <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4 dark:bg-gray-900">
         <Card className="max-w-md p-8">
           <div className="text-center">
             <AlertCircle className="mx-auto h-12 w-12 text-red-500" />
-            <h1 className="mt-4 text-2xl font-bold text-gray-900">
+            <h1 className="mt-4 text-2xl font-bold text-gray-900 dark:text-gray-100">
               Oops! Something went wrong
             </h1>
-            <p className="mt-2 text-gray-600">{error}</p>
+            <p className="mt-2 text-gray-600 dark:text-gray-400">{error}</p>
             <Button className="mt-6" onClick={() => window.location.reload()}>
               Try Again
             </Button>
@@ -302,26 +424,26 @@ function OnboardingContent() {
   const currentStepData = ONBOARDING_STEPS[currentStep - 1];
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Header */}
-      <header className="border-b bg-white">
+      <header className="border-b border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
         <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                 Tenant Onboarding
               </h1>
               {invitationInfo && (
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-gray-600 dark:text-gray-400">
                   Welcome, {invitationInfo.tenantName}!
                 </p>
               )}
             </div>
             <div className="text-right">
-              <div className="text-sm font-medium text-gray-600">
+              <div className="text-sm font-medium text-gray-600 dark:text-gray-400">
                 Step {currentStep} of {ONBOARDING_STEPS.length}
               </div>
-              <div className="text-xs text-gray-500">
+              <div className="text-xs text-gray-500 dark:text-gray-500">
                 {completedSteps.length} completed
               </div>
             </div>
@@ -330,7 +452,7 @@ function OnboardingContent() {
       </header>
 
       {/* Progress Bar */}
-      <div className="border-b bg-white">
+      <div className="border-b border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
         <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
           {/* Desktop Progress */}
           <div className="hidden md:block">
@@ -348,13 +470,13 @@ function OnboardingContent() {
                           "flex h-10 w-10 items-center justify-center rounded-full border-2 text-sm font-semibold transition-all",
                           isCompleted && "border-green-500 bg-green-500 text-white",
                           isCurrent && !isCompleted && "border-purple-600 bg-purple-600 text-white",
-                          !isCompleted && !isCurrent && "border-gray-300 bg-white text-gray-600"
+                          !isCompleted && !isCurrent && "border-gray-300 bg-white text-gray-600 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-400"
                         )}
                       >
                         {isCompleted ? <Check className="h-5 w-5" /> : stepNumber}
                       </div>
                       <div className="mt-2 text-center">
-                        <div className={cn("text-xs font-medium", isCurrent && "text-purple-600")}>
+                        <div className={cn("text-xs font-medium text-gray-600 dark:text-gray-400", isCurrent && "text-purple-600 dark:text-purple-400")}>
                           {step.title}
                         </div>
                       </div>
@@ -364,7 +486,7 @@ function OnboardingContent() {
                         <div
                           className={cn(
                             "h-1 rounded-full",
-                            isCompleted ? "bg-green-500" : "bg-gray-200"
+                            isCompleted ? "bg-green-500" : "bg-gray-200 dark:bg-gray-700"
                           )}
                         />
                       </div>
@@ -377,7 +499,7 @@ function OnboardingContent() {
 
           {/* Mobile Progress */}
           <div className="md:hidden">
-            <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200">
+            <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
               <div
                 className="h-full bg-purple-600 transition-all"
                 style={{ width: `${(completedSteps.length / ONBOARDING_STEPS.length) * 100}%` }}
@@ -391,10 +513,10 @@ function OnboardingContent() {
       <main className="mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
         <Card className="p-8">
           <div className="mb-6">
-            <h2 className="text-2xl font-bold text-gray-900">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
               {currentStepData?.title}
             </h2>
-            <p className="mt-2 text-gray-600">
+            <p className="mt-2 text-gray-600 dark:text-gray-400">
               {currentStepData?.description}
             </p>
           </div>
@@ -489,8 +611,8 @@ function OnboardingContent() {
                 />
               </div>
 
-              <div className="rounded-lg bg-blue-50 p-4">
-                <p className="text-sm text-blue-800">
+              <div className="rounded-lg bg-blue-50 p-4 dark:bg-blue-900/20">
+                <p className="text-sm text-blue-800 dark:text-blue-300">
                   <strong>💡 Why we need this:</strong> This information helps your landlord
                   verify your eligibility and ensures a smooth rental process.
                 </p>
@@ -562,12 +684,12 @@ function OnboardingContent() {
               <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="supervisorName">
-                    Manager/Supervisor Name <span className="text-red-500">*</span>
+                    Manager/Supervisor Name
                   </Label>
                   <Input
                     id="supervisorName"
                     type="text"
-                    placeholder="Full name"
+                    placeholder="Full name (optional)"
                     value={stepFormData.supervisorName ?? ""}
                     onChange={(e) =>
                       setStepFormData({
@@ -575,27 +697,31 @@ function OnboardingContent() {
                         supervisorName: e.target.value,
                       })
                     }
-                    required
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="lengthOfEmployment">
-                    Length of Employment <span className="text-red-500">*</span>
+                  <Label htmlFor="employmentType">
+                    Employment Type <span className="text-red-500">*</span>
                   </Label>
-                  <Input
-                    id="lengthOfEmployment"
-                    type="text"
-                    placeholder="e.g., 2 years 3 months"
-                    value={stepFormData.lengthOfEmployment ?? ""}
+                  <select
+                    id="employmentType"
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    value={stepFormData.employmentType ?? ""}
                     onChange={(e) =>
                       setStepFormData({
                         ...stepFormData,
-                        lengthOfEmployment: e.target.value,
+                        employmentType: e.target.value,
                       })
                     }
                     required
-                  />
+                  >
+                    <option value="">Select employment type</option>
+                    <option value="full_time">Full-time</option>
+                    <option value="part_time">Part-time</option>
+                    <option value="contract">Contract</option>
+                    <option value="self_employed">Self-employed</option>
+                  </select>
                 </div>
               </div>
 
@@ -642,8 +768,8 @@ function OnboardingContent() {
                 </div>
               </div>
 
-              <div className="rounded-lg bg-blue-50 p-4">
-                <p className="text-sm text-blue-800">
+              <div className="rounded-lg bg-blue-50 p-4 dark:bg-blue-900/20">
+                <p className="text-sm text-blue-800 dark:text-blue-300">
                   <strong>💡 Why we need this:</strong> Employment information helps verify
                   your income and ability to pay rent.
                 </p>
@@ -657,7 +783,7 @@ function OnboardingContent() {
                 <Label htmlFor="proofOfAddress">
                   Upload Proof of Address <span className="text-red-500">*</span>
                 </Label>
-                <div className="rounded-lg border-2 border-dashed border-gray-300 p-8 text-center">
+                <div className="rounded-lg border-2 border-dashed border-gray-300 p-8 text-center dark:border-gray-600">
                   <input
                     id="proofOfAddress"
                     type="file"
@@ -691,12 +817,12 @@ function OnboardingContent() {
                     htmlFor="proofOfAddress"
                     className={cn("cursor-pointer", isUploading && "pointer-events-none opacity-50")}
                   >
-                    <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-purple-100">
+                    <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-purple-100 dark:bg-purple-900">
                       {isUploading ? (
-                        <Loader2 className="h-6 w-6 animate-spin text-purple-600" />
+                        <Loader2 className="h-6 w-6 animate-spin text-purple-600 dark:text-purple-400" />
                       ) : (
                         <svg
-                          className="h-6 w-6 text-purple-600"
+                          className="h-6 w-6 text-purple-600 dark:text-purple-400"
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
@@ -710,23 +836,23 @@ function OnboardingContent() {
                         </svg>
                       )}
                     </div>
-                    <p className="text-sm font-medium text-gray-900">
+                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
                       {isUploading ? "Uploading..." : "Click to upload or drag and drop"}
                     </p>
-                    <p className="mt-1 text-xs text-gray-500">
+                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                       PNG, JPG up to 4MB, or PDF up to 8MB
                     </p>
                   </label>
                   {stepFormData.proofOfAddressFileName && !isUploading && (
-                    <p className="mt-4 text-sm text-green-600">
+                    <p className="mt-4 text-sm text-green-600 dark:text-green-400">
                       ✓ Uploaded: {stepFormData.proofOfAddressFileName}
                     </p>
                   )}
                 </div>
               </div>
 
-              <div className="rounded-lg bg-blue-50 p-4">
-                <p className="text-sm text-blue-800">
+              <div className="rounded-lg bg-blue-50 p-4 dark:bg-blue-900/20">
+                <p className="text-sm text-blue-800 dark:text-blue-300">
                   <strong>💡 Accepted documents:</strong> Utility bill (electric, gas, water),
                   bank statement, or government correspondence showing your current address.
                 </p>
@@ -815,8 +941,8 @@ function OnboardingContent() {
                 </div>
               </div>
 
-              <div className="rounded-lg bg-blue-50 p-4">
-                <p className="text-sm text-blue-800">
+              <div className="rounded-lg bg-blue-50 p-4 dark:bg-blue-900/20">
+                <p className="text-sm text-blue-800 dark:text-blue-300">
                   <strong>💡 Why we need this:</strong> In case of an emergency, we need
                   someone to contact on your behalf.
                 </p>
@@ -830,7 +956,7 @@ function OnboardingContent() {
                 <Label htmlFor="photoId">
                   Upload Photo ID <span className="text-red-500">*</span>
                 </Label>
-                <div className="rounded-lg border-2 border-dashed border-gray-300 p-8 text-center">
+                <div className="rounded-lg border-2 border-dashed border-gray-300 p-8 text-center dark:border-gray-600">
                   <input
                     id="photoId"
                     type="file"
@@ -864,12 +990,12 @@ function OnboardingContent() {
                     htmlFor="photoId"
                     className={cn("cursor-pointer", isUploading && "pointer-events-none opacity-50")}
                   >
-                    <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-purple-100">
+                    <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-purple-100 dark:bg-purple-900">
                       {isUploading ? (
-                        <Loader2 className="h-6 w-6 animate-spin text-purple-600" />
+                        <Loader2 className="h-6 w-6 animate-spin text-purple-600 dark:text-purple-400" />
                       ) : (
                         <svg
-                          className="h-6 w-6 text-purple-600"
+                          className="h-6 w-6 text-purple-600 dark:text-purple-400"
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
@@ -883,23 +1009,23 @@ function OnboardingContent() {
                         </svg>
                       )}
                     </div>
-                    <p className="text-sm font-medium text-gray-900">
+                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
                       {isUploading ? "Uploading..." : "Click to upload or drag and drop"}
                     </p>
-                    <p className="mt-1 text-xs text-gray-500">
+                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                       PNG, JPG up to 4MB, or PDF up to 8MB
                     </p>
                   </label>
                   {stepFormData.photoIdFileName && !isUploading && (
-                    <p className="mt-4 text-sm text-green-600">
+                    <p className="mt-4 text-sm text-green-600 dark:text-green-400">
                       ✓ Uploaded: {stepFormData.photoIdFileName}
                     </p>
                   )}
                 </div>
               </div>
 
-              <div className="rounded-lg bg-blue-50 p-4">
-                <p className="text-sm text-blue-800">
+              <div className="rounded-lg bg-blue-50 p-4 dark:bg-blue-900/20">
+                <p className="text-sm text-blue-800 dark:text-blue-300">
                   <strong>💡 Accepted documents:</strong> Driver&apos;s license, passport,
                   or government-issued photo ID.
                 </p>
@@ -909,55 +1035,55 @@ function OnboardingContent() {
 
           {currentStep === 6 && (
             <div className="space-y-6">
-              <div className="rounded-lg bg-gray-50 p-6">
-                <h3 className="mb-4 text-lg font-semibold text-gray-900">Review Your Information</h3>
-                
+              <div className="rounded-lg bg-gray-50 p-6 dark:bg-gray-800">
+                <h3 className="mb-4 text-lg font-semibold text-gray-900 dark:text-gray-100">Review Your Information</h3>
+
                 <div className="space-y-6">
                   <div>
-                    <h4 className="mb-2 font-medium text-gray-700">Personal Information</h4>
-                    <div className="grid grid-cols-2 gap-2 text-sm">
-                      <p><span className="text-gray-500">Name:</span> {allOnboardingData.personal?.firstName} {allOnboardingData.personal?.lastName}</p>
-                      <p><span className="text-gray-500">Email:</span> {allOnboardingData.personal?.email}</p>
-                      <p><span className="text-gray-500">Phone:</span> {allOnboardingData.personal?.phone}</p>
-                      <p><span className="text-gray-500">Date of Birth:</span> {allOnboardingData.personal?.dateOfBirth}</p>
+                    <h4 className="mb-2 font-medium text-gray-700 dark:text-gray-300">Personal Information</h4>
+                    <div className="grid grid-cols-2 gap-2 text-sm text-gray-900 dark:text-gray-100">
+                      <p><span className="text-gray-500 dark:text-gray-400">Name:</span> {allOnboardingData.personal?.firstName} {allOnboardingData.personal?.lastName}</p>
+                      <p><span className="text-gray-500 dark:text-gray-400">Email:</span> {allOnboardingData.personal?.email}</p>
+                      <p><span className="text-gray-500 dark:text-gray-400">Phone:</span> {allOnboardingData.personal?.phone}</p>
+                      <p><span className="text-gray-500 dark:text-gray-400">Date of Birth:</span> {allOnboardingData.personal?.dateOfBirth}</p>
                     </div>
                   </div>
 
-                  <div className="border-t pt-4">
-                    <h4 className="mb-2 font-medium text-gray-700">Employment Information</h4>
-                    <div className="grid grid-cols-2 gap-2 text-sm">
-                      <p><span className="text-gray-500">Employer:</span> {allOnboardingData.employment?.employerName}</p>
-                      <p><span className="text-gray-500">Address:</span> {allOnboardingData.employment?.employerAddress}</p>
-                      <p><span className="text-gray-500">Supervisor:</span> {allOnboardingData.employment?.supervisorName}</p>
-                      <p><span className="text-gray-500">Phone:</span> {allOnboardingData.employment?.employerPhone}</p>
-                      <p><span className="text-gray-500">Length:</span> {allOnboardingData.employment?.lengthOfEmployment}</p>
-                      <p><span className="text-gray-500">Salary:</span> {allOnboardingData.employment?.salary}</p>
-                      <p><span className="text-gray-500">Work Permit:</span> {allOnboardingData.employment?.workPermit === "yes" ? "Yes" : "No"}</p>
+                  <div className="border-t border-gray-200 pt-4 dark:border-gray-700">
+                    <h4 className="mb-2 font-medium text-gray-700 dark:text-gray-300">Employment Information</h4>
+                    <div className="grid grid-cols-2 gap-2 text-sm text-gray-900 dark:text-gray-100">
+                      <p><span className="text-gray-500 dark:text-gray-400">Employer:</span> {allOnboardingData.employment?.employerName}</p>
+                      <p><span className="text-gray-500 dark:text-gray-400">Address:</span> {allOnboardingData.employment?.employerAddress}</p>
+                      <p><span className="text-gray-500 dark:text-gray-400">Supervisor:</span> {allOnboardingData.employment?.supervisorName ?? "Not provided"}</p>
+                      <p><span className="text-gray-500 dark:text-gray-400">Phone:</span> {allOnboardingData.employment?.employerPhone}</p>
+                      <p><span className="text-gray-500 dark:text-gray-400">Type:</span> {allOnboardingData.employment?.employmentType?.replace("_", "-") ?? "Not specified"}</p>
+                      <p><span className="text-gray-500 dark:text-gray-400">Salary:</span> {allOnboardingData.employment?.salary}</p>
+                      <p><span className="text-gray-500 dark:text-gray-400">Work Permit:</span> {allOnboardingData.employment?.workPermit === "yes" ? "Yes" : "No"}</p>
                     </div>
                   </div>
 
-                  <div className="border-t pt-4">
-                    <h4 className="mb-2 font-medium text-gray-700">Documents</h4>
-                    <div className="grid grid-cols-2 gap-2 text-sm">
-                      <p><span className="text-gray-500">Proof of Address:</span> {allOnboardingData.proofOfAddress?.proofOfAddressFileName ?? "Not uploaded"}</p>
-                      <p><span className="text-gray-500">Photo ID:</span> {allOnboardingData.photoId?.photoIdFileName ?? "Not uploaded"}</p>
+                  <div className="border-t border-gray-200 pt-4 dark:border-gray-700">
+                    <h4 className="mb-2 font-medium text-gray-700 dark:text-gray-300">Documents</h4>
+                    <div className="grid grid-cols-1 gap-2 text-sm text-gray-900 dark:text-gray-100 sm:grid-cols-2">
+                      <p className="overflow-hidden"><span className="text-gray-500 dark:text-gray-400">Proof of Address:</span> <span className="block truncate" title={allOnboardingData.proofOfAddress?.proofOfAddressFileName}>{allOnboardingData.proofOfAddress?.proofOfAddressFileName ?? "Not uploaded"}</span></p>
+                      <p className="overflow-hidden"><span className="text-gray-500 dark:text-gray-400">Photo ID:</span> <span className="block truncate" title={allOnboardingData.photoId?.photoIdFileName}>{allOnboardingData.photoId?.photoIdFileName ?? "Not uploaded"}</span></p>
                     </div>
                   </div>
 
-                  <div className="border-t pt-4">
-                    <h4 className="mb-2 font-medium text-gray-700">Emergency Contact</h4>
-                    <div className="grid grid-cols-2 gap-2 text-sm">
-                      <p><span className="text-gray-500">Name:</span> {allOnboardingData.emergencyContact?.emergencyContactName}</p>
-                      <p><span className="text-gray-500">Relationship:</span> {allOnboardingData.emergencyContact?.emergencyContactRelationship}</p>
-                      <p><span className="text-gray-500">Phone:</span> {allOnboardingData.emergencyContact?.emergencyContactPhone}</p>
-                      <p><span className="text-gray-500">Email:</span> {allOnboardingData.emergencyContact?.emergencyContactEmail ?? "Not provided"}</p>
+                  <div className="border-t border-gray-200 pt-4 dark:border-gray-700">
+                    <h4 className="mb-2 font-medium text-gray-700 dark:text-gray-300">Emergency Contact</h4>
+                    <div className="grid grid-cols-2 gap-2 text-sm text-gray-900 dark:text-gray-100">
+                      <p><span className="text-gray-500 dark:text-gray-400">Name:</span> {allOnboardingData.emergencyContact?.emergencyContactName}</p>
+                      <p><span className="text-gray-500 dark:text-gray-400">Relationship:</span> {allOnboardingData.emergencyContact?.emergencyContactRelationship}</p>
+                      <p><span className="text-gray-500 dark:text-gray-400">Phone:</span> {allOnboardingData.emergencyContact?.emergencyContactPhone}</p>
+                      <p><span className="text-gray-500 dark:text-gray-400">Email:</span> {allOnboardingData.emergencyContact?.emergencyContactEmail ?? "Not provided"}</p>
                     </div>
                   </div>
                 </div>
               </div>
 
-              <div className="rounded-lg bg-green-50 p-4">
-                <p className="text-sm text-green-800">
+              <div className="rounded-lg bg-green-50 p-4 dark:bg-green-900/20">
+                <p className="text-sm text-green-800 dark:text-green-300">
                   <strong>✓ Almost done!</strong> Please review all your information above.
                   If everything looks correct, click Submit to complete your application.
                 </p>
@@ -1022,8 +1148,8 @@ function OnboardingContent() {
                     return;
                   }
                 } else if (currentStep === 2) {
-                  const { employerName, employerPhone, employerAddress, supervisorName, lengthOfEmployment, salary, workPermit } = stepFormData;
-                  if (!employerName || !employerPhone || !employerAddress || !supervisorName || !lengthOfEmployment || !salary || !workPermit) {
+                  const { employerName, employerPhone, employerAddress, employmentType, salary, workPermit } = stepFormData;
+                  if (!employerName || !employerPhone || !employerAddress || !employmentType || !salary || !workPermit) {
                     setError("Please fill in all required fields before continuing");
                     return;
                   }
@@ -1057,7 +1183,7 @@ function OnboardingContent() {
                   );
                 }
               }}
-              disabled={isSaving || isSubmitting}
+              disabled={isSaving || isSubmitting || !isCurrentStepValid()}
               className="flex-1"
             >
               {isSaving || isSubmitting
@@ -1070,9 +1196,9 @@ function OnboardingContent() {
         </Card>
 
         {/* Help Section */}
-        <div className="mt-6 rounded-lg bg-white p-6 shadow">
-          <h3 className="font-semibold text-gray-900">Need Help?</h3>
-          <p className="mt-2 text-sm text-gray-600">
+        <div className="mt-6 rounded-lg bg-white p-6 shadow dark:bg-gray-800">
+          <h3 className="font-semibold text-gray-900 dark:text-gray-100">Need Help?</h3>
+          <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
             If you have questions or need assistance completing your onboarding,
             feel free to contact your landlord or our support team.
           </p>
@@ -1086,10 +1212,10 @@ export default function OnboardingPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex min-h-screen items-center justify-center">
+        <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-900">
           <div className="text-center">
             <Loader2 className="mx-auto h-12 w-12 animate-spin text-purple-600" />
-            <p className="mt-4 text-gray-600">Loading your onboarding...</p>
+            <p className="mt-4 text-gray-600 dark:text-gray-400">Loading your onboarding...</p>
           </div>
         </div>
       }

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { db } from "~/server/db";
-import { units, tenantInvitations, tenantOnboardingProgress, properties, user } from "~/server/db/schema";
+import { units, tenantInvitations, tenantOnboardingProgress, properties, user, notifications } from "~/server/db/schema";
 import { eq } from "drizzle-orm";
 import { sendEmail } from "~/lib/email";
 import { getTenantInvitationEmailHtml } from "~/emails/tenant-invitation";
@@ -79,6 +79,17 @@ export async function POST(
       );
     }
 
+    // Check if tenant email exists in user table
+    const [existingTenantUser] = await db
+      .select()
+      .from(user)
+      .where(eq(user.email, tenantEmail.toLowerCase()))
+      .limit(1);
+
+    // Determine if this is an existing tenant (override the passed value if we find them)
+    const actualIsExistingTenant = !!existingTenantUser || isExistingTenant;
+    const tenantUserId = existingTenantUser?.id ?? null;
+
     // Get landlord info
     const [landlordUser] = await db
       .select()
@@ -109,7 +120,8 @@ export async function POST(
         tenantEmail,
         tenantName,
         invitationToken,
-        isExistingTenant,
+        isExistingTenant: actualIsExistingTenant,
+        tenantUserId: tenantUserId,
         status: "sent",
         expiresAt,
       })
@@ -156,12 +168,32 @@ export async function POST(
       html: emailHtml,
     });
 
+    // If tenant has an existing account, create an in-app notification
+    if (existingTenantUser) {
+      await db.insert(notifications).values({
+        userId: existingTenantUser.id,
+        type: "tenant_invitation",
+        title: "New Rental Invitation",
+        message: `${landlordName} has invited you to Unit ${unitNumber} at ${unitAddress}. Complete your onboarding to accept.`,
+        data: JSON.stringify({
+          landlordName,
+          unitId,
+          unitNumber,
+          unitAddress,
+          invitationId: invitation.id,
+          expiresAt: expiresAt.toISOString(),
+        }),
+        actionUrl: onboardingUrl,
+      });
+    }
+
     return NextResponse.json({
       success: true,
       invitation: {
         id: invitation.id,
         tenantEmail: invitation.tenantEmail,
         tenantName: invitation.tenantName,
+        isExistingTenant: actualIsExistingTenant,
         status: invitation.status,
         sentAt: invitation.sentAt,
         expiresAt: invitation.expiresAt,
