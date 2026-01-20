@@ -126,7 +126,7 @@ export async function PATCH(
     } else if (existingUnit.imageUrls) {
       // Fall back to existing unit imageUrls when not updated
       try {
-        const existing = JSON.parse(existingUnit.imageUrls);
+        const existing = JSON.parse(existingUnit.imageUrls) as unknown;
 
         if (Array.isArray(existing)) {
           imageUrlsForValidation = existing as string[];
@@ -142,9 +142,7 @@ export async function PATCH(
     }
 
     // Validate description is required
-    const descriptionForValidation = data.description !== undefined
-      ? data.description
-      : existingUnit.description;
+    const descriptionForValidation = data.description ?? existingUnit.description;
 
     if (!descriptionForValidation || descriptionForValidation.trim() === "") {
       return new NextResponse("Description is required", { status: 400 });
