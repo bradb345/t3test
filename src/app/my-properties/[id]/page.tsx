@@ -93,9 +93,6 @@ export default async function PropertyDetailPage({
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold">Units</h2>
           <div className="flex gap-3">
-            <button className="px-4 py-2 border border-input rounded-md text-sm font-medium hover:bg-accent">
-              Download
-            </button>
             <a 
               href={`/my-properties/${propertyId}/units/create`}
               className="px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90"

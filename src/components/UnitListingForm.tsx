@@ -433,9 +433,10 @@ export function UnitListingForm({
             <div className="space-y-4">
               <div>
                 <label className="mb-1 block text-sm font-medium">
-                  Description
+                  Description <span className="text-red-500">*</span>
                 </label>
                 <textarea
+                  required
                   value={formData.description}
                   onChange={(e) =>
                     setFormData((prev) => ({
@@ -446,6 +447,11 @@ export function UnitListingForm({
                   className="min-h-[100px] w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
                   placeholder="Describe this unit..."
                 />
+                {formData.description.trim() === "" && (
+                  <p className="mt-1 text-sm text-red-500">
+                    Description is required
+                  </p>
+                )}
               </div>
               <div>
                 <label className="mb-1 block text-sm font-medium">
@@ -559,7 +565,7 @@ export function UnitListingForm({
                 >
                   Back
                 </Button>
-                <Button type="submit" disabled={isSubmitting || isUploading || formData.imageUrls.length === 0}>
+                <Button type="submit" disabled={isSubmitting || isUploading || formData.imageUrls.length === 0 || formData.description.trim() === ""}>
                   {isSubmitting ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
