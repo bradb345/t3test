@@ -140,6 +140,16 @@ export async function PATCH(
     if (imageUrlsForValidation.length === 0) {
       return new NextResponse("At least one unit photo is required", { status: 400 });
     }
+
+    // Validate description is required
+    const descriptionForValidation = data.description !== undefined
+      ? data.description
+      : existingUnit.description;
+
+    if (!descriptionForValidation || descriptionForValidation.trim() === "") {
+      return new NextResponse("Description is required", { status: 400 });
+    }
+
     // Parse JSON strings if they're already stringified
     const features = data.features ? (typeof data.features === 'string' ? data.features : JSON.stringify(data.features)) : undefined;
     const imageUrls = data.imageUrls ? (typeof data.imageUrls === 'string' ? data.imageUrls : JSON.stringify(data.imageUrls)) : undefined;

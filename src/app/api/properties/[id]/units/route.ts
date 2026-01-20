@@ -54,6 +54,11 @@ export async function POST(
       return new NextResponse("Missing required fields", { status: 400 });
     }
 
+    // Validate description is required
+    if (!data.description || data.description.trim() === "") {
+      return new NextResponse("Description is required", { status: 400 });
+    }
+
     // Validate required images - at least one unit photo is required
     let parsedImageUrls: string[] = [];
     if (typeof data.imageUrls === 'string') {
