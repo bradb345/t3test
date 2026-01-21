@@ -60,8 +60,14 @@ export async function POST(
     }
 
     // Parse request body
-    const body = (await request.json()) as { tenantName: string; tenantEmail: string; isExistingTenant?: boolean };
-    const { tenantName, tenantEmail, isExistingTenant = false } = body;
+    const body = (await request.json()) as {
+      tenantName: string;
+      tenantEmail: string;
+      isExistingTenant?: boolean;
+      rentDueDay?: number;
+      leaseDocuments?: string[];
+    };
+    const { tenantName, tenantEmail, isExistingTenant = false, rentDueDay, leaseDocuments } = body;
 
     if (!tenantName || !tenantEmail) {
       return NextResponse.json(
@@ -75,6 +81,14 @@ export async function POST(
     if (!emailRegex.test(tenantEmail)) {
       return NextResponse.json(
         { error: "Invalid email format" },
+        { status: 400 }
+      );
+    }
+
+    // Validate rentDueDay if provided (must be 1-28)
+    if (rentDueDay !== undefined && (rentDueDay < 1 || rentDueDay > 28)) {
+      return NextResponse.json(
+        { error: "Rent due day must be between 1 and 28" },
         { status: 400 }
       );
     }
@@ -122,6 +136,10 @@ export async function POST(
         invitationToken,
         isExistingTenant: actualIsExistingTenant,
         tenantUserId: tenantUserId,
+        rentDueDay: actualIsExistingTenant ? rentDueDay : undefined,
+        leaseDocuments: actualIsExistingTenant && leaseDocuments?.length
+          ? JSON.stringify(leaseDocuments)
+          : undefined,
         status: "sent",
         expiresAt,
       })
