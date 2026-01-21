@@ -229,7 +229,7 @@ export const leases = createTable(
     monthlyRent: decimal("monthly_rent", { precision: 10, scale: 2 }).notNull(),
     securityDeposit: decimal("security_deposit", { precision: 10, scale: 2 }),
     currency: varchar("currency", { length: 3 }).notNull().default("USD"),
-    rentDueDay: integer("rent_due_day").default(1), // Day of month (1-28)
+    rentDueDay: integer("rent_due_day").notNull().default(1), // Day of month (1-28)
     status: varchar("status", { length: 20 }).notNull().default('active'),
     documents: text("documents"),
     terms: text("terms"),
@@ -306,6 +306,7 @@ export const maintenanceRequests = createTable(
 {
   id: 1,
   tenantId: 42,
+  leaseId: 1,  // Required: Links payment to specific lease for tracking and reconciliation
   amount: 2500.00,
   type: "rent",
   status: "completed",
@@ -323,7 +324,14 @@ export const payments = createTable(
     tenantId: integer("tenant_id")
       .notNull()
       .references(() => user.id),
-    leaseId: integer("lease_id").references(() => leases.id),
+    // leaseId is required - every payment must be associated with a lease for proper
+    // financial tracking, reconciliation, and audit trail. This enables:
+    // - Tracking payment history per lease
+    // - Calculating outstanding balances
+    // - Generating lease-specific payment reports
+    leaseId: integer("lease_id")
+      .notNull()
+      .references(() => leases.id),
     amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
     currency: varchar("currency", { length: 3 }).notNull().default("USD"),
     type: varchar("type", { length: 50 }).notNull(),
