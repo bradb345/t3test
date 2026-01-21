@@ -229,6 +229,7 @@ export const leases = createTable(
     monthlyRent: decimal("monthly_rent", { precision: 10, scale: 2 }).notNull(),
     securityDeposit: decimal("security_deposit", { precision: 10, scale: 2 }),
     currency: varchar("currency", { length: 3 }).notNull().default("USD"),
+    rentDueDay: integer("rent_due_day").notNull().default(1), // Day of month (1-28)
     status: varchar("status", { length: 20 }).notNull().default('active'),
     documents: text("documents"),
     terms: text("terms"),
@@ -305,6 +306,7 @@ export const maintenanceRequests = createTable(
 {
   id: 1,
   tenantId: 42,
+  leaseId: 1,  // Required: Links payment to specific lease for tracking and reconciliation
   amount: 2500.00,
   type: "rent",
   status: "completed",
@@ -322,6 +324,14 @@ export const payments = createTable(
     tenantId: integer("tenant_id")
       .notNull()
       .references(() => user.id),
+    // leaseId is required - every payment must be associated with a lease for proper
+    // financial tracking, reconciliation, and audit trail. This enables:
+    // - Tracking payment history per lease
+    // - Calculating outstanding balances
+    // - Generating lease-specific payment reports
+    leaseId: integer("lease_id")
+      .notNull()
+      .references(() => leases.id),
     amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
     currency: varchar("currency", { length: 3 }).notNull().default("USD"),
     type: varchar("type", { length: 50 }).notNull(),
@@ -339,6 +349,7 @@ export const payments = createTable(
   (payment) => ({
     tenantPaymentIndex: index("tenant_payment_idx").on(payment.tenantId, payment.dueDate),
     statusIndex: index("payment_status_idx").on(payment.status),
+    leaseIndex: index("payment_lease_idx").on(payment.leaseId),
   })
 );
 
@@ -417,6 +428,8 @@ export const tenantInvitations = createTable(
     tenantName: varchar("tenant_name", { length: 256 }).notNull(),
     invitationToken: varchar("invitation_token", { length: 256 }).notNull().unique(),
     isExistingTenant: boolean("is_existing_tenant").notNull().default(false),
+    rentDueDay: integer("rent_due_day"), // Passed to lease on completion
+    leaseDocuments: text("lease_documents"), // JSON array of uploaded document URLs
     status: varchar("status", { length: 20 }).notNull().default('sent'),
     sentAt: timestamp("sent_at", { withTimezone: true })
       .default(sql`CURRENT_TIMESTAMP`)
