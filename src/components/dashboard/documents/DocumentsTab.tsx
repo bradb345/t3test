@@ -9,7 +9,7 @@ import {
   CardTitle,
 } from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
-import { FileText, Download, Upload, File, ExternalLink } from "lucide-react";
+import { FileText, Upload, File, ExternalLink } from "lucide-react";
 import { DocumentCard } from "./DocumentCard";
 import { DocumentUploadModal } from "./DocumentUploadModal";
 import type {

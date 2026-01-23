@@ -4,6 +4,10 @@ import { db } from "~/server/db";
 import { maintenanceRequests, user, leases } from "~/server/db/schema";
 import { eq, and, desc } from "drizzle-orm";
 import { hasRole } from "~/lib/roles";
+import {
+  VALID_MAINTENANCE_CATEGORIES,
+  VALID_MAINTENANCE_PRIORITIES,
+} from "~/lib/constants/maintenance";
 
 // GET: List maintenance requests for tenant
 export async function GET() {
@@ -95,22 +99,12 @@ export async function POST(request: NextRequest) {
   }
 
   // Validate category
-  const validCategories = [
-    "plumbing",
-    "electrical",
-    "hvac",
-    "appliance",
-    "structural",
-    "pest",
-    "other",
-  ];
-  if (!validCategories.includes(body.category)) {
+  if (!VALID_MAINTENANCE_CATEGORIES.includes(body.category)) {
     return NextResponse.json({ error: "Invalid category" }, { status: 400 });
   }
 
   // Validate priority
-  const validPriorities = ["low", "medium", "high", "emergency"];
-  if (!validPriorities.includes(body.priority)) {
+  if (!VALID_MAINTENANCE_PRIORITIES.includes(body.priority)) {
     return NextResponse.json({ error: "Invalid priority" }, { status: 400 });
   }
 

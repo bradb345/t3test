@@ -59,6 +59,10 @@ export function EmploymentInfoForm({
       toast.error("Position is required");
       return;
     }
+    if (!annualIncome || parseFloat(String(annualIncome)) <= 0) {
+      toast.error("Annual income is required");
+      return;
+    }
 
     setIsSubmitting(true);
 

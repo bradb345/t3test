@@ -24,6 +24,10 @@ import { Loader2, Upload, X } from "lucide-react";
 import { toast } from "sonner";
 import { useUploadThing } from "~/utils/uploadthing";
 import type { maintenanceRequests } from "~/server/db/schema";
+import {
+  MAINTENANCE_CATEGORIES,
+  MAINTENANCE_PRIORITIES,
+} from "~/lib/constants/maintenance";
 
 type MaintenanceRequest = typeof maintenanceRequests.$inferSelect;
 
@@ -34,22 +38,9 @@ interface CreateMaintenanceModalProps {
   onRequestCreated: (request: MaintenanceRequest) => void;
 }
 
-const categories = [
-  { value: "plumbing", label: "Plumbing" },
-  { value: "electrical", label: "Electrical" },
-  { value: "hvac", label: "HVAC / Heating / Cooling" },
-  { value: "appliance", label: "Appliance" },
-  { value: "structural", label: "Structural" },
-  { value: "pest", label: "Pest Control" },
-  { value: "other", label: "Other" },
-];
-
-const priorities = [
-  { value: "low", label: "Low", description: "Can wait a few weeks" },
-  { value: "medium", label: "Medium", description: "Should be addressed soon" },
-  { value: "high", label: "High", description: "Needs attention within days" },
-  { value: "emergency", label: "Emergency", description: "Urgent - safety concern" },
-];
+// Use shared constants
+const categories = MAINTENANCE_CATEGORIES;
+const priorities = MAINTENANCE_PRIORITIES;
 
 export function CreateMaintenanceModal({
   open,

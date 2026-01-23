@@ -22,6 +22,7 @@ import { Loader2, Upload, X, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { useUploadThing } from "~/utils/uploadthing";
 import type { tenantDocuments } from "~/server/db/schema";
+import { documentTypes } from "~/lib/document-constants";
 
 type TenantDocument = typeof tenantDocuments.$inferSelect;
 
@@ -31,14 +32,6 @@ interface DocumentUploadModalProps {
   profileId: number;
   onDocumentUploaded: (document: TenantDocument) => void;
 }
-
-const documentTypes = [
-  { value: "government_id", label: "Government ID" },
-  { value: "proof_of_address", label: "Proof of Address" },
-  { value: "pay_stub", label: "Pay Stub" },
-  { value: "bank_statement", label: "Bank Statement" },
-  { value: "other", label: "Other" },
-];
 
 export function DocumentUploadModal({
   open,

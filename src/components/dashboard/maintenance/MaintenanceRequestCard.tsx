@@ -8,8 +8,14 @@ import {
   CardTitle,
 } from "~/components/ui/card";
 import { Badge } from "~/components/ui/badge";
-import { Clock, Wrench, CheckCircle2, Calendar, Image as ImageIcon } from "lucide-react";
+import { Calendar, Image as ImageIcon } from "lucide-react";
 import type { maintenanceRequests } from "~/server/db/schema";
+import {
+  maintenanceStatusConfig,
+  maintenancePriorityBadgeConfig,
+  maintenanceCategoryLabels,
+} from "~/lib/maintenance-constants";
+import { formatDate } from "~/lib/date";
 
 type MaintenanceRequest = typeof maintenanceRequests.$inferSelect;
 
@@ -17,55 +23,9 @@ interface MaintenanceRequestCardProps {
   request: MaintenanceRequest;
 }
 
-const statusConfig = {
-  pending: {
-    label: "Pending",
-    variant: "secondary" as const,
-    icon: Clock,
-    description: "Awaiting review",
-  },
-  in_progress: {
-    label: "In Progress",
-    variant: "default" as const,
-    icon: Wrench,
-    description: "Being worked on",
-  },
-  completed: {
-    label: "Completed",
-    variant: "outline" as const,
-    icon: CheckCircle2,
-    description: "Issue resolved",
-  },
-};
-
-const priorityConfig = {
-  low: { label: "Low", className: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300" },
-  medium: { label: "Medium", className: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300" },
-  high: { label: "High", className: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300" },
-  emergency: { label: "Emergency", className: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300" },
-};
-
-const categoryLabels: Record<string, string> = {
-  plumbing: "Plumbing",
-  electrical: "Electrical",
-  hvac: "HVAC",
-  appliance: "Appliance",
-  structural: "Structural",
-  pest: "Pest Control",
-  other: "Other",
-};
-
 export function MaintenanceRequestCard({ request }: MaintenanceRequestCardProps) {
-  const formatDate = (date: Date) => {
-    return new Date(date).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
-  };
-
-  const status = statusConfig[request.status as keyof typeof statusConfig] ?? statusConfig.pending;
-  const priority = priorityConfig[request.priority as keyof typeof priorityConfig] ?? priorityConfig.medium;
+  const status = maintenanceStatusConfig[request.status as keyof typeof maintenanceStatusConfig] ?? maintenanceStatusConfig.pending;
+  const priority = maintenancePriorityBadgeConfig[request.priority as keyof typeof maintenancePriorityBadgeConfig] ?? maintenancePriorityBadgeConfig.medium;
   const StatusIcon = status.icon;
 
   // Parse imageUrls if they exist
@@ -90,7 +50,7 @@ export function MaintenanceRequestCard({ request }: MaintenanceRequestCardProps)
         </div>
         <CardDescription className="flex items-center gap-2">
           <span className="capitalize">
-            {categoryLabels[request.category] ?? request.category}
+            {maintenanceCategoryLabels[request.category] ?? request.category}
           </span>
           <span>-</span>
           <span className={`rounded px-1.5 py-0.5 text-xs font-medium ${priority.className}`}>

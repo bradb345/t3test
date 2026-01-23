@@ -8,8 +8,13 @@ import {
   CardTitle,
 } from "~/components/ui/card";
 import { Badge } from "~/components/ui/badge";
-import { Wrench, Clock, CheckCircle2, AlertCircle } from "lucide-react";
+import { Wrench, CheckCircle2 } from "lucide-react";
 import type { maintenanceRequests } from "~/server/db/schema";
+import {
+  maintenanceStatusConfig,
+  maintenancePriorityConfig,
+} from "~/lib/maintenance-constants";
+import { formatDateShort } from "~/lib/date";
 
 type MaintenanceRequest = typeof maintenanceRequests.$inferSelect;
 
@@ -17,39 +22,7 @@ interface RecentMaintenanceCardProps {
   requests: MaintenanceRequest[];
 }
 
-const statusConfig = {
-  pending: {
-    label: "Pending",
-    variant: "secondary" as const,
-    icon: Clock,
-  },
-  in_progress: {
-    label: "In Progress",
-    variant: "default" as const,
-    icon: Wrench,
-  },
-  completed: {
-    label: "Completed",
-    variant: "outline" as const,
-    icon: CheckCircle2,
-  },
-};
-
-const priorityConfig = {
-  low: { label: "Low", className: "text-green-600" },
-  medium: { label: "Medium", className: "text-yellow-600" },
-  high: { label: "High", className: "text-orange-600" },
-  emergency: { label: "Emergency", className: "text-red-600" },
-};
-
 export function RecentMaintenanceCard({ requests }: RecentMaintenanceCardProps) {
-  const formatDate = (date: Date) => {
-    return new Date(date).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-    });
-  };
-
   if (requests.length === 0) {
     return (
       <Card>
@@ -85,8 +58,8 @@ export function RecentMaintenanceCard({ requests }: RecentMaintenanceCardProps) 
       <CardContent>
         <div className="space-y-4">
           {requests.map((request) => {
-            const status = statusConfig[request.status as keyof typeof statusConfig] ?? statusConfig.pending;
-            const priority = priorityConfig[request.priority as keyof typeof priorityConfig] ?? priorityConfig.medium;
+            const status = maintenanceStatusConfig[request.status as keyof typeof maintenanceStatusConfig] ?? maintenanceStatusConfig.pending;
+            const priority = maintenancePriorityConfig[request.priority as keyof typeof maintenancePriorityConfig] ?? maintenancePriorityConfig.medium;
             const StatusIcon = status.icon;
 
             return (
@@ -108,7 +81,7 @@ export function RecentMaintenanceCard({ requests }: RecentMaintenanceCardProps) 
                 <div className="flex flex-col items-end gap-1">
                   <Badge variant={status.variant}>{status.label}</Badge>
                   <span className="text-xs text-muted-foreground">
-                    {formatDate(request.createdAt)}
+                    {formatDateShort(request.createdAt)}
                   </span>
                 </div>
               </div>

@@ -16,6 +16,7 @@ import {
 import { File, ExternalLink, Trash2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import type { tenantDocuments } from "~/server/db/schema";
+import { formatDate } from "~/lib/date";
 
 type TenantDocument = typeof tenantDocuments.$inferSelect;
 
@@ -50,14 +51,6 @@ const statusConfig = {
 export function DocumentCard({ document, onDeleted }: DocumentCardProps) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-
-  const formatDate = (date: Date) => {
-    return new Date(date).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
-  };
 
   const handleDelete = async () => {
     setIsDeleting(true);

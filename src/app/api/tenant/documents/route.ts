@@ -4,6 +4,7 @@ import { db } from "~/server/db";
 import { tenantDocuments, tenantProfiles, user } from "~/server/db/schema";
 import { eq, desc } from "drizzle-orm";
 import { hasRole } from "~/lib/roles";
+import { isValidDocumentType } from "~/lib/document-constants";
 
 // GET: List documents for tenant
 export async function GET() {
@@ -103,14 +104,7 @@ export async function POST(request: NextRequest) {
   }
 
   // Validate document type
-  const validTypes = [
-    "government_id",
-    "proof_of_address",
-    "pay_stub",
-    "bank_statement",
-    "other",
-  ];
-  if (!validTypes.includes(body.documentType)) {
+  if (!isValidDocumentType(body.documentType)) {
     return NextResponse.json(
       { error: "Invalid document type" },
       { status: 400 }

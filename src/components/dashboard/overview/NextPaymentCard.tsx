@@ -11,6 +11,8 @@ import { Button } from "~/components/ui/button";
 import { Badge } from "~/components/ui/badge";
 import { CreditCard, Calendar, AlertCircle, CheckCircle2 } from "lucide-react";
 import type { leases, units, properties, payments } from "~/server/db/schema";
+import { formatDate } from "~/lib/date";
+import { formatCurrency } from "~/lib/currency";
 
 type Lease = typeof leases.$inferSelect;
 type Unit = typeof units.$inferSelect;
@@ -29,22 +31,6 @@ interface NextPaymentCardProps {
 }
 
 export function NextPaymentCard({ payment, lease }: NextPaymentCardProps) {
-  const formatDate = (date: Date) => {
-    return new Date(date).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
-  };
-
-  const formatCurrency = (amount: string | number, currency: string) => {
-    const num = typeof amount === "string" ? parseFloat(amount) : amount;
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: currency,
-    }).format(num);
-  };
-
   const getDaysUntilDue = (dueDate: Date) => {
     const now = new Date();
     const due = new Date(dueDate);

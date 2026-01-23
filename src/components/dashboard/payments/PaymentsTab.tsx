@@ -18,6 +18,8 @@ import {
   DollarSign,
 } from "lucide-react";
 import type { leases, units, properties, payments } from "~/server/db/schema";
+import { formatDate } from "~/lib/date";
+import { formatCurrency } from "~/lib/currency";
 
 type Lease = typeof leases.$inferSelect;
 type Unit = typeof units.$inferSelect;
@@ -59,22 +61,6 @@ const statusConfig = {
 };
 
 export function PaymentsTab({ payments, lease }: PaymentsTabProps) {
-  const formatDate = (date: Date) => {
-    return new Date(date).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
-  };
-
-  const formatCurrency = (amount: string | number, currency: string) => {
-    const num = typeof amount === "string" ? parseFloat(amount) : amount;
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: currency,
-    }).format(num);
-  };
-
   return (
     <div className="space-y-6">
       <div>
