@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Badge } from "~/components/ui/badge";
 import { MapPin, Bed, Bath, Square, Home, ChevronLeft, ChevronRight } from "lucide-react";
 import type { UnitSearchRecord } from "~/lib/algolia";
+import { formatCurrency } from "~/lib/currency";
 
 interface PropertyListingCardProps {
   unit: UnitSearchRecord;
@@ -33,15 +34,6 @@ export function PropertyListingCard({ unit }: PropertyListingCardProps) {
     e.preventDefault();
     e.stopPropagation();
     setCurrentImageIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1));
-  };
-
-  const formatCurrency = (amount: number, currency: string) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: currency,
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount);
   };
 
   return (
