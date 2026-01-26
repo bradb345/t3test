@@ -446,6 +446,8 @@ export async function POST(request: NextRequest) {
         leaseEnd,
         monthlyRent: invitation.unit.monthlyRent ?? "0",
         securityDeposit: invitation.unit.deposit,
+        rentDueDay: invitation.invitation.rentDueDay ?? 1,
+        documents: invitation.invitation.leaseDocuments,
         status: "active",
       });
 

@@ -13,9 +13,15 @@ interface Property {
   // Add other property fields if needed for type safety
 }
 
+interface UserRoles {
+  roles: string[];
+  hasActiveLease: boolean;
+}
+
 export function Navbar() {
   const { isSignedIn } = useAuth();
   const [hasProperties, setHasProperties] = useState(false);
+  const [isTenant, setIsTenant] = useState(false);
   const searchParams = useSearchParams();
   const [signInButtonElement, setSignInButtonElement] = useState<HTMLButtonElement | null>(null);
 
@@ -29,6 +35,16 @@ export function Navbar() {
         })
         .catch((error) => {
           console.error("Error checking properties:", error);
+        });
+
+      // Check if user is a tenant with active lease
+      fetch("/api/tenant/check")
+        .then((res) => res.json())
+        .then((data: UserRoles) => {
+          setIsTenant(data.hasActiveLease);
+        })
+        .catch((error) => {
+          console.error("Error checking tenant status:", error);
         });
     }
   }, [isSignedIn]);
@@ -78,6 +94,14 @@ export function Navbar() {
               >
                 Messages
               </Link>
+              {isTenant && (
+                <Link
+                  href="/dashboard"
+                  className="text-sm font-medium text-muted-foreground hover:text-primary"
+                >
+                  Dashboard
+                </Link>
+              )}
               <NotificationBell />
             </>
           )}
