@@ -7,10 +7,10 @@ import {
   leases,
   units,
   properties,
-  notifications,
 } from "~/server/db/schema";
 import { eq, and, desc } from "drizzle-orm";
 import { hasRole } from "~/lib/roles";
+import { createAndEmitNotification } from "~/server/notification-emitter";
 import {
   VALID_MAINTENANCE_CATEGORIES,
   VALID_MAINTENANCE_PRIORITIES,
@@ -146,7 +146,7 @@ export async function POST(request: NextRequest) {
 
   if (landlord && newRequest) {
     const tenantName = `${dbUser.first_name} ${dbUser.last_name}`;
-    await db.insert(notifications).values({
+    await createAndEmitNotification({
       userId: landlord.id,
       type: "maintenance_request",
       title: "New Maintenance Request",

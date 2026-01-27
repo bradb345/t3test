@@ -52,23 +52,25 @@ export function NotificationBell() {
     }
   };
 
-  // Fetch notifications on mount and poll every 30 seconds
+  // Fetch notifications on mount, then use SSE for real-time updates
   useEffect(() => {
     void fetchNotifications();
 
-    const interval = setInterval(() => {
-      void fetchNotifications();
-    }, 30000);
+    const eventSource = new EventSource("/api/notifications/stream");
 
-    // Listen for custom refresh event (triggered by other components)
-    const handleRefresh = () => {
+    eventSource.addEventListener("notification", (event) => {
+      const notification = JSON.parse(event.data as string) as Notification;
+      setNotifications((prev) => [notification, ...prev]);
+      setUnreadCount((prev) => prev + 1);
+    });
+
+    eventSource.addEventListener("open", () => {
+      // Refetch on reconnect to catch anything missed during disconnect
       void fetchNotifications();
-    };
-    window.addEventListener("refresh-notifications", handleRefresh);
+    });
 
     return () => {
-      clearInterval(interval);
-      window.removeEventListener("refresh-notifications", handleRefresh);
+      eventSource.close();
     };
   }, []);
 

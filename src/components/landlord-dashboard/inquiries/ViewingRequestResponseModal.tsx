@@ -64,9 +64,6 @@ export function ViewingRequestResponseModal({
         ...updatedRequest,
       });
 
-      // Trigger notification refresh to update the notification bell
-      window.dispatchEvent(new CustomEvent("refresh-notifications"));
-
       const messages = {
         approved: "Viewing request approved",
         declined: "Viewing request declined",

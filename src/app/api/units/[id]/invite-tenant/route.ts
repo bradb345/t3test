@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { db } from "~/server/db";
-import { units, tenantInvitations, tenantOnboardingProgress, properties, user, notifications } from "~/server/db/schema";
+import { units, tenantInvitations, tenantOnboardingProgress, properties, user } from "~/server/db/schema";
+import { createAndEmitNotification } from "~/server/notification-emitter";
 import { eq } from "drizzle-orm";
 import { sendEmail } from "~/lib/email";
 import { getTenantInvitationEmailHtml } from "~/emails/tenant-invitation";
@@ -188,7 +189,7 @@ export async function POST(
 
     // If tenant has an existing account, create an in-app notification
     if (existingTenantUser) {
-      await db.insert(notifications).values({
+      await createAndEmitNotification({
         userId: existingTenantUser.id,
         type: "tenant_invitation",
         title: "New Rental Invitation",

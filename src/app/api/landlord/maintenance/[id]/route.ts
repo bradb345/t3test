@@ -10,6 +10,7 @@ import {
 } from "~/server/db/schema";
 import { eq, and, like } from "drizzle-orm";
 import { hasRole } from "~/lib/roles";
+import { createAndEmitNotification } from "~/server/notification-emitter";
 import {
   VALID_MAINTENANCE_STATUSES,
   MAINTENANCE_STATUS_TRANSITIONS,
@@ -158,7 +159,7 @@ export async function PATCH(
 
       const message = statusMessages[body.status];
       if (message) {
-        await db.insert(notifications).values({
+        await createAndEmitNotification({
           userId: existingRequest.request.requestedBy,
           type: "maintenance_update",
           title: "Maintenance Request Updated",
