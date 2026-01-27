@@ -92,9 +92,6 @@ export function MaintenanceStatusUpdateModal({
         ...updatedRequest,
       });
 
-      // Trigger notification refresh to update the notification bell
-      window.dispatchEvent(new CustomEvent("refresh-notifications"));
-
       toast.success("Maintenance request updated");
       onOpenChange(false);
     } catch (error) {

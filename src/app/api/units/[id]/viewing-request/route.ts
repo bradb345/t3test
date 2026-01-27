@@ -5,9 +5,9 @@ import {
   units,
   properties,
   user,
-  notifications,
 } from "~/server/db/schema";
 import { eq } from "drizzle-orm";
+import { createAndEmitNotification } from "~/server/notification-emitter";
 
 // POST: Submit a viewing request (public endpoint for prospective tenants)
 export async function POST(
@@ -115,7 +115,7 @@ export async function POST(
       .limit(1);
 
     if (landlord) {
-      await db.insert(notifications).values({
+      await createAndEmitNotification({
         userId: landlord.id,
         type: "viewing_request",
         title: "New Viewing Request",

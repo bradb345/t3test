@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { db } from "~/server/db";
 import { tenantInvitations, tenantOnboardingProgress, units, properties, user, notifications, leases } from "~/server/db/schema";
+import { createAndEmitNotification } from "~/server/notification-emitter";
 import { eq, and, gt } from "drizzle-orm";
 import { sendEmail } from "~/lib/email";
 import { getOnboardingCompleteEmailHtml, getOnboardingCompleteEmailSubject } from "~/emails/onboarding-complete";
@@ -549,7 +550,7 @@ export async function POST(request: NextRequest) {
       ? `${invitation.invitation.tenantName} has completed their onboarding and has been attached to Unit ${invitation.unit.unitNumber}`
       : `${invitation.invitation.tenantName} has completed their onboarding for Unit ${invitation.unit.unitNumber}`;
 
-    await db.insert(notifications).values({
+    await createAndEmitNotification({
       userId: invitation.landlord.id,
       type: "onboarding_complete",
       title: "Tenant Onboarding Complete",
