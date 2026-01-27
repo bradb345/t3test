@@ -12,7 +12,7 @@
 import { config } from 'dotenv';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
-import { like, eq, and, ne } from 'drizzle-orm';
+import { like, eq, and, notInArray } from 'drizzle-orm';
 import { algoliasearch } from 'algoliasearch';
 import { extractFileKeys, utapi } from '../src/lib/uploadthing';
 
@@ -314,8 +314,7 @@ async function cleanupTestUsers() {
     .where(
       and(
         like(users.email, '%+clerk_test@example.com'),
-        ne(users.email, PROTECTED_EMAILS[0]!),
-        ne(users.email, PROTECTED_EMAILS[1]!),
+        notInArray(users.email, PROTECTED_EMAILS),
       )
     );
 

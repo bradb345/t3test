@@ -56,32 +56,4 @@ describe("Signup Flow", () => {
     cy.get(".cl-card", { timeout: 15000 }).should("not.exist");
     cy.contains("button", "Sign In").should("not.exist");
   });
-
-  it("should show the new user is authenticated after signup", () => {
-    // Generate unique test email
-    const randomId = Date.now();
-    const testEmail = `test${randomId}+clerk_test@example.com`;
-    const testPassword = "m8QiMzxkx5!&c#9T";
-
-    // Open the Clerk modal and switch to sign up
-    cy.contains("button", "Sign In").click();
-    cy.get(".cl-card").should("be.visible");
-    cy.get(".cl-footerActionLink", { timeout: 10000 }).click();
-
-    // Fill in the sign up form
-    cy.get('input[name="firstName"]', { timeout: 10000 }).should("be.visible");
-    cy.get('input[name="firstName"]').type("Test");
-    cy.get('input[name="lastName"]').type("User");
-    cy.get('input[name="emailAddress"]').type(testEmail);
-    cy.get('input[name="password"]').type(testPassword);
-
-    // Submit and verify
-    cy.get(".cl-formButtonPrimary").click();
-    cy.get("[class*='cl-otpCodeField']", { timeout: 15000 }).should("be.visible");
-    cy.get("[class*='cl-otpCodeField']").first().click().type("424242");
-
-    // After signup, verify authenticated state
-    cy.get(".cl-card", { timeout: 15000 }).should("not.exist");
-    cy.contains("button", "Sign In").should("not.exist");
-  });
 });
