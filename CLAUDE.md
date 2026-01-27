@@ -6,6 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Always use the DRY (Don't Repeat Yourself) principle when working in this codebase. Extract shared logic into reusable functions, constants, and components.
 
+Consider scalability when writing code. Choose patterns and data structures that handle growing data volumes, concurrent users, and increased load. Prefer solutions that can scale horizontally (e.g., external pub/sub over in-memory state, paginated queries over unbounded fetches, indexed lookups over full scans).
+
 ## Build & Development Commands
 
 ```bash
