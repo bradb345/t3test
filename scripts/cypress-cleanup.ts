@@ -1,9 +1,10 @@
 /**
  * Cypress Test Cleanup Script
- * 
- * This script cleans up any leftover test data from failed Cypress tests.
- * It deletes all properties (and associated units) that have names starting with "Cypress Test Property".
- * 
+ *
+ * This script cleans up any leftover test data from failed Cypress tests:
+ * 1. Deletes all properties (and associated units) with names starting with "Cypress Test Property"
+ * 2. Deletes all test users matching +clerk_test@example.com (except permanent test accounts)
+ *
  * Run with: npx tsx scripts/cypress-cleanup.ts
  * Or before Cypress: npm run cy:clean && npx cypress open
  */
@@ -11,7 +12,7 @@
 import { config } from 'dotenv';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
-import { like, eq } from 'drizzle-orm';
+import { like, eq, and, ne } from 'drizzle-orm';
 import { algoliasearch } from 'algoliasearch';
 import { extractFileKeys, utapi } from '../src/lib/uploadthing';
 
@@ -106,7 +107,28 @@ const units = createTable(
   })
 );
 
+// User table schema (minimal, only fields needed for cleanup)
+const users = createTable(
+  "user",
+  {
+    id: serial("id").primaryKey(),
+    auth_id: varchar("auth_id", { length: 256 }).notNull(),
+    email: varchar("email", { length: 256 }).notNull(),
+    first_name: varchar("first_name", { length: 256 }).notNull(),
+    last_name: varchar("last_name", { length: 256 }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .default(drizzleSql`CURRENT_TIMESTAMP`)
+      .notNull(),
+  }
+);
+
 const db = drizzle(sql);
+
+// Protected test accounts that should never be deleted
+const PROTECTED_EMAILS = [
+  'doe+clerk_test@example.com',
+  'smith+clerk_test@example.com',
+];
 
 // Algolia setup
 const algoliaAppId = process.env.NEXT_PUBLIC_ALGOLIA_APP_ID;
@@ -153,98 +175,195 @@ async function removeUnitFromAlgolia(unitId: number): Promise<void> {
 }
 
 /**
+ * Delete a user from Clerk using the REST API
+ */
+async function deleteClerkUser(authId: string): Promise<boolean> {
+  const clerkSecretKey = process.env.CLERK_SECRET_KEY;
+  if (!clerkSecretKey) {
+    console.log(`   ⚠️  Skipping Clerk deletion (no CLERK_SECRET_KEY)`);
+    return false;
+  }
+
+  try {
+    const response = await fetch(`https://api.clerk.com/v1/users/${authId}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${clerkSecretKey}`,
+      },
+    });
+
+    if (response.ok) {
+      return true;
+    }
+
+    // 404 means user already doesn't exist in Clerk
+    if (response.status === 404) {
+      console.log(`   ⚠️  User ${authId} not found in Clerk (already deleted)`);
+      return true;
+    }
+
+    const errorText = await response.text();
+    console.error(`   ❌ Failed to delete Clerk user ${authId}: ${response.status} ${errorText}`);
+    return false;
+  } catch (error) {
+    console.error(`   ❌ Error deleting Clerk user ${authId}:`, error instanceof Error ? error.message : 'Unknown error');
+    return false;
+  }
+}
+
+/**
+ * Clean up test properties and associated units
+ */
+async function cleanupTestProperties() {
+  console.log('Looking for properties starting with "Cypress Test Property"...\n');
+
+  const testProperties = await db
+    .select()
+    .from(properties)
+    .where(like(properties.name, 'Cypress Test Property%'));
+
+  if (testProperties.length === 0) {
+    console.log('✅ No test properties found.\n');
+    return;
+  }
+
+  console.log(`Found ${testProperties.length} test properties to delete:\n`);
+
+  for (const property of testProperties) {
+    console.log(`📍 Property: "${property.name}" (ID: ${property.id})`);
+    console.log(`   Address: ${property.address}`);
+    console.log(`   Created: ${property.createdAt.toISOString()}`);
+
+    // Get all units for this property
+    const propertyUnits = await db
+      .select()
+      .from(units)
+      .where(eq(units.propertyId, property.id));
+
+    console.log(`   Units: ${propertyUnits.length}`);
+
+    // Delete each unit's data
+    for (const unit of propertyUnits) {
+      console.log(`\n   🏠 Unit ${unit.unitNumber} (ID: ${unit.id})`);
+
+      // Remove from Algolia
+      console.log(`      Removing from Algolia...`);
+      await removeUnitFromAlgolia(unit.id);
+
+      // Delete unit images from UploadThing
+      if (unit.imageUrls) {
+        try {
+          const imageUrls = JSON.parse(unit.imageUrls) as string[];
+          await deleteFilesFromUploadThingSafe(imageUrls, `unit ${unit.id} images`);
+        } catch {
+          console.warn(`      ⚠️  Failed to parse unit image URLs`);
+        }
+      }
+
+      // Delete floor plan from UploadThing
+      if (unit.floorPlan) {
+        try {
+          const floorPlanUrls = JSON.parse(unit.floorPlan) as string[];
+          await deleteFilesFromUploadThingSafe(floorPlanUrls, `unit ${unit.id} floor plan`);
+        } catch {
+          console.warn(`      ⚠️  Failed to parse floor plan URLs`);
+        }
+      }
+    }
+
+    // Delete property images from UploadThing
+    if (property.imageUrls) {
+      try {
+        const imageUrls = JSON.parse(property.imageUrls) as string[];
+        await deleteFilesFromUploadThingSafe(imageUrls, `property ${property.id} images`);
+      } catch {
+        console.warn(`   ⚠️  Failed to parse property image URLs`);
+      }
+    }
+
+    // Delete units from database
+    if (propertyUnits.length > 0) {
+      console.log(`\n   🗑️  Deleting ${propertyUnits.length} units from database...`);
+      await db
+        .delete(units)
+        .where(eq(units.propertyId, property.id));
+    }
+
+    // Delete property from database
+    console.log(`   🗑️  Deleting property from database...`);
+    await db
+      .delete(properties)
+      .where(eq(properties.id, property.id));
+
+    console.log(`   ✅ Property deleted successfully\n`);
+  }
+
+  console.log(`✅ Deleted ${testProperties.length} test properties.\n`);
+}
+
+/**
+ * Clean up test users from Clerk and database (excluding permanent test accounts)
+ */
+async function cleanupTestUsers() {
+  console.log('Looking for test users matching "+clerk_test@example.com"...');
+  console.log(`Protected emails: ${PROTECTED_EMAILS.join(', ')}\n`);
+
+  const testUsers = await db
+    .select()
+    .from(users)
+    .where(
+      and(
+        like(users.email, '%+clerk_test@example.com'),
+        ne(users.email, PROTECTED_EMAILS[0]!),
+        ne(users.email, PROTECTED_EMAILS[1]!),
+      )
+    );
+
+  if (testUsers.length === 0) {
+    console.log('✅ No test users found.\n');
+    return;
+  }
+
+  console.log(`Found ${testUsers.length} test user(s) to delete:\n`);
+
+  let deletedCount = 0;
+
+  for (const user of testUsers) {
+    console.log(`👤 User: ${user.first_name} ${user.last_name} (${user.email})`);
+    console.log(`   Auth ID: ${user.auth_id}`);
+    console.log(`   Created: ${user.createdAt.toISOString()}`);
+
+    // Delete from Clerk first
+    console.log(`   🔑 Deleting from Clerk...`);
+    const clerkDeleted = await deleteClerkUser(user.auth_id);
+
+    if (clerkDeleted) {
+      // Delete from database
+      console.log(`   🗑️  Deleting from database...`);
+      await db
+        .delete(users)
+        .where(eq(users.email, user.email));
+
+      console.log(`   ✅ User deleted successfully\n`);
+      deletedCount++;
+    } else {
+      console.log(`   ⚠️  Skipping database deletion due to Clerk error\n`);
+    }
+  }
+
+  console.log(`✅ Deleted ${deletedCount}/${testUsers.length} test users.\n`);
+}
+
+/**
  * Main cleanup function
  */
 async function cleanupCypressTestData() {
   console.log('\n🧹 Cypress Test Data Cleanup\n');
-  console.log('Looking for properties starting with "Cypress Test Property"...\n');
 
   try {
-    // Find all test properties
-    const testProperties = await db
-      .select()
-      .from(properties)
-      .where(like(properties.name, 'Cypress Test Property%'));
-
-    if (testProperties.length === 0) {
-      console.log('✅ No test properties found. Nothing to clean up!\n');
-      await sql.end();
-      return;
-    }
-
-    console.log(`Found ${testProperties.length} test properties to delete:\n`);
-
-    for (const property of testProperties) {
-      console.log(`📍 Property: "${property.name}" (ID: ${property.id})`);
-      console.log(`   Address: ${property.address}`);
-      console.log(`   Created: ${property.createdAt.toISOString()}`);
-
-      // Get all units for this property
-      const propertyUnits = await db
-        .select()
-        .from(units)
-        .where(eq(units.propertyId, property.id));
-
-      console.log(`   Units: ${propertyUnits.length}`);
-
-      // Delete each unit's data
-      for (const unit of propertyUnits) {
-        console.log(`\n   🏠 Unit ${unit.unitNumber} (ID: ${unit.id})`);
-
-        // Remove from Algolia
-        console.log(`      Removing from Algolia...`);
-        await removeUnitFromAlgolia(unit.id);
-
-        // Delete unit images from UploadThing
-        if (unit.imageUrls) {
-          try {
-            const imageUrls = JSON.parse(unit.imageUrls) as string[];
-            await deleteFilesFromUploadThingSafe(imageUrls, `unit ${unit.id} images`);
-          } catch {
-            console.warn(`      ⚠️  Failed to parse unit image URLs`);
-          }
-        }
-
-        // Delete floor plan from UploadThing
-        if (unit.floorPlan) {
-          try {
-            const floorPlanUrls = JSON.parse(unit.floorPlan) as string[];
-            await deleteFilesFromUploadThingSafe(floorPlanUrls, `unit ${unit.id} floor plan`);
-          } catch {
-            console.warn(`      ⚠️  Failed to parse floor plan URLs`);
-          }
-        }
-      }
-
-      // Delete property images from UploadThing
-      if (property.imageUrls) {
-        try {
-          const imageUrls = JSON.parse(property.imageUrls) as string[];
-          await deleteFilesFromUploadThingSafe(imageUrls, `property ${property.id} images`);
-        } catch {
-          console.warn(`   ⚠️  Failed to parse property image URLs`);
-        }
-      }
-
-      // Delete units from database
-      if (propertyUnits.length > 0) {
-        console.log(`\n   🗑️  Deleting ${propertyUnits.length} units from database...`);
-        await db
-          .delete(units)
-          .where(eq(units.propertyId, property.id));
-      }
-
-      // Delete property from database
-      console.log(`   🗑️  Deleting property from database...`);
-      await db
-        .delete(properties)
-        .where(eq(properties.id, property.id));
-
-      console.log(`   ✅ Property deleted successfully\n`);
-    }
-
-    console.log(`\n✅ Cleanup complete! Deleted ${testProperties.length} test properties.\n`);
-
+    await cleanupTestProperties();
+    await cleanupTestUsers();
+    console.log('✅ All cleanup complete!\n');
   } catch (error) {
     console.error('\n❌ Cleanup failed:', error);
     process.exit(1);
