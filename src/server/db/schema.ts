@@ -786,3 +786,50 @@ export const notifications = createTable(
   })
 );
 
+// Example viewing request data:
+/*
+{
+  id: 1,
+  unitId: 1,
+  name: "Jane Smith",
+  email: "jane.smith@example.com",
+  phone: "+1-555-123-4567",
+  preferredDate: "2024-04-15T00:00:00Z",
+  preferredTime: "2:00 PM",
+  message: "I'm interested in viewing this unit. I'm looking for a 2-bedroom apartment...",
+  status: "pending",
+  landlordNotes: null,
+  respondedAt: null
+}
+*/
+export const viewingRequests = createTable(
+  "viewing_request",
+  {
+    id: serial("id").primaryKey(),
+    unitId: integer("unit_id")
+      .notNull()
+      .references(() => units.id),
+    name: varchar("name", { length: 256 }).notNull(),
+    email: varchar("email", { length: 256 }).notNull(),
+    phone: varchar("phone", { length: 20 }),
+    preferredDate: timestamp("preferred_date", { withTimezone: true }),
+    preferredTime: varchar("preferred_time", { length: 50 }),
+    message: text("message"),
+    status: varchar("status", { length: 20 }).notNull().default("pending"),
+    // status: pending, approved, declined, completed
+    landlordNotes: text("landlord_notes"),
+    respondedAt: timestamp("responded_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).$onUpdate(
+      () => new Date()
+    ),
+  },
+  (request) => ({
+    unitIndex: index("viewing_unit_idx").on(request.unitId),
+    statusIndex: index("viewing_status_idx").on(request.status),
+    emailIndex: index("viewing_email_idx").on(request.email),
+  })
+);
+

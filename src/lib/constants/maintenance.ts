@@ -37,3 +37,25 @@ export const VALID_MAINTENANCE_CATEGORIES = MAINTENANCE_CATEGORIES.map(
 export const VALID_MAINTENANCE_PRIORITIES = MAINTENANCE_PRIORITIES.map(
   (p) => p.value
 ) as string[];
+
+// Maintenance statuses
+export const MAINTENANCE_STATUSES = [
+  { value: "pending", label: "Pending" },
+  { value: "in_progress", label: "In Progress" },
+  { value: "completed", label: "Completed" },
+  { value: "cancelled", label: "Cancelled" },
+] as const;
+
+export type MaintenanceStatus = (typeof MAINTENANCE_STATUSES)[number]["value"];
+
+export const VALID_MAINTENANCE_STATUSES = MAINTENANCE_STATUSES.map(
+  (s) => s.value
+) as string[];
+
+// Valid status transitions for landlords
+export const MAINTENANCE_STATUS_TRANSITIONS: Record<string, string[]> = {
+  pending: ["in_progress", "cancelled"],
+  in_progress: ["completed", "pending", "cancelled"],
+  completed: [],
+  cancelled: ["pending"],
+};

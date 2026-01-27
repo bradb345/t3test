@@ -1,7 +1,14 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse, type NextRequest } from "next/server";
 import { db } from "~/server/db";
-import { maintenanceRequests, user, leases } from "~/server/db/schema";
+import {
+  maintenanceRequests,
+  user,
+  leases,
+  units,
+  properties,
+  notifications,
+} from "~/server/db/schema";
 import { eq, and, desc } from "drizzle-orm";
 import { hasRole } from "~/lib/roles";
 import {
@@ -53,19 +60,27 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  // Get tenant's active lease to find their unit
-  const [lease] = await db
-    .select({ unitId: leases.unitId })
+  // Get tenant's active lease with unit and property info
+  const [leaseData] = await db
+    .select({
+      lease: leases,
+      unit: units,
+      property: properties,
+    })
     .from(leases)
+    .innerJoin(units, eq(units.id, leases.unitId))
+    .innerJoin(properties, eq(properties.id, units.propertyId))
     .where(and(eq(leases.tenantId, dbUser.id), eq(leases.status, "active")))
     .limit(1);
 
-  if (!lease) {
+  if (!leaseData) {
     return NextResponse.json(
       { error: "No active lease found" },
       { status: 400 }
     );
   }
+
+  const lease = leaseData.lease;
 
   const body = (await request.json()) as {
     title: string;
@@ -121,6 +136,31 @@ export async function POST(request: NextRequest) {
       status: "pending",
     })
     .returning();
+
+  // Notify landlord about new maintenance request
+  const [landlord] = await db
+    .select()
+    .from(user)
+    .where(eq(user.auth_id, leaseData.property.userId))
+    .limit(1);
+
+  if (landlord && newRequest) {
+    const tenantName = `${dbUser.first_name} ${dbUser.last_name}`;
+    await db.insert(notifications).values({
+      userId: landlord.id,
+      type: "maintenance_request",
+      title: "New Maintenance Request",
+      message: `${tenantName} submitted a ${body.priority} priority ${body.category} request: ${body.title}`,
+      data: JSON.stringify({
+        maintenanceRequestId: newRequest.id,
+        unitId: lease.unitId,
+        tenantName,
+        category: body.category,
+        priority: body.priority,
+      }),
+      actionUrl: `/my-properties?tab=maintenance`,
+    });
+  }
 
   return NextResponse.json(newRequest, { status: 201 });
 }

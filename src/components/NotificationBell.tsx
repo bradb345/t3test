@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Bell, Check, CheckCheck, User } from "lucide-react";
+import { Bell, Check, CheckCheck, User, Wrench, Inbox } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import Link from "next/link";
 import { cn } from "~/lib/utils";
@@ -35,25 +35,41 @@ export function NotificationBell() {
   const [isLoading, setIsLoading] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Fetch notifications on mount
-  useEffect(() => {
-    const fetchNotifications = async () => {
-      try {
-        const response = await fetch("/api/notifications");
-        if (response.ok) {
-          const data = (await response.json()) as {
-            notifications: Notification[];
-            unreadCount: number;
-          };
-          setNotifications(data.notifications);
-          setUnreadCount(data.unreadCount);
-        }
-      } catch (error) {
-        console.error("Error fetching notifications:", error);
+  // Fetch notifications function
+  const fetchNotifications = async () => {
+    try {
+      const response = await fetch("/api/notifications");
+      if (response.ok) {
+        const data = (await response.json()) as {
+          notifications: Notification[];
+          unreadCount: number;
+        };
+        setNotifications(data.notifications);
+        setUnreadCount(data.unreadCount);
       }
-    };
+    } catch (error) {
+      console.error("Error fetching notifications:", error);
+    }
+  };
 
+  // Fetch notifications on mount and poll every 30 seconds
+  useEffect(() => {
     void fetchNotifications();
+
+    const interval = setInterval(() => {
+      void fetchNotifications();
+    }, 30000);
+
+    // Listen for custom refresh event (triggered by other components)
+    const handleRefresh = () => {
+      void fetchNotifications();
+    };
+    window.addEventListener("refresh-notifications", handleRefresh);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("refresh-notifications", handleRefresh);
+    };
   }, []);
 
   // Close dropdown when clicking outside
@@ -124,6 +140,24 @@ export function NotificationBell() {
         return (
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-100">
             <Check className="h-4 w-4 text-green-600" />
+          </div>
+        );
+      case "maintenance_request":
+        return (
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-orange-100">
+            <Wrench className="h-4 w-4 text-orange-600" />
+          </div>
+        );
+      case "maintenance_update":
+        return (
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100">
+            <Wrench className="h-4 w-4 text-blue-600" />
+          </div>
+        );
+      case "viewing_request":
+        return (
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-purple-100">
+            <Inbox className="h-4 w-4 text-purple-600" />
           </div>
         );
       default:
