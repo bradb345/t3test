@@ -111,12 +111,12 @@ export function PropertyDocumentsSection({ documents }: PropertyDocumentsSection
                       {doc.status.replace("_", " ")}
                     </Badge>
                     <Button variant="ghost" size="icon" asChild>
-                      <a href={doc.fileUrl} target="_blank" rel="noopener noreferrer">
+                      <a href={doc.fileUrl} target="_blank" rel="noopener noreferrer" aria-label="View document">
                         <Eye className="h-4 w-4" />
                       </a>
                     </Button>
                     <Button variant="ghost" size="icon" asChild>
-                      <a href={doc.fileUrl} download={doc.fileName}>
+                      <a href={doc.fileUrl} download={doc.fileName} aria-label={`Download ${doc.fileName}`}>
                         <Download className="h-4 w-4" />
                       </a>
                     </Button>
