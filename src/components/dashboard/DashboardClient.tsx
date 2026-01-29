@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { Home, Wrench, CreditCard, FileText, User } from "lucide-react";
 import { OverviewTab } from "./overview/OverviewTab";
@@ -18,6 +19,7 @@ import type {
   tenantDocuments,
   employmentInfo,
   emergencyContacts,
+  tenantOffboardingNotices,
 } from "~/server/db/schema";
 
 type User = typeof user.$inferSelect;
@@ -30,6 +32,7 @@ type TenantProfile = typeof tenantProfiles.$inferSelect;
 type TenantDocument = typeof tenantDocuments.$inferSelect;
 type EmploymentInfo = typeof employmentInfo.$inferSelect;
 type EmergencyContact = typeof emergencyContacts.$inferSelect;
+type OffboardingNotice = typeof tenantOffboardingNotices.$inferSelect;
 
 interface LeaseWithDetails {
   lease: Lease;
@@ -46,6 +49,7 @@ interface DashboardClientProps {
   employment: EmploymentInfo | null;
   emergencyContacts: EmergencyContact[];
   tenantDocuments: TenantDocument[];
+  offboardingNotice: OffboardingNotice | null;
 }
 
 export function DashboardClient({
@@ -57,7 +61,14 @@ export function DashboardClient({
   employment,
   emergencyContacts,
   tenantDocuments,
+  offboardingNotice,
 }: DashboardClientProps) {
+  const router = useRouter();
+
+  const handleOffboardingChange = () => {
+    router.refresh();
+  };
+
   return (
     <main className="flex min-h-screen flex-col bg-background">
       <div className="mx-auto w-full max-w-7xl px-4 pb-16 pt-8">
@@ -101,6 +112,8 @@ export function DashboardClient({
               lease={lease}
               payments={payments}
               maintenanceRequests={maintenanceRequests}
+              offboardingNotice={offboardingNotice}
+              onOffboardingChange={handleOffboardingChange}
             />
           </TabsContent>
           <TabsContent value="maintenance">

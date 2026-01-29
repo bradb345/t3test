@@ -1,30 +1,50 @@
 "use client";
 
 import { useState } from "react";
-import { Users, Search } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Users, Search, Filter } from "lucide-react";
 import { Input } from "~/components/ui/input";
+import { Button } from "~/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "~/components/ui/select";
 import { TenantCard } from "./TenantCard";
 import { TenantDetailModal } from "./TenantDetailModal";
-import type { TenantWithLease } from "~/types/landlord";
+import type { TenantWithLease, User } from "~/types/landlord";
 
 interface TenantsTabProps {
   tenants: TenantWithLease[];
+  currentUser?: User | null;
 }
 
-export function TenantsTab({ tenants }: TenantsTabProps) {
+export function TenantsTab({ tenants, currentUser }: TenantsTabProps) {
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("active");
   const [selectedTenant, setSelectedTenant] = useState<TenantWithLease | null>(null);
 
   const filteredTenants = tenants.filter((tenant) => {
+    const matchesStatus = statusFilter === "all" || tenant.lease.status === statusFilter;
     const searchLower = searchQuery.toLowerCase();
-    return (
+    const matchesSearch =
+      !searchQuery ||
       tenant.user.first_name.toLowerCase().includes(searchLower) ||
       tenant.user.last_name.toLowerCase().includes(searchLower) ||
       tenant.user.email.toLowerCase().includes(searchLower) ||
       tenant.property.name.toLowerCase().includes(searchLower) ||
-      tenant.unit.unitNumber.toLowerCase().includes(searchLower)
-    );
+      tenant.unit.unitNumber.toLowerCase().includes(searchLower);
+    return matchesStatus && matchesSearch;
   });
+
+  const hasActiveFilters = statusFilter !== "all";
+
+  const clearFilters = () => {
+    setStatusFilter("all");
+  };
 
   return (
     <div className="space-y-6">
@@ -35,7 +55,33 @@ export function TenantsTab({ tenants }: TenantsTabProps) {
             View and manage all tenants across your properties
           </p>
         </div>
-        <div className="relative w-full sm:w-64">
+      </div>
+
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="flex items-center gap-2">
+          <Filter className="h-4 w-4 text-muted-foreground" />
+          <span className="text-sm text-muted-foreground">Filters:</span>
+        </div>
+
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-[150px]">
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Status</SelectItem>
+            <SelectItem value="active">Active</SelectItem>
+            <SelectItem value="notice_given">Notice Given</SelectItem>
+            <SelectItem value="terminated">Completed</SelectItem>
+          </SelectContent>
+        </Select>
+
+        {hasActiveFilters && (
+          <Button variant="ghost" size="sm" onClick={clearFilters}>
+            Clear filters
+          </Button>
+        )}
+
+        <div className="relative ml-auto w-full sm:w-64">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Search tenants..."
@@ -50,11 +96,11 @@ export function TenantsTab({ tenants }: TenantsTabProps) {
         <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-12">
           <Users className="h-12 w-12 text-muted-foreground" />
           <p className="mt-4 text-lg font-medium">
-            {searchQuery ? "No tenants found" : "No tenants yet"}
+            {searchQuery || hasActiveFilters ? "No tenants found" : "No tenants yet"}
           </p>
           <p className="text-sm text-muted-foreground">
-            {searchQuery
-              ? "Try adjusting your search query"
+            {searchQuery || hasActiveFilters
+              ? "Try adjusting your search or filters"
               : "Invite tenants to your properties to see them here"}
           </p>
         </div>
@@ -74,6 +120,8 @@ export function TenantsTab({ tenants }: TenantsTabProps) {
         open={!!selectedTenant}
         onOpenChange={(open) => !open && setSelectedTenant(null)}
         tenant={selectedTenant}
+        currentUser={currentUser}
+        onOffboardingChange={() => router.refresh()}
       />
     </div>
   );

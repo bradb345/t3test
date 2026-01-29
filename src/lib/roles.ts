@@ -157,3 +157,11 @@ export async function getUserRolesByAuthId(authId: string): Promise<UserRole[]> 
 
   return parseRoles(existingUser.roles);
 }
+
+/**
+ * Check if user is an admin (uses admin boolean column, not roles)
+ * This is a simple helper to check the admin flag on the user record
+ */
+export function isAdmin(userRecord: { admin: boolean | null }): boolean {
+  return userRecord.admin === true;
+}

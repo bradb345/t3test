@@ -1,5 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 import { db } from "~/server/db";
 import { properties, units, leases, maintenanceRequests, user } from "~/server/db/schema";
 import { eq, and } from "drizzle-orm";
@@ -78,6 +80,15 @@ export default async function PropertyDetailPage({
   return (
     <main className="flex min-h-screen flex-col bg-background">
       <div className="w-full max-w-7xl mx-auto px-4 pt-8 pb-16">
+        {/* Back Navigation */}
+        <Link
+          href="/my-properties"
+          className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mb-6"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Properties
+        </Link>
+
         {/* Property Header */}
         <div className="mb-8">
           <h1 className="text-4xl font-bold tracking-tight mb-2">
@@ -108,7 +119,7 @@ export default async function PropertyDetailPage({
         ) : (
           <div className="space-y-4">
             {unitsWithDetails.map((unit) => (
-              <UnitCard key={unit.id} unit={unit} propertyId={propertyId} />
+              <UnitCard key={unit.id} unit={unit} propertyId={propertyId} propertyName={property.name} />
             ))}
           </div>
         )}

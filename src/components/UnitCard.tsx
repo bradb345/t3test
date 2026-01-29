@@ -5,16 +5,18 @@ import { Badge } from "~/components/ui/badge";
 import { Card } from "~/components/ui/card";
 import { Switch } from "~/components/ui/switch";
 import { toast } from "sonner";
-import { MoreVertical, Edit, Copy, UserPlus, Trash2 } from "lucide-react";
+import { MoreVertical, Edit, Copy, UserPlus, Trash2, LogOut } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "~/components/ui/dropdown-menu";
 import { DeleteConfirmationDialog } from "~/components/DeleteConfirmationDialog";
 import { ConfirmationDialog } from "~/components/ConfirmationDialog";
 import { TenantInvitationModal } from "~/components/TenantInvitationModal";
+import { GiveNoticeFromUnitModal } from "~/components/GiveNoticeFromUnitModal";
 
 interface UnitCardProps {
   unit: {
@@ -23,6 +25,8 @@ interface UnitCardProps {
     isAvailable: boolean | null;
     isVisible: boolean | null;
     activeLease?: {
+      id: number;
+      status: string;
       tenant: {
         first_name: string;
         last_name: string;
@@ -32,9 +36,10 @@ interface UnitCardProps {
     hasPendingMaintenance: boolean;
   };
   propertyId: number;
+  propertyName: string;
 }
 
-export function UnitCard({ unit, propertyId }: UnitCardProps) {
+export function UnitCard({ unit, propertyId, propertyName }: UnitCardProps) {
   const [isVisible, setIsVisible] = useState(unit.isVisible ?? false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [isDuplicating, setIsDuplicating] = useState(false);
@@ -42,6 +47,9 @@ export function UnitCard({ unit, propertyId }: UnitCardProps) {
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
+  const [showGiveNoticeModal, setShowGiveNoticeModal] = useState(false);
+
+  const canGiveNotice = unit.activeLease && unit.activeLease.status === "active";
 
   const handleVisibilityToggle = async (checked: boolean) => {
     setIsUpdating(true);
@@ -163,6 +171,18 @@ export function UnitCard({ unit, propertyId }: UnitCardProps) {
         open={showInviteModal}
         onClose={() => setShowInviteModal(false)}
       />
+
+      {unit.activeLease && (
+        <GiveNoticeFromUnitModal
+          open={showGiveNoticeModal}
+          onOpenChange={setShowGiveNoticeModal}
+          leaseId={unit.activeLease.id}
+          unitNumber={unit.unitNumber}
+          propertyName={propertyName}
+          tenantName={`${unit.activeLease.tenant.first_name} ${unit.activeLease.tenant.last_name}`}
+          onSuccess={() => window.location.reload()}
+        />
+      )}
       
       <Card className="p-6 hover:shadow-md transition-shadow">
         <div className="flex items-center justify-between">
@@ -236,15 +256,30 @@ export function UnitCard({ unit, propertyId }: UnitCardProps) {
                   Onboard Tenant
                 </DropdownMenuItem>
               )}
+              {canGiveNotice && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => setShowGiveNoticeModal(true)}
+                    className="text-orange-600 focus:text-orange-600"
+                  >
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Give 2-Month Notice
+                  </DropdownMenuItem>
+                </>
+              )}
               {!unit.activeLease && (
-                <DropdownMenuItem
-                  onClick={() => setShowDeleteModal(true)}
-                  disabled={isDeleting}
-                  className="text-red-600 focus:text-red-600"
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  {isDeleting ? "Deleting..." : "Delete"}
-                </DropdownMenuItem>
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => setShowDeleteModal(true)}
+                    disabled={isDeleting}
+                    className="text-red-600 focus:text-red-600"
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    {isDeleting ? "Deleting..." : "Delete"}
+                  </DropdownMenuItem>
+                </>
               )}
             </DropdownMenuContent>
           </DropdownMenu>

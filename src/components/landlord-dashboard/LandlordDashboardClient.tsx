@@ -183,7 +183,7 @@ export function LandlordDashboardClient({
           </TabsContent>
 
           <TabsContent value="tenants">
-            <TenantsTab tenants={tenants} />
+            <TenantsTab tenants={tenants} currentUser={user} />
           </TabsContent>
 
           <TabsContent value="maintenance">
