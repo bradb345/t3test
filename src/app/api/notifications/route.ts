@@ -1,32 +1,21 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
 import { db } from "~/server/db";
-import { notifications, user } from "~/server/db/schema";
+import { notifications } from "~/server/db/schema";
 import { eq, and, desc } from "drizzle-orm";
 import { getAuthenticatedUser } from "~/server/auth";
 
 // GET /api/notifications - Get user's notifications
 export async function GET() {
   try {
-    const { userId } = await auth();
-
-    if (!userId) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+    const authResult = await getAuthenticatedUser();
+    if (authResult.error) {
+      // Gracefully return empty for new users without a DB record
+      if (authResult.error.status === 404) {
+        return NextResponse.json({ notifications: [], unreadCount: 0 });
+      }
+      return authResult.error;
     }
-
-    // Get the user's database ID
-    const [dbUser] = await db
-      .select()
-      .from(user)
-      .where(eq(user.auth_id, userId))
-      .limit(1);
-
-    if (!dbUser) {
-      return NextResponse.json({ notifications: [], unreadCount: 0 });
-    }
+    const dbUser = authResult.user;
 
     // Get notifications for the user
     const userNotifications = await db

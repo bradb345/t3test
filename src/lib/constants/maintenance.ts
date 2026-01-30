@@ -3,6 +3,8 @@
  * Used by both frontend components and backend API validation.
  */
 
+import { Clock, Wrench, CheckCircle2 } from "lucide-react";
+
 export const MAINTENANCE_CATEGORIES = [
   { value: "plumbing", label: "Plumbing" },
   { value: "electrical", label: "Electrical" },
@@ -61,8 +63,6 @@ export const MAINTENANCE_STATUS_TRANSITIONS: Record<string, string[]> = {
 };
 
 // --- UI config (previously in src/lib/maintenance-constants.ts) ---
-
-import { Clock, Wrench, CheckCircle2 } from "lucide-react";
 
 /**
  * Status configuration for UI display (icons, variants, descriptions)

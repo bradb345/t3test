@@ -47,23 +47,14 @@ export async function getAuthenticatedUser(): Promise<AuthSuccess | AuthError> {
  * Authenticate and verify the user has the tenant role.
  */
 export async function getAuthenticatedTenant(): Promise<AuthSuccess | AuthError> {
-  const { userId: clerkUserId } = await auth();
+  const result = await getAuthenticatedUser();
+  if (result.error) return result;
 
-  if (!clerkUserId) {
-    return { error: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) };
-  }
-
-  const [dbUser] = await db
-    .select()
-    .from(user)
-    .where(eq(user.auth_id, clerkUserId))
-    .limit(1);
-
-  if (!dbUser || !hasRole(dbUser.roles, "tenant")) {
+  if (!hasRole(result.user.roles, "tenant")) {
     return { error: NextResponse.json({ error: "Forbidden" }, { status: 403 }) };
   }
 
-  return { user: dbUser };
+  return { user: result.user };
 }
 
 /**
