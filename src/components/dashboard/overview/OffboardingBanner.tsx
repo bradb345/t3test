@@ -83,9 +83,7 @@ export function OffboardingBanner({
               }`}
             >
               {isUrgent ? (
-                <AlertTriangle
-                  className={`h-6 w-6 ${isUrgent ? "text-red-600" : "text-orange-600"}`}
-                />
+                <AlertTriangle className="h-6 w-6 text-red-600" />
               ) : (
                 <LogOut className="h-6 w-6 text-orange-600" />
               )}

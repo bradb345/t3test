@@ -8,8 +8,9 @@ import {
   properties,
   tenantOffboardingNotices,
 } from "~/server/db/schema";
-import { eq, and, ne } from "drizzle-orm";
+import { eq, and, ne, or } from "drizzle-orm";
 import { isAdmin, removeRole, serializeRoles } from "~/lib/roles";
+import { updateUnitIndex } from "~/lib/algolia";
 import type { FastTrackOffboardingRequest } from "~/types/offboarding";
 
 // POST /api/admin/fast-track-offboarding - Admin-only immediate offboarding for testing
@@ -131,11 +132,17 @@ export async function POST(request: NextRequest) {
       .set({ status: "terminated" })
       .where(eq(leases.id, leaseId));
 
-    // Set unit as available
+    // Set unit as available and visible (inverse of onboarding)
     await db
       .update(units)
-      .set({ isAvailable: true })
+      .set({ isAvailable: true, isVisible: true })
       .where(eq(units.id, unit.id));
+
+    // Sync Algolia index
+    await updateUnitIndex(unit.id, {
+      isAvailable: true,
+      isVisible: true,
+    });
 
     // Check if tenant has any other active leases
     const otherActiveLeases = await db
@@ -144,7 +151,7 @@ export async function POST(request: NextRequest) {
       .where(
         and(
           eq(leases.tenantId, lease.tenantId),
-          eq(leases.status, "active"),
+          or(eq(leases.status, "active"), eq(leases.status, "notice_given")),
           ne(leases.id, lease.id)
         )
       )

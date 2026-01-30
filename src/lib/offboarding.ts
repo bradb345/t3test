@@ -10,7 +10,13 @@ import type { OffboardingNotice, OffboardingStatus } from "~/types/offboarding";
  */
 export function calculateMoveOutDate(noticeDate: Date): Date {
   const moveOutDate = new Date(noticeDate);
+  const originalDay = moveOutDate.getDate();
   moveOutDate.setMonth(moveOutDate.getMonth() + 2);
+  // Handle month overflow (e.g., Jan 31 + 2 months should be Mar 31, not Apr 3)
+  if (moveOutDate.getDate() !== originalDay) {
+    // Overflowed into next month, set to last day of intended month
+    moveOutDate.setDate(0);
+  }
   return moveOutDate;
 }
 
