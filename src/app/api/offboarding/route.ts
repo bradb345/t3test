@@ -13,6 +13,7 @@ import { calculateMoveOutDate } from "~/lib/offboarding";
 import { createAndEmitNotification } from "~/server/notification-emitter";
 import { sendEmail } from "~/lib/email";
 import { getNoticeGivenEmailHtml, getNoticeGivenEmailSubject } from "~/emails/notice-given";
+import { getAuthenticatedUser } from "~/server/auth";
 import type { CreateOffboardingRequest } from "~/types/offboarding";
 
 // GET /api/offboarding - List offboarding notices for current user (as tenant or landlord)
@@ -110,22 +111,9 @@ export async function GET() {
 // POST /api/offboarding - Create a new offboarding notice
 export async function POST(request: NextRequest) {
   try {
-    const { userId } = await auth();
-
-    if (!userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    // Get the user's database record
-    const [dbUser] = await db
-      .select()
-      .from(user)
-      .where(eq(user.auth_id, userId))
-      .limit(1);
-
-    if (!dbUser) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
+    const authResult = await getAuthenticatedUser();
+    if (authResult.error) return authResult.error;
+    const dbUser = authResult.user;
 
     const body = (await request.json()) as CreateOffboardingRequest;
     const { leaseId, reason } = body;

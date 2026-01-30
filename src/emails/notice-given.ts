@@ -1,3 +1,5 @@
+import { formatMoveOutDate } from "~/lib/offboarding";
+
 interface NoticeGivenEmailProps {
   recipientName: string;
   initiatorName: string;
@@ -21,19 +23,8 @@ export function getNoticeGivenEmailHtml({
   reason,
   dashboardUrl,
 }: NoticeGivenEmailProps): string {
-  const formattedNoticeDate = new Date(noticeDate).toLocaleDateString("en-US", {
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
-
-  const formattedMoveOutDate = new Date(moveOutDate).toLocaleDateString("en-US", {
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
+  const formattedNoticeDate = formatMoveOutDate(noticeDate);
+  const formattedMoveOutDate = formatMoveOutDate(moveOutDate);
 
   const initiatorLabel = initiatedBy === "tenant" ? "Your tenant" : "Your landlord";
   const headerColor = initiatedBy === "tenant" ? "#f59e0b" : "#6366f1"; // Orange for tenant, indigo for landlord

@@ -14,19 +14,24 @@ import { Button } from "~/components/ui/button";
 import { Textarea } from "~/components/ui/textarea";
 import { Label } from "~/components/ui/label";
 import { calculateMoveOutDate, formatMoveOutDate } from "~/lib/offboarding";
-import type { TenantWithLease } from "~/types/landlord";
 
 interface GiveNoticeModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  tenant: TenantWithLease;
+  leaseId: number;
+  unitNumber: string;
+  propertyName: string;
+  tenantName: string;
   onSuccess: () => void;
 }
 
 export function GiveNoticeModal({
   open,
   onOpenChange,
-  tenant,
+  leaseId,
+  unitNumber,
+  propertyName,
+  tenantName,
   onSuccess,
 }: GiveNoticeModalProps) {
   const [reason, setReason] = useState("");
@@ -44,13 +49,13 @@ export function GiveNoticeModal({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          leaseId: tenant.lease.id,
+          leaseId,
           reason: reason.trim() || undefined,
         }),
       });
 
       if (!response.ok) {
-        const data = await response.json() as { error?: string };
+        const data = (await response.json()) as { error?: string };
         throw new Error(data.error ?? "Failed to give notice");
       }
 
@@ -81,7 +86,8 @@ export function GiveNoticeModal({
             Give 2-Month Notice
           </DialogTitle>
           <DialogDescription>
-            Issue a move-out notice to {tenant.user.first_name} {tenant.user.last_name} for Unit {tenant.unit.unitNumber}.
+            Issue a move-out notice to {tenantName} for Unit {unitNumber} at{" "}
+            {propertyName}.
           </DialogDescription>
         </DialogHeader>
 
@@ -91,10 +97,13 @@ export function GiveNoticeModal({
             <div className="flex gap-3">
               <AlertTriangle className="h-5 w-5 flex-shrink-0 text-orange-500" />
               <div className="text-sm text-orange-800">
-                <p className="font-medium">This action starts a 2-month countdown</p>
+                <p className="font-medium">
+                  This action starts a 2-month countdown
+                </p>
                 <p className="mt-1">
-                  The tenant will be notified and will have until the move-out date to vacate.
-                  You can cancel this notice before the move-out date if needed.
+                  The tenant will be notified and will have until the move-out
+                  date to vacate. You can cancel this notice before the move-out
+                  date if needed.
                 </p>
               </div>
             </div>
@@ -103,7 +112,9 @@ export function GiveNoticeModal({
           {/* Move-out Date Display */}
           <div className="rounded-lg border bg-muted/50 p-4">
             <div className="text-center">
-              <p className="text-sm text-muted-foreground">Calculated Move-Out Date</p>
+              <p className="text-sm text-muted-foreground">
+                Calculated Move-Out Date
+              </p>
               <p className="mt-1 text-xl font-semibold text-primary">
                 {formatMoveOutDate(moveOutDate)}
               </p>

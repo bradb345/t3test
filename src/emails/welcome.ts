@@ -3,14 +3,7 @@
  * A simple welcome email to demonstrate email structure
  */
 
-function escapeHtml(unsafe: string): string {
-  return unsafe
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
+import { escapeHtml } from "~/lib/html";
 
 export function welcomeEmail(userName: string, baseUrl: string): string {
   const safeUserName = escapeHtml(userName);

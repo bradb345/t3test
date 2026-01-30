@@ -16,7 +16,7 @@ import {
 import { DeleteConfirmationDialog } from "~/components/DeleteConfirmationDialog";
 import { ConfirmationDialog } from "~/components/ConfirmationDialog";
 import { TenantInvitationModal } from "~/components/TenantInvitationModal";
-import { GiveNoticeFromUnitModal } from "~/components/GiveNoticeFromUnitModal";
+import { GiveNoticeModal } from "~/components/GiveNoticeModal";
 
 interface UnitCardProps {
   unit: {
@@ -173,7 +173,7 @@ export function UnitCard({ unit, propertyId, propertyName }: UnitCardProps) {
       />
 
       {unit.activeLease && (
-        <GiveNoticeFromUnitModal
+        <GiveNoticeModal
           open={showGiveNoticeModal}
           onOpenChange={setShowGiveNoticeModal}
           leaseId={unit.activeLease.id}

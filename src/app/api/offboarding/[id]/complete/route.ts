@@ -1,5 +1,4 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
 import { db } from "~/server/db";
 import {
   user,
@@ -8,10 +7,10 @@ import {
   properties,
   tenantOffboardingNotices,
 } from "~/server/db/schema";
-import { eq, and, ne, or } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { createAndEmitNotification } from "~/server/notification-emitter";
-import { removeRole, serializeRoles } from "~/lib/roles";
-import { updateUnitIndex } from "~/lib/algolia";
+import { completeOffboardingProcess } from "~/server/offboarding";
+import { getAuthenticatedUser } from "~/server/auth";
 import type { CompleteOffboardingRequest } from "~/types/offboarding";
 
 // POST /api/offboarding/[id]/complete - Complete offboarding
@@ -20,28 +19,15 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { userId } = await auth();
-
-    if (!userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const authResult = await getAuthenticatedUser();
+    if (authResult.error) return authResult.error;
+    const dbUser = authResult.user;
 
     const { id } = await params;
     const noticeId = parseInt(id);
 
     if (isNaN(noticeId)) {
       return NextResponse.json({ error: "Invalid notice ID" }, { status: 400 });
-    }
-
-    // Get the user's database record
-    const [dbUser] = await db
-      .select()
-      .from(user)
-      .where(eq(user.auth_id, userId))
-      .limit(1);
-
-    if (!dbUser) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
     // Get the notice with all details
@@ -113,53 +99,12 @@ export async function POST(
       .where(eq(tenantOffboardingNotices.id, noticeId))
       .returning();
 
-    // Update lease status to terminated
-    await db
-      .update(leases)
-      .set({ status: "terminated" })
-      .where(eq(leases.id, lease.id));
-
-    // Set unit as available and visible (inverse of onboarding)
-    await db
-      .update(units)
-      .set({ isAvailable: true, isVisible: true })
-      .where(eq(units.id, unit.id));
-
-    // Sync Algolia index
-    await updateUnitIndex(unit.id, {
-      isAvailable: true,
-      isVisible: true,
+    // Complete offboarding: terminate lease, update unit, sync Algolia, remove tenant role
+    const { tenantRoleRemoved } = await completeOffboardingProcess({
+      leaseId: lease.id,
+      unitId: unit.id,
+      tenantId: lease.tenantId,
     });
-
-    // Check if tenant has any other active leases
-    const otherActiveLeases = await db
-      .select({ id: leases.id })
-      .from(leases)
-      .where(
-        and(
-          eq(leases.tenantId, lease.tenantId),
-          or(eq(leases.status, "active"), eq(leases.status, "notice_given")),
-          ne(leases.id, lease.id)
-        )
-      )
-      .limit(1);
-
-    // If no other active leases, remove tenant role
-    if (otherActiveLeases.length === 0) {
-      const [tenant] = await db
-        .select()
-        .from(user)
-        .where(eq(user.id, lease.tenantId))
-        .limit(1);
-
-      if (tenant) {
-        const newRoles = removeRole(tenant.roles, "tenant");
-        await db
-          .update(user)
-          .set({ roles: serializeRoles(newRoles) })
-          .where(eq(user.id, lease.tenantId));
-      }
-    }
 
     // Get tenant details for notification
     const [tenant] = await db
@@ -200,7 +145,7 @@ export async function POST(
       message: "Offboarding completed successfully",
       unitAvailable: true,
       leaseTerminated: true,
-      tenantRoleRemoved: otherActiveLeases.length === 0,
+      tenantRoleRemoved,
     });
   } catch (error) {
     console.error("Error completing offboarding:", error);

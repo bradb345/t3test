@@ -1,4 +1,3 @@
-import { auth } from "@clerk/nextjs/server";
 import { NextResponse, type NextRequest } from "next/server";
 import { db } from "~/server/db";
 import {
@@ -9,35 +8,22 @@ import {
   properties,
 } from "~/server/db/schema";
 import { eq, and, desc } from "drizzle-orm";
-import { hasRole } from "~/lib/roles";
 import { createAndEmitNotification } from "~/server/notification-emitter";
 import {
   VALID_MAINTENANCE_CATEGORIES,
   VALID_MAINTENANCE_PRIORITIES,
 } from "~/lib/constants/maintenance";
+import { getAuthenticatedTenant } from "~/server/auth";
 
 // GET: List maintenance requests for tenant
 export async function GET() {
-  const { userId: clerkUserId } = await auth();
-  if (!clerkUserId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  // Get user and verify tenant role
-  const [dbUser] = await db
-    .select()
-    .from(user)
-    .where(eq(user.auth_id, clerkUserId))
-    .limit(1);
-
-  if (!dbUser || !hasRole(dbUser.roles, "tenant")) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  const auth = await getAuthenticatedTenant();
+  if (auth.error) return auth.error;
 
   const requests = await db
     .select()
     .from(maintenanceRequests)
-    .where(eq(maintenanceRequests.requestedBy, dbUser.id))
+    .where(eq(maintenanceRequests.requestedBy, auth.user.id))
     .orderBy(desc(maintenanceRequests.createdAt));
 
   return NextResponse.json(requests);
@@ -45,20 +31,10 @@ export async function GET() {
 
 // POST: Create new maintenance request
 export async function POST(request: NextRequest) {
-  const { userId: clerkUserId } = await auth();
-  if (!clerkUserId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const auth = await getAuthenticatedTenant();
+  if (auth.error) return auth.error;
 
-  const [dbUser] = await db
-    .select()
-    .from(user)
-    .where(eq(user.auth_id, clerkUserId))
-    .limit(1);
-
-  if (!dbUser || !hasRole(dbUser.roles, "tenant")) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  const dbUser = auth.user;
 
   // Get tenant's active lease with unit and property info
   const [leaseData] = await db

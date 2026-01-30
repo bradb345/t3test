@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
 import { db } from "~/server/db";
 import { units, tenantInvitations, tenantOnboardingProgress, properties, user } from "~/server/db/schema";
 import { createAndEmitNotification } from "~/server/notification-emitter";
 import { eq } from "drizzle-orm";
 import { sendEmail } from "~/lib/email";
 import { getTenantInvitationEmailHtml } from "~/emails/tenant-invitation";
+import { getAuthenticatedUser } from "~/server/auth";
 import crypto from "crypto";
 
 export async function POST(
@@ -13,17 +13,12 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { userId } = await auth();
-
-    if (!userId) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
+    const authResult = await getAuthenticatedUser();
+    if (authResult.error) return authResult.error;
+    const userId = authResult.user.auth_id;
 
     const unitId = parseInt(params.id);
-    
+
     if (isNaN(unitId)) {
       return NextResponse.json(
         { error: "Invalid unit ID" },
@@ -105,19 +100,7 @@ export async function POST(
     const actualIsExistingTenant = !!existingTenantUser || isExistingTenant;
     const tenantUserId = existingTenantUser?.id ?? null;
 
-    // Get landlord info
-    const [landlordUser] = await db
-      .select()
-      .from(user)
-      .where(eq(user.auth_id, userId))
-      .limit(1);
-
-    if (!landlordUser) {
-      return NextResponse.json(
-        { error: "Landlord user not found" },
-        { status: 404 }
-      );
-    }
+    const landlordUser = authResult.user;
 
     // Generate unique invitation token
     const invitationToken = crypto.randomBytes(32).toString("hex");

@@ -1,44 +1,24 @@
-import { auth } from "@clerk/nextjs/server";
 import { NextResponse, type NextRequest } from "next/server";
 import { db } from "~/server/db";
-import { tenantDocuments, tenantProfiles, user } from "~/server/db/schema";
+import { tenantDocuments } from "~/server/db/schema";
 import { eq, desc } from "drizzle-orm";
-import { hasRole } from "~/lib/roles";
 import { isValidDocumentType } from "~/lib/document-constants";
+import { getAuthenticatedTenantWithProfile } from "~/server/auth";
 
 // GET: List documents for tenant
 export async function GET() {
-  const { userId: clerkUserId } = await auth();
-  if (!clerkUserId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  // Get user and verify tenant role
-  const [dbUser] = await db
-    .select()
-    .from(user)
-    .where(eq(user.auth_id, clerkUserId))
-    .limit(1);
-
-  if (!dbUser || !hasRole(dbUser.roles, "tenant")) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-
-  // Get tenant profile
-  const [profile] = await db
-    .select()
-    .from(tenantProfiles)
-    .where(eq(tenantProfiles.userId, dbUser.id))
-    .limit(1);
-
-  if (!profile) {
-    return NextResponse.json([]);
+  const auth = await getAuthenticatedTenantWithProfile();
+  if (auth.error) {
+    // If profile not found (400), return empty array instead
+    return auth.error.status === 400
+      ? NextResponse.json([])
+      : auth.error;
   }
 
   const documents = await db
     .select()
     .from(tenantDocuments)
-    .where(eq(tenantDocuments.tenantProfileId, profile.id))
+    .where(eq(tenantDocuments.tenantProfileId, auth.profile.id))
     .orderBy(desc(tenantDocuments.uploadedAt));
 
   return NextResponse.json(documents);
@@ -46,34 +26,8 @@ export async function GET() {
 
 // POST: Upload new document
 export async function POST(request: NextRequest) {
-  const { userId: clerkUserId } = await auth();
-  if (!clerkUserId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const [dbUser] = await db
-    .select()
-    .from(user)
-    .where(eq(user.auth_id, clerkUserId))
-    .limit(1);
-
-  if (!dbUser || !hasRole(dbUser.roles, "tenant")) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-
-  // Get tenant profile
-  const [profile] = await db
-    .select()
-    .from(tenantProfiles)
-    .where(eq(tenantProfiles.userId, dbUser.id))
-    .limit(1);
-
-  if (!profile) {
-    return NextResponse.json(
-      { error: "Tenant profile not found" },
-      { status: 400 }
-    );
-  }
+  const auth = await getAuthenticatedTenantWithProfile();
+  if (auth.error) return auth.error;
 
   const body = (await request.json()) as {
     documentType: string;
@@ -114,7 +68,7 @@ export async function POST(request: NextRequest) {
   const [newDocument] = await db
     .insert(tenantDocuments)
     .values({
-      tenantProfileId: profile.id,
+      tenantProfileId: auth.profile.id,
       documentType: body.documentType,
       fileName: body.fileName.trim(),
       fileUrl: body.fileUrl.trim(),

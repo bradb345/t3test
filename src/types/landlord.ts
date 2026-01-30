@@ -3,23 +3,17 @@
  */
 
 import type {
-  user,
-  leases,
-  units,
-  properties,
-  payments,
-  maintenanceRequests,
-  tenantDocuments,
-} from "~/server/db/schema";
+  User,
+  Lease,
+  Unit,
+  Property,
+  Payment,
+  MaintenanceRequest,
+  TenantDocument,
+} from "~/types/schema";
 
-// Base types from schema
-export type User = typeof user.$inferSelect;
-export type Lease = typeof leases.$inferSelect;
-export type Unit = typeof units.$inferSelect;
-export type Property = typeof properties.$inferSelect;
-export type Payment = typeof payments.$inferSelect;
-export type MaintenanceRequest = typeof maintenanceRequests.$inferSelect;
-export type TenantDocument = typeof tenantDocuments.$inferSelect;
+// Re-export base types
+export type { User, Lease, Unit, Property, Payment, MaintenanceRequest, TenantDocument };
 
 // Extended types with relations
 export interface PropertyWithUnits extends Property {
