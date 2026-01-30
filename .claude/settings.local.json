@@ -5,7 +5,9 @@
       "Bash(npm run cy:run:*)",
       "Bash(xargs ls:*)",
       "Bash(npx shadcn@latest add:*)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(npx tsc:*)",
+      "Bash(npx cypress run:*)"
     ]
   }
 }

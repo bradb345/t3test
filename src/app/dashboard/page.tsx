@@ -12,8 +12,9 @@ import {
   tenantDocuments,
   employmentInfo,
   emergencyContacts,
+  tenantOffboardingNotices,
 } from "~/server/db/schema";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, asc, desc, or, inArray } from "drizzle-orm";
 import { hasRole } from "~/lib/roles";
 import { DashboardClient } from "~/components/dashboard/DashboardClient";
 
@@ -40,7 +41,7 @@ export default async function TenantDashboard() {
     redirect("/");
   }
 
-  // Get active lease with unit and property info
+  // Get active or notice_given lease with unit and property info
   const leaseResult = await db
     .select({
       lease: leases,
@@ -50,14 +51,36 @@ export default async function TenantDashboard() {
     .from(leases)
     .innerJoin(units, eq(units.id, leases.unitId))
     .innerJoin(properties, eq(properties.id, units.propertyId))
-    .where(and(eq(leases.tenantId, dbUser.id), eq(leases.status, "active")))
+    .where(
+      and(
+        eq(leases.tenantId, dbUser.id),
+        or(eq(leases.status, "active"), eq(leases.status, "notice_given"))
+      )
+    )
+    .orderBy(asc(leases.status), desc(leases.createdAt))
     .limit(1);
 
   const activeLease = leaseResult[0];
 
-  // Redirect if no active lease
+  // Redirect if no active or notice_given lease
   if (!activeLease) {
     redirect("/");
+  }
+
+  // Fetch active offboarding notice if lease is in notice_given status
+  let activeOffboardingNotice: typeof tenantOffboardingNotices.$inferSelect | null = null;
+  if (activeLease.lease.status === "notice_given") {
+    const [notice] = await db
+      .select()
+      .from(tenantOffboardingNotices)
+      .where(
+        and(
+          eq(tenantOffboardingNotices.leaseId, activeLease.lease.id),
+          inArray(tenantOffboardingNotices.status, ["active", "inspection_scheduled"])
+        )
+      )
+      .limit(1);
+    activeOffboardingNotice = notice ?? null;
   }
 
   // Fetch remaining data in parallel
@@ -123,6 +146,7 @@ export default async function TenantDashboard() {
       employment={employment}
       emergencyContacts={emergencyContactsList}
       tenantDocuments={documents}
+      offboardingNotice={activeOffboardingNotice}
     />
   );
 }

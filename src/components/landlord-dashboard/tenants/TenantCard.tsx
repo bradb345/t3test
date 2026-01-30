@@ -18,6 +18,12 @@ export function TenantCard({ tenant, onViewDetails }: TenantCardProps) {
   const daysUntilExpiration = Math.ceil((leaseEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 
   const getStatusBadge = () => {
+    if (tenant.lease.status === "notice_given") {
+      return <Badge className="bg-orange-100 text-orange-800">Notice Given</Badge>;
+    }
+    if (tenant.lease.status === "terminated") {
+      return <Badge variant="secondary">Terminated</Badge>;
+    }
     if (tenant.lease.status !== "active") {
       return <Badge variant="secondary">{tenant.lease.status}</Badge>;
     }
@@ -39,7 +45,7 @@ export function TenantCard({ tenant, onViewDetails }: TenantCardProps) {
   };
 
   return (
-    <Card className="hover:shadow-md transition-shadow">
+    <Card className="hover:shadow-md transition-shadow" data-testid="tenant-card">
       <CardContent className="p-4">
         <div className="flex items-start gap-4">
           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 overflow-hidden">

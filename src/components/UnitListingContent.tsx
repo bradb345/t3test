@@ -17,6 +17,7 @@ import {
   ChevronLeft,
   ChevronRight,
   X,
+  ArrowLeft,
 } from "lucide-react";
 import { formatCurrency } from "~/lib/currency";
 
@@ -182,7 +183,7 @@ export function UnitListingContent({ unit, property }: UnitListingContentProps) 
   return (
     <div className="min-h-screen bg-background">
       {/* Image Gallery */}
-      <div 
+      <div
         className="relative w-full h-[500px] bg-gray-900 cursor-pointer"
         onClick={() => openLightbox(currentImageIndex)}
       >

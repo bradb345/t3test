@@ -833,3 +833,64 @@ export const viewingRequests = createTable(
   })
 );
 
+// Example tenant offboarding notice data:
+/*
+{
+  id: 1,
+  leaseId: 1,
+  initiatedBy: "landlord",
+  initiatedByUserId: 56,
+  noticeDate: "2024-03-15T00:00:00Z",
+  moveOutDate: "2024-05-15T00:00:00Z",
+  reason: "End of lease term",
+  status: "active",
+  cancelledAt: null,
+  cancelledByUserId: null,
+  cancellationReason: null,
+  inspectionDate: "2024-05-14T10:00:00Z",
+  inspectionNotes: "Unit in good condition",
+  inspectionCompleted: true,
+  depositStatus: "returned",
+  depositNotes: "Full deposit returned",
+  completedAt: "2024-05-15T14:00:00Z"
+}
+*/
+export const tenantOffboardingNotices = createTable(
+  "tenant_offboarding_notice",
+  {
+    id: serial("id").primaryKey(),
+    leaseId: integer("lease_id")
+      .notNull()
+      .references(() => leases.id),
+    initiatedBy: varchar("initiated_by", { length: 20 }).notNull(), // "tenant" | "landlord"
+    initiatedByUserId: integer("initiated_by_user_id")
+      .notNull()
+      .references(() => user.id),
+    noticeDate: timestamp("notice_date", { withTimezone: true }).notNull(),
+    moveOutDate: timestamp("move_out_date", { withTimezone: true }).notNull(),
+    reason: text("reason"),
+    status: varchar("status", { length: 20 }).notNull().default("active"),
+    // Status: active -> cancelled | inspection_scheduled -> completed
+    cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
+    cancelledByUserId: integer("cancelled_by_user_id").references(() => user.id),
+    cancellationReason: text("cancellation_reason"),
+    inspectionDate: timestamp("inspection_date", { withTimezone: true }),
+    inspectionNotes: text("inspection_notes"),
+    inspectionCompleted: boolean("inspection_completed").default(false),
+    depositStatus: varchar("deposit_status", { length: 20 }).default("pending"),
+    // depositStatus: pending -> returned | withheld | partial
+    depositNotes: text("deposit_notes"),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).$onUpdate(
+      () => new Date()
+    ),
+  },
+  (notice) => ({
+    leaseIndex: index("offboarding_lease_idx").on(notice.leaseId),
+    statusIndex: index("offboarding_notice_status_idx").on(notice.status),
+  })
+);
+

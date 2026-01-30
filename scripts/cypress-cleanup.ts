@@ -354,6 +354,88 @@ async function cleanupTestUsers() {
 }
 
 /**
+ * Reset the offboarding test tenant's unit to a clean state.
+ * Deletes offboarding notices, leases, invitations, and onboarding progress
+ * for each protected test tenant email, and marks their units as available.
+ */
+async function cleanupOffboardingTestData() {
+  console.log('Resetting offboarding test data for protected test tenants...\n');
+
+  for (const email of PROTECTED_EMAILS) {
+    console.log(`👤 Resetting: ${email}`);
+
+    // Find the test tenant user
+    const tenantRows = await sql`
+      SELECT id FROM t3test_user WHERE email = ${email} LIMIT 1
+    `;
+    const tenantId = tenantRows[0]?.id as number | undefined;
+
+    if (tenantId) {
+      // Update the user's name to match what the offboarding test expects
+      if (email === 'smith+clerk_test@example.com') {
+        await sql`
+          UPDATE t3test_user
+          SET first_name = 'Test', last_name = 'Tenant'
+          WHERE id = ${tenantId}
+        `;
+        console.log(`   📝 Reset user name to "Test Tenant"`);
+      }
+
+      // Delete offboarding notices for the tenant's leases
+      const deletedNotices = await sql`
+        DELETE FROM t3test_tenant_offboarding_notice
+        WHERE lease_id IN (
+          SELECT id FROM t3test_lease WHERE tenant_id = ${tenantId}
+        )
+      `;
+      console.log(`   🗑️  Deleted ${deletedNotices.count} offboarding notices`);
+
+      // Get unit IDs from the tenant's leases before deleting them
+      const leaseUnits = await sql`
+        SELECT unit_id FROM t3test_lease WHERE tenant_id = ${tenantId}
+      `;
+
+      // Delete the tenant's leases
+      const deletedLeases = await sql`
+        DELETE FROM t3test_lease WHERE tenant_id = ${tenantId}
+      `;
+      console.log(`   🗑️  Deleted ${deletedLeases.count} leases`);
+
+      // Mark those units as available
+      for (const row of leaseUnits) {
+        await sql`
+          UPDATE t3test_unit
+          SET is_available = true, is_visible = false, updated_at = NOW()
+          WHERE id = ${row.unit_id}
+        `;
+        console.log(`   🏠 Reset unit ${row.unit_id} to available`);
+      }
+    } else {
+      console.log(`   ⚠️  User not found in database, skipping lease/notice cleanup`);
+    }
+
+    // Delete onboarding progress records for invitations
+    const deletedProgress = await sql`
+      DELETE FROM t3test_tenant_onboarding_progress
+      WHERE invitation_id IN (
+        SELECT id FROM t3test_tenant_invitation WHERE tenant_email = ${email}
+      )
+    `;
+    console.log(`   🗑️  Deleted ${deletedProgress.count} onboarding progress records`);
+
+    // Delete invitations
+    const deletedInvitations = await sql`
+      DELETE FROM t3test_tenant_invitation WHERE tenant_email = ${email}
+    `;
+    console.log(`   🗑️  Deleted ${deletedInvitations.count} invitations`);
+
+    console.log(`   ✅ Done\n`);
+  }
+
+  console.log('✅ Offboarding test data reset complete.\n');
+}
+
+/**
  * Main cleanup function
  */
 async function cleanupCypressTestData() {
@@ -362,6 +444,7 @@ async function cleanupCypressTestData() {
   try {
     await cleanupTestProperties();
     await cleanupTestUsers();
+    await cleanupOffboardingTestData();
     console.log('✅ All cleanup complete!\n');
   } catch (error) {
     console.error('\n❌ Cleanup failed:', error);

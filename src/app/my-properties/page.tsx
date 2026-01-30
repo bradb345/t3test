@@ -12,7 +12,7 @@ import {
   tenantProfiles,
   viewingRequests,
 } from "~/server/db/schema";
-import { eq, and, desc, inArray } from "drizzle-orm";
+import { eq, and, desc, inArray, or } from "drizzle-orm";
 import { hasRole } from "~/lib/roles";
 import { LandlordDashboardClient } from "~/components/landlord-dashboard/LandlordDashboardClient";
 import type {
@@ -99,7 +99,8 @@ export default async function MyPropertiesPage() {
     units: allUnits.filter((u) => u.propertyId === property.id),
   }));
 
-  // Fetch active leases for landlord's units
+  // Fetch active, notice_given, and terminated leases for landlord's units
+  // notice_given tenants are still occupying units; terminated shown for filtering
   const activeLeases = unitIds.length > 0
     ? await db
         .select({
@@ -115,17 +116,18 @@ export default async function MyPropertiesPage() {
         .where(
           and(
             inArray(leases.unitId, unitIds),
-            eq(leases.status, "active")
+            or(eq(leases.status, "active"), eq(leases.status, "notice_given"), eq(leases.status, "terminated"))
           )
         )
         .orderBy(desc(leases.createdAt))
     : [];
 
-  // Calculate stats
-  const occupiedUnits = activeLeases.length;
+  // Calculate stats (exclude terminated leases from occupancy/revenue)
+  const currentLeases = activeLeases.filter((l) => l.lease.status !== "terminated");
+  const occupiedUnits = currentLeases.length;
   const totalUnits = allUnits.length;
   const occupancyRate = totalUnits > 0 ? (occupiedUnits / totalUnits) * 100 : 0;
-  const monthlyRevenue = activeLeases.reduce(
+  const monthlyRevenue = currentLeases.reduce(
     (sum, l) => sum + parseFloat(l.lease.monthlyRent),
     0
   );
