@@ -14,7 +14,7 @@ import {
   maintenanceStatusConfig,
   maintenancePriorityBadgeConfig,
   maintenanceCategoryLabels,
-} from "~/lib/maintenance-constants";
+} from "~/lib/constants/maintenance";
 import { formatDate } from "~/lib/date";
 
 type MaintenanceRequest = typeof maintenanceRequests.$inferSelect;

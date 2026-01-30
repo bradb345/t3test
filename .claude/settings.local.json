@@ -4,7 +4,12 @@
       "Bash(tree:*)",
       "Bash(npm run cy:run:*)",
       "Bash(xargs ls:*)",
-      "Bash(npx shadcn@latest add:*)"
+      "Bash(npx shadcn@latest add:*)",
+      "WebSearch",
+      "Bash(npx tsc:*)",
+      "Bash(npx cypress run:*)",
+      "WebFetch(domain:github.com)",
+      "Bash(npm run build:*)"
     ]
   }
 }

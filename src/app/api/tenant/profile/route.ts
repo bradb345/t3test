@@ -1,46 +1,21 @@
-import { auth } from "@clerk/nextjs/server";
 import { NextResponse, type NextRequest } from "next/server";
 import { db } from "~/server/db";
 import { user } from "~/server/db/schema";
 import { eq } from "drizzle-orm";
-import { hasRole } from "~/lib/roles";
+import { getAuthenticatedTenant } from "~/server/auth";
 
 // GET: Get current user profile
 export async function GET() {
-  const { userId: clerkUserId } = await auth();
-  if (!clerkUserId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const auth = await getAuthenticatedTenant();
+  if (auth.error) return auth.error;
 
-  const [dbUser] = await db
-    .select()
-    .from(user)
-    .where(eq(user.auth_id, clerkUserId))
-    .limit(1);
-
-  if (!dbUser || !hasRole(dbUser.roles, "tenant")) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-
-  return NextResponse.json(dbUser);
+  return NextResponse.json(auth.user);
 }
 
 // PATCH: Update user profile
 export async function PATCH(request: NextRequest) {
-  const { userId: clerkUserId } = await auth();
-  if (!clerkUserId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const [dbUser] = await db
-    .select()
-    .from(user)
-    .where(eq(user.auth_id, clerkUserId))
-    .limit(1);
-
-  if (!dbUser || !hasRole(dbUser.roles, "tenant")) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  const auth = await getAuthenticatedTenant();
+  if (auth.error) return auth.error;
 
   const body = (await request.json()) as {
     firstName?: string;
@@ -82,7 +57,7 @@ export async function PATCH(request: NextRequest) {
   const [updatedUser] = await db
     .update(user)
     .set(updateData)
-    .where(eq(user.id, dbUser.id))
+    .where(eq(user.id, auth.user.id))
     .returning();
 
   return NextResponse.json(updatedUser);

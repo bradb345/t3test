@@ -57,6 +57,13 @@
       "when": 1763036764375,
       "tag": "0007_ancient_jack_power",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1769612569226,
+      "tag": "0008_happy_chamber",
+      "breakpoints": true
     }
   ]
 }

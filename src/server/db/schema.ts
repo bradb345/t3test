@@ -786,3 +786,111 @@ export const notifications = createTable(
   })
 );
 
+// Example viewing request data:
+/*
+{
+  id: 1,
+  unitId: 1,
+  name: "Jane Smith",
+  email: "jane.smith@example.com",
+  phone: "+1-555-123-4567",
+  preferredDate: "2024-04-15T00:00:00Z",
+  preferredTime: "2:00 PM",
+  message: "I'm interested in viewing this unit. I'm looking for a 2-bedroom apartment...",
+  status: "pending",
+  landlordNotes: null,
+  respondedAt: null
+}
+*/
+export const viewingRequests = createTable(
+  "viewing_request",
+  {
+    id: serial("id").primaryKey(),
+    unitId: integer("unit_id")
+      .notNull()
+      .references(() => units.id),
+    name: varchar("name", { length: 256 }).notNull(),
+    email: varchar("email", { length: 256 }).notNull(),
+    phone: varchar("phone", { length: 20 }),
+    preferredDate: timestamp("preferred_date", { withTimezone: true }),
+    preferredTime: varchar("preferred_time", { length: 50 }),
+    message: text("message"),
+    status: varchar("status", { length: 20 }).notNull().default("pending"),
+    // status: pending, approved, declined, completed
+    landlordNotes: text("landlord_notes"),
+    respondedAt: timestamp("responded_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).$onUpdate(
+      () => new Date()
+    ),
+  },
+  (request) => ({
+    unitIndex: index("viewing_unit_idx").on(request.unitId),
+    statusIndex: index("viewing_status_idx").on(request.status),
+    emailIndex: index("viewing_email_idx").on(request.email),
+  })
+);
+
+// Example tenant offboarding notice data:
+/*
+{
+  id: 1,
+  leaseId: 1,
+  initiatedBy: "landlord",
+  initiatedByUserId: 56,
+  noticeDate: "2024-03-15T00:00:00Z",
+  moveOutDate: "2024-05-15T00:00:00Z",
+  reason: "End of lease term",
+  status: "active",
+  cancelledAt: null,
+  cancelledByUserId: null,
+  cancellationReason: null,
+  inspectionDate: "2024-05-14T10:00:00Z",
+  inspectionNotes: "Unit in good condition",
+  inspectionCompleted: true,
+  depositStatus: "returned",
+  depositNotes: "Full deposit returned",
+  completedAt: "2024-05-15T14:00:00Z"
+}
+*/
+export const tenantOffboardingNotices = createTable(
+  "tenant_offboarding_notice",
+  {
+    id: serial("id").primaryKey(),
+    leaseId: integer("lease_id")
+      .notNull()
+      .references(() => leases.id),
+    initiatedBy: varchar("initiated_by", { length: 20 }).notNull(), // "tenant" | "landlord"
+    initiatedByUserId: integer("initiated_by_user_id")
+      .notNull()
+      .references(() => user.id),
+    noticeDate: timestamp("notice_date", { withTimezone: true }).notNull(),
+    moveOutDate: timestamp("move_out_date", { withTimezone: true }).notNull(),
+    reason: text("reason"),
+    status: varchar("status", { length: 20 }).notNull().default("active"),
+    // Status: active -> cancelled | inspection_scheduled -> completed
+    cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
+    cancelledByUserId: integer("cancelled_by_user_id").references(() => user.id),
+    cancellationReason: text("cancellation_reason"),
+    inspectionDate: timestamp("inspection_date", { withTimezone: true }),
+    inspectionNotes: text("inspection_notes"),
+    inspectionCompleted: boolean("inspection_completed").default(false),
+    depositStatus: varchar("deposit_status", { length: 20 }).default("pending"),
+    // depositStatus: pending -> returned | withheld | partial
+    depositNotes: text("deposit_notes"),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).$onUpdate(
+      () => new Date()
+    ),
+  },
+  (notice) => ({
+    leaseIndex: index("offboarding_lease_idx").on(notice.leaseId),
+    statusIndex: index("offboarding_notice_status_idx").on(notice.status),
+  })
+);
+

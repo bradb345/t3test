@@ -1,12 +1,14 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { db } from "~/server/db";
 import { tenantInvitations, tenantOnboardingProgress, units, properties, user, notifications, leases } from "~/server/db/schema";
+import { createAndEmitNotification } from "~/server/notification-emitter";
 import { eq, and, gt } from "drizzle-orm";
 import { sendEmail } from "~/lib/email";
 import { getOnboardingCompleteEmailHtml, getOnboardingCompleteEmailSubject } from "~/emails/onboarding-complete";
 import { encryptSSN } from "~/lib/encryption";
 import { addRoleToUserById } from "~/lib/roles";
 import { persistTenantProfile, loadExistingTenantProfile, type OnboardingData } from "~/lib/tenant-profile";
+import { updateUnitIndex } from "~/lib/algolia";
 
 /**
  * Merges two optional objects, with the second object's properties taking precedence.
@@ -116,11 +118,23 @@ export async function GET(request: NextRequest) {
       ? (JSON.parse(progress.data) as Record<string, unknown>)
       : {};
 
-    // If this is an existing tenant, pre-populate with their profile data
+    // Pre-populate with existing tenant profile data if available
     // This allows tenants to reuse their information across multiple rentals
-    if (invitation.isExistingTenant && invitation.tenantUserId) {
-      try {
-        const existingProfile = await loadExistingTenantProfile(invitation.tenantUserId);
+    try {
+      let tenantUserId = invitation.tenantUserId;
+
+      // If no tenantUserId is set, look up the user by invitation email
+      if (!tenantUserId) {
+        const [existingUser] = await db
+          .select({ id: user.id })
+          .from(user)
+          .where(eq(user.email, invitation.tenantEmail))
+          .limit(1);
+        tenantUserId = existingUser?.id ?? null;
+      }
+
+      if (tenantUserId) {
+        const existingProfile = await loadExistingTenantProfile(tenantUserId);
         if (existingProfile) {
           // Merge existing profile with saved onboarding progress
           // Saved progress takes precedence (allows tenant to update info)
@@ -132,11 +146,20 @@ export async function GET(request: NextRequest) {
             emergencyContact: mergeOnboardingSection(existingProfile.emergencyContact, progressData.emergencyContact),
             photoId: mergeOnboardingSection(existingProfile.photoId, progressData.photoId),
           };
+
+          // Persist merged data back to progress so subsequent PATCH calls retain it
+          await db
+            .update(tenantOnboardingProgress)
+            .set({
+              data: JSON.stringify(data),
+              updatedAt: new Date(),
+            })
+            .where(eq(tenantOnboardingProgress.id, progress.id));
         }
-      } catch (profileError) {
-        console.error("Error loading existing tenant profile:", profileError);
-        // Continue with saved progress data if profile load fails
       }
+    } catch (profileError) {
+      console.error("Error loading existing tenant profile:", profileError);
+      // Continue with saved progress data if profile load fails
     }
 
     // Return masked SSN for security (only last 4 digits)
@@ -161,7 +184,7 @@ export async function GET(request: NextRequest) {
         status: invitation.status,
         expiresAt: invitation.expiresAt,
         isExistingTenant: invitation.isExistingTenant,
-        hasExistingProfile: invitation.isExistingTenant && invitation.tenantUserId !== null,
+        hasExistingProfile: invitation.tenantUserId !== null,
       },
       progress: {
         id: progress.id,
@@ -451,14 +474,21 @@ export async function POST(request: NextRequest) {
         status: "active",
       });
 
-      // Mark the unit as unavailable
+      // Mark the unit as unavailable and hide from search
       await db
         .update(units)
         .set({
           isAvailable: false,
+          isVisible: false,
           updatedAt: new Date(),
         })
         .where(eq(units.id, invitation.unit.id));
+
+      // Sync visibility change to Algolia search index
+      await updateUnitIndex(invitation.unit.id, {
+        isAvailable: false,
+        isVisible: false,
+      });
 
       // Update the invitation with the tenant user ID
       await db
@@ -549,7 +579,7 @@ export async function POST(request: NextRequest) {
       ? `${invitation.invitation.tenantName} has completed their onboarding and has been attached to Unit ${invitation.unit.unitNumber}`
       : `${invitation.invitation.tenantName} has completed their onboarding for Unit ${invitation.unit.unitNumber}`;
 
-    await db.insert(notifications).values({
+    await createAndEmitNotification({
       userId: invitation.landlord.id,
       type: "onboarding_complete",
       title: "Tenant Onboarding Complete",

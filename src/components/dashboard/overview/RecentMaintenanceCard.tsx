@@ -13,7 +13,7 @@ import type { maintenanceRequests } from "~/server/db/schema";
 import {
   maintenanceStatusConfig,
   maintenancePriorityConfig,
-} from "~/lib/maintenance-constants";
+} from "~/lib/constants/maintenance";
 import { formatDateShort } from "~/lib/date";
 
 type MaintenanceRequest = typeof maintenanceRequests.$inferSelect;

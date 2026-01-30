@@ -22,6 +22,10 @@ const config = {
         protocol: 'https',
         hostname: '6ocmn4xpbd.ufs.sh',
       },
+      {
+        protocol: 'https',
+        hostname: 'img.clerk.com',
+      },
     ],
   },
 };
