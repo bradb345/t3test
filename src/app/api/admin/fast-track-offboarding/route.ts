@@ -1,37 +1,23 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
 import { db } from "~/server/db";
 import {
-  user,
   leases,
   units,
   properties,
   tenantOffboardingNotices,
 } from "~/server/db/schema";
-import { eq, and, ne, or } from "drizzle-orm";
-import { isAdmin, removeRole, serializeRoles } from "~/lib/roles";
-import { updateUnitIndex } from "~/lib/algolia";
+import { eq, and } from "drizzle-orm";
+import { isAdmin } from "~/lib/roles";
+import { completeOffboardingProcess } from "~/server/offboarding";
+import { getAuthenticatedUser } from "~/server/auth";
 import type { FastTrackOffboardingRequest } from "~/types/offboarding";
 
 // POST /api/admin/fast-track-offboarding - Admin-only immediate offboarding for testing
 export async function POST(request: NextRequest) {
   try {
-    const { userId } = await auth();
-
-    if (!userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    // Get the user's database record
-    const [dbUser] = await db
-      .select()
-      .from(user)
-      .where(eq(user.auth_id, userId))
-      .limit(1);
-
-    if (!dbUser) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
+    const authResult = await getAuthenticatedUser();
+    if (authResult.error) return authResult.error;
+    const dbUser = authResult.user;
 
     // Verify user is an admin
     if (!isAdmin(dbUser)) {
@@ -126,55 +112,12 @@ export async function POST(request: NextRequest) {
       })
       .returning();
 
-    // Update lease status to terminated
-    await db
-      .update(leases)
-      .set({ status: "terminated" })
-      .where(eq(leases.id, leaseId));
-
-    // Set unit as available and visible (inverse of onboarding)
-    await db
-      .update(units)
-      .set({ isAvailable: true, isVisible: true })
-      .where(eq(units.id, unit.id));
-
-    // Sync Algolia index
-    await updateUnitIndex(unit.id, {
-      isAvailable: true,
-      isVisible: true,
+    // Complete offboarding: terminate lease, update unit, sync Algolia, remove tenant role
+    const { tenantRoleRemoved } = await completeOffboardingProcess({
+      leaseId,
+      unitId: unit.id,
+      tenantId: lease.tenantId,
     });
-
-    // Check if tenant has any other active leases
-    const otherActiveLeases = await db
-      .select({ id: leases.id })
-      .from(leases)
-      .where(
-        and(
-          eq(leases.tenantId, lease.tenantId),
-          or(eq(leases.status, "active"), eq(leases.status, "notice_given")),
-          ne(leases.id, lease.id)
-        )
-      )
-      .limit(1);
-
-    // If no other active leases, remove tenant role
-    let tenantRoleRemoved = false;
-    if (otherActiveLeases.length === 0) {
-      const [tenant] = await db
-        .select()
-        .from(user)
-        .where(eq(user.id, lease.tenantId))
-        .limit(1);
-
-      if (tenant) {
-        const newRoles = removeRole(tenant.roles, "tenant");
-        await db
-          .update(user)
-          .set({ roles: serializeRoles(newRoles) })
-          .where(eq(user.id, lease.tenantId));
-        tenantRoleRemoved = true;
-      }
-    }
 
     return NextResponse.json({
       success: true,

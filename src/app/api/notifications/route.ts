@@ -3,6 +3,7 @@ import { auth } from "@clerk/nextjs/server";
 import { db } from "~/server/db";
 import { notifications, user } from "~/server/db/schema";
 import { eq, and, desc } from "drizzle-orm";
+import { getAuthenticatedUser } from "~/server/auth";
 
 // GET /api/notifications - Get user's notifications
 export async function GET() {
@@ -56,30 +57,11 @@ export async function GET() {
 // PATCH /api/notifications - Mark notifications as read
 export async function PATCH(request: NextRequest) {
   try {
-    const { userId } = await auth();
-
-    if (!userId) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
+    const authResult = await getAuthenticatedUser();
+    if (authResult.error) return authResult.error;
+    const dbUser = authResult.user;
 
     const body = (await request.json()) as { notificationIds?: number[]; markAllRead?: boolean };
-
-    // Get the user's database ID
-    const [dbUser] = await db
-      .select()
-      .from(user)
-      .where(eq(user.auth_id, userId))
-      .limit(1);
-
-    if (!dbUser) {
-      return NextResponse.json(
-        { error: "User not found" },
-        { status: 404 }
-      );
-    }
 
     if (body.markAllRead) {
       // Mark all notifications as read

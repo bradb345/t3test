@@ -27,7 +27,7 @@ import { Separator } from "~/components/ui/separator";
 import Link from "next/link";
 import type { TenantWithLease, User as UserType } from "~/types/landlord";
 import type { OffboardingNotice } from "~/types/offboarding";
-import { GiveNoticeModal } from "./GiveNoticeModal";
+import { GiveNoticeModal } from "~/components/GiveNoticeModal";
 import { CancelNoticeModal } from "./CancelNoticeModal";
 import { CompleteOffboardingModal } from "./CompleteOffboardingModal";
 import { getDaysUntilMoveOut, formatMoveOutDate } from "~/lib/offboarding";
@@ -397,7 +397,10 @@ export function TenantDetailModal({
       <GiveNoticeModal
         open={showGiveNotice}
         onOpenChange={setShowGiveNotice}
-        tenant={tenant}
+        leaseId={tenant.lease.id}
+        unitNumber={tenant.unit.unitNumber}
+        propertyName={tenant.property.name}
+        tenantName={`${tenant.user.first_name} ${tenant.user.last_name}`}
         onSuccess={handleNoticeSuccess}
       />
 

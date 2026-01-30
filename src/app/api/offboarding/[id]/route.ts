@@ -1,5 +1,4 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
 import { db } from "~/server/db";
 import {
   user,
@@ -11,6 +10,7 @@ import {
 import { eq } from "drizzle-orm";
 import { canCancelNotice } from "~/lib/offboarding";
 import { createAndEmitNotification } from "~/server/notification-emitter";
+import { getAuthenticatedUser } from "~/server/auth";
 import type { UpdateOffboardingRequest, CancelOffboardingRequest } from "~/types/offboarding";
 
 // GET /api/offboarding/[id] - Get offboarding notice details
@@ -19,28 +19,15 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { userId } = await auth();
-
-    if (!userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const authResult = await getAuthenticatedUser();
+    if (authResult.error) return authResult.error;
+    const dbUser = authResult.user;
 
     const { id } = await params;
     const noticeId = parseInt(id);
 
     if (isNaN(noticeId)) {
       return NextResponse.json({ error: "Invalid notice ID" }, { status: 400 });
-    }
-
-    // Get the user's database ID
-    const [dbUser] = await db
-      .select()
-      .from(user)
-      .where(eq(user.auth_id, userId))
-      .limit(1);
-
-    if (!dbUser) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
     // Get the notice with all details
@@ -117,28 +104,15 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { userId } = await auth();
-
-    if (!userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const authResult = await getAuthenticatedUser();
+    if (authResult.error) return authResult.error;
+    const dbUser = authResult.user;
 
     const { id } = await params;
     const noticeId = parseInt(id);
 
     if (isNaN(noticeId)) {
       return NextResponse.json({ error: "Invalid notice ID" }, { status: 400 });
-    }
-
-    // Get the user's database record
-    const [dbUser] = await db
-      .select()
-      .from(user)
-      .where(eq(user.auth_id, userId))
-      .limit(1);
-
-    if (!dbUser) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
     // Get the notice with lease
@@ -246,28 +220,15 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { userId } = await auth();
-
-    if (!userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const authResult = await getAuthenticatedUser();
+    if (authResult.error) return authResult.error;
+    const dbUser = authResult.user;
 
     const { id } = await params;
     const noticeId = parseInt(id);
 
     if (isNaN(noticeId)) {
       return NextResponse.json({ error: "Invalid notice ID" }, { status: 400 });
-    }
-
-    // Get the user's database record
-    const [dbUser] = await db
-      .select()
-      .from(user)
-      .where(eq(user.auth_id, userId))
-      .limit(1);
-
-    if (!dbUser) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
     // Get the notice with lease details

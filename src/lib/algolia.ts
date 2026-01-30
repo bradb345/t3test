@@ -2,6 +2,9 @@ import { algoliasearch } from 'algoliasearch';
 import { env } from '~/env';
 import type { InferSelectModel } from 'drizzle-orm';
 import type { properties, units } from '~/server/db/schema';
+import { UNITS_INDEX } from '~/lib/algolia-client';
+
+export { UNITS_INDEX };
 
 type Property = InferSelectModel<typeof properties>;
 type Unit = InferSelectModel<typeof units>;
@@ -17,8 +20,6 @@ export const algoliaSearchClient = algoliasearch(
   env.NEXT_PUBLIC_ALGOLIA_APP_ID as string,
   env.NEXT_PUBLIC_ALGOLIA_SEARCH_API_KEY as string
 );
-
-export const UNITS_INDEX = 'units';
 
 // Types for your search records
 export interface UnitSearchRecord {

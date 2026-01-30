@@ -2,14 +2,7 @@
  * Property Inquiry Email Template
  * Sent when a potential renter inquires about a property
  */
-function escapeHtml(unsafe: string): string {
-  return unsafe
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
+import { escapeHtml } from "~/lib/html";
 
 export function propertyInquiryEmail(
   propertyOwnerName: string,

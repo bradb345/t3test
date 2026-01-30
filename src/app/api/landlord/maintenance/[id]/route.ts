@@ -1,11 +1,9 @@
-import { auth } from "@clerk/nextjs/server";
 import { NextResponse, type NextRequest } from "next/server";
 import { db } from "~/server/db";
 import {
   maintenanceRequests,
   units,
   properties,
-  user,
   notifications,
 } from "~/server/db/schema";
 import { eq, and, like } from "drizzle-orm";
@@ -15,6 +13,7 @@ import {
   VALID_MAINTENANCE_STATUSES,
   MAINTENANCE_STATUS_TRANSITIONS,
 } from "~/lib/constants/maintenance";
+import { getAuthenticatedUser } from "~/server/auth";
 
 // PATCH: Update maintenance request status/notes
 export async function PATCH(
@@ -22,19 +21,11 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { userId: clerkUserId } = await auth();
-    if (!clerkUserId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const authResult = await getAuthenticatedUser();
+    if (authResult.error) return authResult.error;
+    const dbUser = authResult.user;
 
-    // Get user and verify landlord role
-    const [dbUser] = await db
-      .select()
-      .from(user)
-      .where(eq(user.auth_id, clerkUserId))
-      .limit(1);
-
-    if (!dbUser || !hasRole(dbUser.roles, "landlord")) {
+    if (!hasRole(dbUser.roles, "landlord")) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -64,7 +55,7 @@ export async function PATCH(
     }
 
     // Verify the landlord owns this property
-    if (existingRequest.property.userId !== clerkUserId) {
+    if (existingRequest.property.userId !== dbUser.auth_id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
