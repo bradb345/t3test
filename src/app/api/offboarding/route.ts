@@ -259,14 +259,14 @@ export async function POST(request: NextRequest) {
         moveOutDate: moveOutDate.toISOString(),
       }),
       actionUrl: isTenant
-        ? `/landlord-dashboard?tab=tenants`
+        ? `/my-properties?tab=tenants`
         : `/dashboard`,
     });
 
     // Send email notification
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
     const dashboardUrl = isTenant
-      ? `${baseUrl}/landlord-dashboard?tab=tenants`
+      ? `${baseUrl}/my-properties?tab=tenants`
       : `${baseUrl}/dashboard`;
 
     await sendEmail({

@@ -7,7 +7,9 @@
       "Bash(npx shadcn@latest add:*)",
       "WebSearch",
       "Bash(npx tsc:*)",
-      "Bash(npx cypress run:*)"
+      "Bash(npx cypress run:*)",
+      "WebFetch(domain:github.com)",
+      "Bash(npm run build:*)"
     ]
   }
 }

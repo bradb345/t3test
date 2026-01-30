@@ -34,9 +34,11 @@ export function OffboardingBanner({
   const [isCancelling, setIsCancelling] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const daysLeft = getDaysUntilMoveOut(new Date(notice.moveOutDate));
-  const isUrgent = daysLeft <= 14;
-  const canCancel = notice.status === "active" && notice.initiatedBy === "tenant";
+  const rawDaysLeft = getDaysUntilMoveOut(new Date(notice.moveOutDate));
+  const daysLeft = Math.max(0, rawDaysLeft);
+  const isPastDue = rawDaysLeft < 0;
+  const isUrgent = rawDaysLeft <= 14;
+  const canCancel = notice.status === "active" && notice.initiatedBy === "tenant" && !isPastDue;
 
   const handleCancel = async () => {
     setIsCancelling(true);
@@ -135,7 +137,7 @@ export function OffboardingBanner({
                       : "bg-orange-200 text-orange-800"
                   }`}
                 >
-                  {daysLeft} days remaining
+                  {isPastDue ? "Move-out date passed" : `${daysLeft} days remaining`}
                 </div>
               </div>
 

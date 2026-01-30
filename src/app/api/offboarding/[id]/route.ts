@@ -312,7 +312,7 @@ export async function DELETE(
         leaseId: lease.id,
         cancelledBy: isTenant ? "tenant" : "landlord",
       }),
-      actionUrl: isTenant ? `/landlord-dashboard?tab=tenants` : `/dashboard`,
+      actionUrl: isTenant ? `/my-properties?tab=tenants` : `/dashboard`,
     });
 
     return NextResponse.json({
