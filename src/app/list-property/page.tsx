@@ -1,4 +1,3 @@
-import { Testimonials } from "~/components/Testimonials";
 import { HowRentrWorks } from "~/components/HowRentrWorks";
 import { StartListingButton } from "./StartListingButton";
 
@@ -28,10 +27,6 @@ export default async function ListPropertyPage() {
         {/* Property Listing Form Section */}
         <div className="mt-24">{/* Content will go here */}</div>
 
-        {/* Testimonials Section */}
-        <div className="mt-24">
-          <Testimonials />
-        </div>
       </div>
     </main>
   );
