@@ -11,6 +11,7 @@ import {
   FileText,
   DollarSign,
   Inbox,
+  ClipboardList,
 } from "lucide-react";
 import { OverviewTab } from "./overview/OverviewTab";
 import { PropertiesTab } from "./properties/PropertiesTab";
@@ -19,6 +20,7 @@ import { MaintenanceTab } from "./maintenance/MaintenanceTab";
 import { DocumentsTab } from "./documents/DocumentsTab";
 import { FinancialsTab } from "./financials/FinancialsTab";
 import { InquiriesTab } from "./inquiries/InquiriesTab";
+import { ApplicationsTab } from "./applications/ApplicationsTab";
 import type {
   User,
   PropertyWithUnits,
@@ -52,6 +54,7 @@ const VALID_TABS: LandlordDashboardTab[] = [
   "documents",
   "financials",
   "inquiries",
+  "applications",
 ];
 
 export function LandlordDashboardClient({
@@ -127,7 +130,7 @@ export function LandlordDashboardClient({
 
         {/* Tabs Navigation */}
         <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-          <TabsList className="mb-8 flex w-full flex-wrap h-auto gap-1 sm:grid sm:grid-cols-7">
+          <TabsList className="mb-8 flex w-full flex-wrap h-auto gap-1 sm:grid sm:grid-cols-8">
             <TabsTrigger value="overview" className="flex items-center gap-2">
               <Home className="h-4 w-4" />
               <span className="hidden sm:inline">Overview</span>
@@ -165,6 +168,10 @@ export function LandlordDashboardClient({
                   {pendingInquiries > 9 ? "9+" : pendingInquiries}
                 </span>
               )}
+            </TabsTrigger>
+            <TabsTrigger value="applications" className="flex items-center gap-2">
+              <ClipboardList className="h-4 w-4" />
+              <span className="hidden sm:inline">Applications</span>
             </TabsTrigger>
           </TabsList>
 
@@ -204,6 +211,10 @@ export function LandlordDashboardClient({
 
           <TabsContent value="inquiries">
             <InquiriesTab requests={viewingRequests} properties={properties} />
+          </TabsContent>
+
+          <TabsContent value="applications">
+            <ApplicationsTab />
           </TabsContent>
         </Tabs>
       </div>

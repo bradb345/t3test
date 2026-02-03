@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
+import { SignInButton } from "@clerk/nextjs";
 import { Card } from "~/components/ui/card";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
@@ -17,8 +18,15 @@ import {
   ChevronLeft,
   ChevronRight,
   X,
+  FileText,
 } from "lucide-react";
 import { formatCurrency } from "~/lib/currency";
+import {
+  ViewingRequestModal,
+  ContactLandlordModal,
+  TenancyApplicationModal,
+  OwnerWarningDialog,
+} from "~/components/listing";
 
 interface UnitListingContentProps {
   unit: {
@@ -46,13 +54,62 @@ interface UnitListingContentProps {
     propertyType: string;
     imageUrls: string | null;
   };
+  landlordId: number | null;
+  landlordName: string;
+  isOwner: boolean;
+  isSignedIn: boolean;
+  currentUserId: number | null; // Reserved for future use (e.g., checking existing applications)
+  currentUserName: string | null;
+  currentUserEmail: string | null;
 }
 
-export function UnitListingContent({ unit, property }: UnitListingContentProps) {
+export function UnitListingContent({
+  unit,
+  property,
+  landlordId,
+  landlordName,
+  isOwner,
+  isSignedIn,
+  currentUserId: _currentUserId,
+  currentUserName,
+  currentUserEmail,
+}: UnitListingContentProps) {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
   const [lightboxImageIndex, setLightboxImageIndex] = useState(0);
+
+  // Modal states
+  const [showViewingModal, setShowViewingModal] = useState(false);
+  const [showContactModal, setShowContactModal] = useState(false);
+  const [showApplicationModal, setShowApplicationModal] = useState(false);
+  const [ownerWarningType, setOwnerWarningType] = useState<
+    "viewing" | "contact" | "apply" | null
+  >(null);
+
+  const handleViewingRequest = () => {
+    if (isOwner) {
+      setOwnerWarningType("viewing");
+      return;
+    }
+    setShowViewingModal(true);
+  };
+
+  const handleContactLandlord = () => {
+    if (isOwner) {
+      setOwnerWarningType("contact");
+      return;
+    }
+    setShowContactModal(true);
+  };
+
+  const handleApplyForTenancy = () => {
+    if (isOwner) {
+      setOwnerWarningType("apply");
+      return;
+    }
+    setShowApplicationModal(true);
+  };
 
   // Parse and merge images
   let unitImages: string[] = [];
@@ -519,12 +576,53 @@ export function UnitListingContent({ unit, property }: UnitListingContentProps) 
               </div>
 
               <div className="space-y-3 mb-6">
-                <Button className="w-full" size="lg">
-                  Request Viewing
-                </Button>
-                <Button variant="outline" className="w-full" size="lg">
-                  Contact Landlord
-                </Button>
+                {isSignedIn ? (
+                  <>
+                    <Button
+                      className="w-full"
+                      size="lg"
+                      onClick={handleViewingRequest}
+                    >
+                      Request Viewing
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="w-full"
+                      size="lg"
+                      onClick={handleContactLandlord}
+                    >
+                      Contact Landlord
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      className="w-full"
+                      size="lg"
+                      onClick={handleApplyForTenancy}
+                    >
+                      <FileText className="mr-2 h-4 w-4" />
+                      Apply for Tenancy
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <SignInButton mode="modal">
+                      <Button className="w-full" size="lg">
+                        Request Viewing
+                      </Button>
+                    </SignInButton>
+                    <SignInButton mode="modal">
+                      <Button variant="outline" className="w-full" size="lg">
+                        Contact Landlord
+                      </Button>
+                    </SignInButton>
+                    <SignInButton mode="modal">
+                      <Button variant="secondary" className="w-full" size="lg">
+                        <FileText className="mr-2 h-4 w-4" />
+                        Apply for Tenancy
+                      </Button>
+                    </SignInButton>
+                  </>
+                )}
               </div>
 
               <div className="border-t pt-6 space-y-3 text-sm">
@@ -555,6 +653,47 @@ export function UnitListingContent({ unit, property }: UnitListingContentProps) 
           </div>
         </div>
       </div>
+
+      {/* Modals */}
+      <ViewingRequestModal
+        open={showViewingModal}
+        onClose={() => setShowViewingModal(false)}
+        unitId={unit.id}
+        unitNumber={unit.unitNumber}
+        propertyName={property.name}
+        defaultName={currentUserName}
+        defaultEmail={currentUserEmail}
+      />
+
+      {landlordId && (
+        <ContactLandlordModal
+          open={showContactModal}
+          onClose={() => setShowContactModal(false)}
+          landlordId={landlordId}
+          landlordName={landlordName}
+          unitId={unit.id}
+          unitNumber={unit.unitNumber}
+          propertyName={property.name}
+        />
+      )}
+
+      <TenancyApplicationModal
+        open={showApplicationModal}
+        onClose={() => setShowApplicationModal(false)}
+        unitId={unit.id}
+        unitNumber={unit.unitNumber}
+        propertyName={property.name}
+        monthlyRent={unit.monthlyRent}
+        currency={unit.currency}
+        defaultName={currentUserName}
+        defaultEmail={currentUserEmail}
+      />
+
+      <OwnerWarningDialog
+        open={ownerWarningType !== null}
+        onClose={() => setOwnerWarningType(null)}
+        actionType={ownerWarningType ?? "viewing"}
+      />
     </div>
   );
 }
