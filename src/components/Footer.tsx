@@ -1,8 +1,10 @@
+import Link from "next/link";
+
 export function Footer() {
   return (
     <footer className="w-full border-t bg-background">
       <div className="mx-auto w-full max-w-6xl px-4 py-12">
-        <div className="grid grid-cols-1 gap-8 md:grid-cols-4">
+        <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
           {/* Company Info */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">Rentr</h3>
@@ -16,13 +18,13 @@ export function Footer() {
             <h3 className="text-sm font-semibold">Quick Links</h3>
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li>
-                <a href="/about" className="hover:text-primary">About Us</a>
+                <Link href="/about" className="hover:text-primary">About Us</Link>
               </li>
               <li>
-                <a href="/list-property" className="hover:text-primary">List Your Property</a>
+                <Link href="/list-property" className="hover:text-primary">List Your Property</Link>
               </li>
               <li>
-                <a href="/search" className="hover:text-primary">Find Rentals</a>
+                <Link href="/search" className="hover:text-primary">Find Rentals</Link>
               </li>
             </ul>
           </div>
@@ -32,37 +34,34 @@ export function Footer() {
             <h3 className="text-sm font-semibold">Support</h3>
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li>
-                <a href="/help" className="hover:text-primary">Help Center</a>
+                <Link href="/contact" className="hover:text-primary">Contact Us</Link>
               </li>
               <li>
-                <a href="/contact" className="hover:text-primary">Contact Us</a>
+                <Link href="/privacy" className="hover:text-primary">Privacy Policy</Link>
               </li>
               <li>
-                <a href="/privacy" className="hover:text-primary">Privacy Policy</a>
-              </li>
-              <li>
-                <a href="/terms" className="hover:text-primary">Terms of Service</a>
+                <Link href="/terms" className="hover:text-primary">Terms of Service</Link>
               </li>
             </ul>
           </div>
 
-          {/* Connect */}
-          <div className="space-y-4">
+          {/* Connect - Uncomment when social media accounts are set up */}
+          {/* <div className="space-y-4">
             <h3 className="text-sm font-semibold">Connect</h3>
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li>
-                <a href="https://facebook.com" className="hover:text-primary">Facebook</a>
+                <a href="https://facebook.com/rentr" className="hover:text-primary">Facebook</a>
               </li>
               <li>
-                <a href="https://instagram.com" className="hover:text-primary">Instagram</a>
+                <a href="https://instagram.com/rentr" className="hover:text-primary">Instagram</a>
               </li>
             </ul>
-          </div>
+          </div> */}
         </div>
         <div className="mt-12 border-t pt-8 text-center text-sm text-muted-foreground">
           <p>© {new Date().getFullYear()} Rentr. All rights reserved.</p>
         </div>
       </div>
     </footer>
-  )
+  );
 } 
