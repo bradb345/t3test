@@ -188,7 +188,7 @@ export function ViewingRequestModal({
                 onChange={(e) =>
                   setFormData({ ...formData, preferredDate: e.target.value })
                 }
-                min={new Date().toISOString().split("T")[0]}
+                min={new Date().toLocaleDateString("en-CA")}
                 disabled={isSubmitting}
               />
             </div>

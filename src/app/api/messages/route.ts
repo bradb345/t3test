@@ -46,6 +46,22 @@ export async function GET() {
       )
       .orderBy(desc(messages.createdAt));
 
+    // Pre-compute unread counts in a single pass (O(n) instead of O(n²))
+    const unreadCountByUser = new Map<number, number>();
+    for (const row of allMessages) {
+      const otherUserId = row.otherUser.id;
+      // Count messages FROM the other user that are unread
+      if (
+        row.message.fromUserId === otherUserId &&
+        row.message.status === "unread"
+      ) {
+        unreadCountByUser.set(
+          otherUserId,
+          (unreadCountByUser.get(otherUserId) ?? 0) + 1
+        );
+      }
+    }
+
     // Group by other user
     const conversationsMap = new Map<
       number,
@@ -70,14 +86,6 @@ export async function GET() {
       const isFromCurrentUser = row.message.fromUserId === currentUser.id;
 
       if (!conversationsMap.has(otherUserId)) {
-        // Count unread messages from this user
-        const unreadCount = allMessages.filter(
-          (m) =>
-            m.otherUser.id === otherUserId &&
-            m.message.fromUserId === otherUserId &&
-            m.message.status === "unread"
-        ).length;
-
         conversationsMap.set(otherUserId, {
           userId: otherUserId,
           userName: `${row.otherUser.first_name} ${row.otherUser.last_name}`,
@@ -90,7 +98,7 @@ export async function GET() {
             createdAt: row.message.createdAt,
             isFromCurrentUser,
           },
-          unreadCount,
+          unreadCount: unreadCountByUser.get(otherUserId) ?? 0,
         });
       }
     }
@@ -132,7 +140,6 @@ export async function POST(request: NextRequest) {
       content: string;
       type?: string;
       propertyId?: number;
-      unitId?: number;
     };
 
     // Validate required fields

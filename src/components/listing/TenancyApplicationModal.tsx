@@ -79,9 +79,9 @@ export function TenancyApplicationModal({
   // Load saved progress from localStorage
   useEffect(() => {
     if (open) {
-      const saved = localStorage.getItem(storageKey);
-      if (saved) {
-        try {
+      try {
+        const saved = localStorage.getItem(storageKey);
+        if (saved) {
           const parsed = JSON.parse(saved) as {
             currentStep: number;
             completedSteps: string[];
@@ -108,16 +108,16 @@ export function TenancyApplicationModal({
               email: defaultEmail ?? "",
             });
           }
-        } catch {
-          // Invalid saved data, start fresh
+        } else {
+          // No saved data, start with defaults
           setStepFormData({
             firstName: defaultName?.split(" ")[0] ?? "",
             lastName: defaultName?.split(" ").slice(1).join(" ") ?? "",
             email: defaultEmail ?? "",
           });
         }
-      } else {
-        // No saved data, start with defaults
+      } catch {
+        // Storage access failed or invalid data, start fresh
         setStepFormData({
           firstName: defaultName?.split(" ")[0] ?? "",
           lastName: defaultName?.split(" ").slice(1).join(" ") ?? "",
@@ -149,7 +149,11 @@ export function TenancyApplicationModal({
       completedSteps: newCompletedSteps,
       data: newData,
     };
-    localStorage.setItem(storageKey, JSON.stringify(toSave));
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(toSave));
+    } catch {
+      // Storage write failed (quota exceeded or disabled), continue without persistence
+    }
   };
 
   const isCurrentStepValid = (): boolean => {

@@ -190,6 +190,7 @@ export function MessagesPageClient() {
             variant="outline"
             onClick={() => {
               setError(null);
+              setIsLoadingConversations(true);
               void fetchConversations();
             }}
             className="mt-4"

@@ -11,7 +11,9 @@
       "WebFetch(domain:github.com)",
       "Bash(npm run build:*)",
       "Bash(npm run lint)",
-      "Bash(npm run db:push:*)"
+      "Bash(npm run db:push:*)",
+      "Bash(gh pr view:*)",
+      "Bash(gh api:*)"
     ]
   }
 }

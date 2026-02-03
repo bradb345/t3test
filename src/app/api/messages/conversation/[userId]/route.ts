@@ -119,6 +119,14 @@ export async function POST(
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
+    // Prevent sending messages to yourself
+    if (toUserId === currentUser.id) {
+      return NextResponse.json(
+        { error: "Cannot send a message to yourself" },
+        { status: 400 }
+      );
+    }
+
     // Check recipient exists
     const [recipient] = await db
       .select()

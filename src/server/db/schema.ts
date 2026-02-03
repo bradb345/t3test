@@ -869,7 +869,7 @@ export const tenancyApplications = createTable(
     status: varchar("status", { length: 20 }).notNull().default("pending"),
     // Statuses: pending, under_review, approved, rejected, withdrawn
     applicationData: text("application_data"), // JSON - same structure as onboarding
-    paymentSetupComplete: boolean("payment_setup_complete").default(false),
+    paymentSetupComplete: boolean("payment_setup_complete").notNull().default(false),
     submittedAt: timestamp("submitted_at", { withTimezone: true }),
     reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
     reviewedByUserId: integer("reviewed_by_user_id").references(() => user.id),

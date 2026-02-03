@@ -49,7 +49,7 @@ const AvatarImage = React.forwardRef<HTMLImageElement, AvatarImageProps>(
       <img
         ref={ref}
         src={src}
-        alt={alt}
+        alt={alt ?? ""}
         className={cn("aspect-square h-full w-full object-cover", className)}
         onLoad={() => {
           setStatus("loaded");
