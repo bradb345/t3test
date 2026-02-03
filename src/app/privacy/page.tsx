@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function PrivacyPage() {
   return (
     <main className="flex min-h-screen flex-col items-center bg-background">
@@ -84,9 +86,9 @@ export default function PrivacyPage() {
             <h2 className="text-xl font-semibold text-foreground">7. Contact Us</h2>
             <p>
               If you have any questions about this Privacy Policy, please contact us at{" "}
-              <a href="/contact" className="text-primary hover:underline">
+              <Link href="/contact" className="text-primary hover:underline">
                 our contact page
-              </a>.
+              </Link>.
             </p>
           </section>
         </div>

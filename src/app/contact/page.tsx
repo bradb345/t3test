@@ -11,6 +11,7 @@ import { toast } from "sonner";
 export default function ContactPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [formKey, setFormKey] = useState(0);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -56,7 +57,13 @@ export default function ContactPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="text-center">
-              <Button onClick={() => setSubmitted(false)} variant="outline">
+              <Button
+                onClick={() => {
+                  setSubmitted(false);
+                  setFormKey((k) => k + 1);
+                }}
+                variant="outline"
+              >
                 Send Another Message
               </Button>
             </CardContent>
@@ -86,7 +93,7 @@ export default function ContactPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form key={formKey} onSubmit={handleSubmit} className="space-y-6">
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="name">Name</Label>

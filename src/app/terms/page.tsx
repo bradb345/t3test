@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function TermsPage() {
   return (
     <main className="flex min-h-screen flex-col items-center bg-background">
@@ -119,9 +121,9 @@ export default function TermsPage() {
             <h2 className="text-xl font-semibold text-foreground">11. Contact</h2>
             <p>
               For questions about these Terms of Service, please visit our{" "}
-              <a href="/contact" className="text-primary hover:underline">
+              <Link href="/contact" className="text-primary hover:underline">
                 contact page
-              </a>.
+              </Link>.
             </p>
           </section>
         </div>
