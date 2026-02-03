@@ -17,7 +17,6 @@ import {
   ChevronLeft,
   ChevronRight,
   X,
-  ArrowLeft,
 } from "lucide-react";
 import { formatCurrency } from "~/lib/currency";
 

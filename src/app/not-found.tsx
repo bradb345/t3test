@@ -8,7 +8,7 @@ export default function NotFound() {
       <div className="flex h-[calc(100vh-4rem)] flex-col items-center justify-center gap-4 text-center">
         <h1 className="text-4xl font-bold tracking-tight sm:text-6xl">404</h1>
         <p className="text-lg text-muted-foreground">
-          Oops! The page you're looking for doesn't exist.
+          Oops! The page you&apos;re looking for doesn&apos;t exist.
         </p>
         <Link href="/">
           <Button className="mt-4" size="lg">

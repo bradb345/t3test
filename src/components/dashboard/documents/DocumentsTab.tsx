@@ -53,7 +53,7 @@ export function DocumentsTab({
   let leaseDocuments: LeaseDocument[] = [];
   if (lease.lease.documents) {
     try {
-      const parsed = JSON.parse(lease.lease.documents);
+      const parsed: unknown = JSON.parse(lease.lease.documents);
       if (Array.isArray(parsed)) {
         leaseDocuments = parsed.map((url: string, index: number) => ({
           url,

@@ -79,7 +79,7 @@ export function PersonalInfoStep({
             Personal Information
           </h2>
           <p className="mt-2 text-gray-600">
-            Let's start with your basic details. This information helps us verify
+            Let&apos;s start with your basic details. This information helps us verify
             your identity and communicate with you throughout the rental process.
           </p>
         </div>
@@ -143,7 +143,7 @@ export function PersonalInfoStep({
               <p className="mt-1 text-sm text-red-500">{errors.email}</p>
             )}
             <p className="mt-1 text-sm text-gray-500">
-              We'll use this email for all rental communications
+              We&apos;ll use this email for all rental communications
             </p>
           </div>
 

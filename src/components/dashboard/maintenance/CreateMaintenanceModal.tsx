@@ -45,7 +45,7 @@ const priorities = MAINTENANCE_PRIORITIES;
 export function CreateMaintenanceModal({
   open,
   onOpenChange,
-  unitId,
+  unitId: _unitId,
   onRequestCreated,
 }: CreateMaintenanceModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);

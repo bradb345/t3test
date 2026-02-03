@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import { db } from "~/server/db";
 import { units, tenantInvitations, tenantOnboardingProgress, properties, user } from "~/server/db/schema";
 import { createAndEmitNotification } from "~/server/notification-emitter";
