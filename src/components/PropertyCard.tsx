@@ -84,7 +84,7 @@ export function PropertyCard({ property }: PropertyCardProps) {
             className="object-cover"
             loading="lazy"
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-            onError={(e) => console.error("Image failed to load:", firstImage)}
+            onError={(_e) => console.error("Image failed to load:", firstImage)}
           />
         </Link>
         <div className="absolute top-2 right-2">

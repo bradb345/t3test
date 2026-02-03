@@ -68,7 +68,7 @@ export async function PATCH(request: NextRequest) {
     position: body.position.trim(),
     employmentType: body.employmentType,
     annualIncome: body.annualIncome?.toString() ?? null,
-    employerPhone: body.employerPhone?.trim() || null,
+    employerPhone: body.employerPhone?.trim() ?? null,
   };
 
   let result;

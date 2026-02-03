@@ -286,10 +286,11 @@ export async function PATCH(request: NextRequest) {
         // Encrypt SSN and store encrypted version
         const encryptedSSN = encryptSSN(personal.ssn);
         const last4 = cleanSSN.slice(-4);
-        
+
         // Remove plaintext SSN from personal data
-        const { ssn, ...personalWithoutSSN } = personal;
-        
+        const personalWithoutSSN = { ...personal };
+        delete personalWithoutSSN.ssn;
+
         processedStepData = {
           ...body.stepData,
           personal: {

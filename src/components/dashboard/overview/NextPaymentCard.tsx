@@ -30,7 +30,7 @@ interface NextPaymentCardProps {
   lease: LeaseWithDetails;
 }
 
-export function NextPaymentCard({ payment, lease }: NextPaymentCardProps) {
+export function NextPaymentCard({ payment, lease: _lease }: NextPaymentCardProps) {
   const getDaysUntilDue = (dueDate: Date) => {
     const now = new Date();
     const due = new Date(dueDate);

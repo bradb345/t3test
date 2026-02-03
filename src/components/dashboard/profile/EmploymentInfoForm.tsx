@@ -32,7 +32,7 @@ const employmentTypes = [
 
 export function EmploymentInfoForm({
   employment,
-  profileId,
+  profileId: _profileId,
   onUpdate,
 }: EmploymentInfoFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
