@@ -5,13 +5,14 @@ import { db } from "~/server/db";
 import { properties } from "~/server/db/schema";
 import { eq } from "drizzle-orm";
 
-export default async function CreateUnitPage({
-  params,
-}: {
-  params: { id: string };
-}) {
+export default async function CreateUnitPage(
+  props: {
+    params: Promise<{ id: string }>;
+  }
+) {
+  const params = await props.params;
   const { userId } = await auth();
-  
+
   if (!userId) {
     redirect("/");
   }

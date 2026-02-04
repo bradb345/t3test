@@ -22,10 +22,8 @@ interface UnitData {
   imageUrls?: string | string[];
 }
 
-export async function GET(
-  req: Request,
-  { params }: { params: { id: string; unitId: string } }
-) {
+export async function GET(req: Request, props: { params: Promise<{ id: string; unitId: string }> }) {
+  const params = await props.params;
   try {
     const { userId } = await auth();
     if (!userId) {
@@ -70,10 +68,8 @@ export async function GET(
   }
 }
 
-export async function PATCH(
-  req: Request,
-  { params }: { params: { id: string; unitId: string } }
-) {
+export async function PATCH(req: Request, props: { params: Promise<{ id: string; unitId: string }> }) {
+  const params = await props.params;
   try {
     const { userId } = await auth();
     if (!userId) {
@@ -200,10 +196,8 @@ export async function PATCH(
   }
 }
 
-export async function DELETE(
-  req: Request,
-  { params }: { params: { id: string; unitId: string } }
-) {
+export async function DELETE(req: Request, props: { params: Promise<{ id: string; unitId: string }> }) {
+  const params = await props.params;
   try {
     const { userId } = await auth();
     if (!userId) {

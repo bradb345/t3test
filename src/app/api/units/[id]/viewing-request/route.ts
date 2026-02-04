@@ -10,10 +10,8 @@ import { eq } from "drizzle-orm";
 import { createAndEmitNotification } from "~/server/notification-emitter";
 
 // POST: Submit a viewing request (public endpoint for prospective tenants)
-export async function POST(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function POST(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const unitId = parseInt(params.id);
     if (isNaN(unitId)) {

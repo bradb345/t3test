@@ -6,10 +6,8 @@ import { eq, or, and, desc } from "drizzle-orm";
 import { createAndEmitNotification } from "~/server/notification-emitter";
 
 // GET: Fetch messages between current user and specified user
-export async function GET(
-  _request: NextRequest,
-  { params }: { params: { userId: string } }
-) {
+export async function GET(_request: NextRequest, props: { params: Promise<{ userId: string }> }) {
+  const params = await props.params;
   try {
     const { userId: clerkUserId } = await auth();
     if (!clerkUserId) {
@@ -93,10 +91,8 @@ export async function GET(
 }
 
 // POST: Reply to conversation
-export async function POST(
-  request: NextRequest,
-  { params }: { params: { userId: string } }
-) {
+export async function POST(request: NextRequest, props: { params: Promise<{ userId: string }> }) {
+  const params = await props.params;
   try {
     const { userId: clerkUserId } = await auth();
     if (!clerkUserId) {
@@ -206,10 +202,8 @@ export async function POST(
 }
 
 // PATCH: Mark messages as read
-export async function PATCH(
-  _request: NextRequest,
-  { params }: { params: { userId: string } }
-) {
+export async function PATCH(_request: NextRequest, props: { params: Promise<{ userId: string }> }) {
+  const params = await props.params;
   try {
     const { userId: clerkUserId } = await auth();
     if (!clerkUserId) {

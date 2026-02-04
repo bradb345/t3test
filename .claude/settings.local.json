@@ -13,7 +13,9 @@
       "Bash(npm run lint)",
       "Bash(npm run db:push:*)",
       "Bash(gh pr view:*)",
-      "Bash(gh api:*)"
+      "Bash(gh api:*)",
+      "Bash(npx @next/codemod@canary next-async-request-api:*)",
+      "Bash(npm install:*)"
     ]
   }
 }

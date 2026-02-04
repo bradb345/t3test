@@ -13,10 +13,8 @@ import { createAndEmitNotification } from "~/server/notification-emitter";
 import { randomBytes } from "crypto";
 
 // GET: Get a single application with full details
-export async function GET(
-  _request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(_request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const { userId: clerkUserId } = await auth();
     if (!clerkUserId) {
@@ -108,10 +106,8 @@ export async function GET(
 }
 
 // PATCH: Review (approve/reject) an application
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function PATCH(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const { userId: clerkUserId } = await auth();
     if (!clerkUserId) {

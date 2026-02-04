@@ -8,10 +8,8 @@ import { getTenantInvitationEmailHtml } from "~/emails/tenant-invitation";
 import { getAuthenticatedUser } from "~/server/auth";
 import crypto from "crypto";
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function POST(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const authResult = await getAuthenticatedUser();
     if (authResult.error) return authResult.error;
