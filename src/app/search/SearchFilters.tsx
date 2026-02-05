@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useConfigure } from "react-instantsearch";
+import { useConfigure, useSearchBox } from "react-instantsearch";
 import { Button } from "~/components/ui/button";
 import { ChevronDown, X, Search } from "lucide-react";
 import {
@@ -9,6 +9,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "~/components/ui/popover";
+import posthog from "posthog-js";
 
 // Bedroom/Bathroom button options
 const BEDROOM_OPTIONS = [
@@ -94,6 +95,30 @@ export function SearchFilters({ initialFilters }: SearchFiltersProps) {
     filters: buildFilterString(),
     hitsPerPage: 20,
   });
+
+  // Get current search query for tracking
+  const { query } = useSearchBox();
+
+  // Track search button click
+  const handleSearchClick = () => {
+    posthog.capture("search_performed", {
+      search_query: query?.trim() ?? "",
+      query_length: query?.trim().length ?? 0,
+      filters: {
+        min_price: minPrice,
+        max_price: maxPrice,
+        min_bedrooms: minBedrooms,
+        min_bathrooms: minBathrooms,
+        property_types: selectedPropertyTypes,
+      },
+      filter_count: [
+        minPrice !== null || maxPrice !== null,
+        minBedrooms !== null,
+        minBathrooms !== null,
+        selectedPropertyTypes.length > 0,
+      ].filter(Boolean).length,
+    });
+  };
 
   // Count active filters
   const activeFilterCount = [
@@ -194,6 +219,11 @@ export function SearchFilters({ initialFilters }: SearchFiltersProps) {
                   onClick={() => {
                     setMinPrice(range.min);
                     setMaxPrice(range.max);
+                    posthog.capture("search_filter_selected", {
+                      filter_type: "price",
+                      min_price: range.min,
+                      max_price: range.max,
+                    });
                   }}
                   className={`rounded-full border px-3 py-1 text-xs transition-colors ${
                     minPrice === range.min && maxPrice === range.max
@@ -227,7 +257,13 @@ export function SearchFilters({ initialFilters }: SearchFiltersProps) {
               {BEDROOM_OPTIONS.map((option) => (
                 <button
                   key={option.label}
-                  onClick={() => setMinBedrooms(option.value)}
+                  onClick={() => {
+                    setMinBedrooms(option.value);
+                    posthog.capture("search_filter_selected", {
+                      filter_type: "bedrooms",
+                      min_bedrooms: option.value,
+                    });
+                  }}
                   className={`min-w-[48px] rounded-full border px-3 py-2 text-sm transition-colors ${
                     minBedrooms === option.value
                       ? "border-primary bg-primary text-primary-foreground"
@@ -260,7 +296,13 @@ export function SearchFilters({ initialFilters }: SearchFiltersProps) {
               {BATHROOM_OPTIONS.map((option) => (
                 <button
                   key={option.label}
-                  onClick={() => setMinBathrooms(option.value)}
+                  onClick={() => {
+                    setMinBathrooms(option.value);
+                    posthog.capture("search_filter_selected", {
+                      filter_type: "bathrooms",
+                      min_bathrooms: option.value,
+                    });
+                  }}
                   className={`min-w-[48px] rounded-full border px-3 py-2 text-sm transition-colors ${
                     minBathrooms === option.value
                       ? "border-primary bg-primary text-primary-foreground"
@@ -298,7 +340,15 @@ export function SearchFilters({ initialFilters }: SearchFiltersProps) {
                   <input
                     type="checkbox"
                     checked={selectedPropertyTypes.includes(type.value)}
-                    onChange={() => togglePropertyType(type.value)}
+                    onChange={() => {
+                      const isAdding = !selectedPropertyTypes.includes(type.value);
+                      togglePropertyType(type.value);
+                      posthog.capture("search_filter_selected", {
+                        filter_type: "property_type",
+                        property_type: type.value,
+                        action: isAdding ? "added" : "removed",
+                      });
+                    }}
                     className="h-4 w-4 rounded border-input"
                   />
                   <span className="text-sm">{type.label}</span>
@@ -323,7 +373,7 @@ export function SearchFilters({ initialFilters }: SearchFiltersProps) {
       )}
 
       {/* Search Button */}
-      <Button className="h-12 gap-2 text-base">
+      <Button className="h-12 gap-2 text-base" onClick={handleSearchClick}>
         <Search className="h-4 w-4" />
         Search
       </Button>

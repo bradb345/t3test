@@ -5,6 +5,7 @@ import { properties } from "~/server/db/schema";
 import { eq } from "drizzle-orm";
 import { detectCurrencyFromCoordinates } from "~/lib/currency";
 import { addRoleToUserByAuthId } from "~/lib/roles";
+import { getPostHogClient } from "~/lib/posthog-server";
 
 interface PropertyData {
   name: string;
@@ -73,6 +74,21 @@ export async function POST(req: Request) {
       // Log but don't fail the request - property was created successfully
       console.error("Error assigning landlord role:", roleError);
     }
+
+    // Track property creation event in PostHog
+    const posthog = getPostHogClient();
+    posthog.capture({
+      distinctId: userId,
+      event: "property_created",
+      properties: {
+        property_id: property?.id,
+        property_type: data.propertyType,
+        country: data.country ?? "US",
+        currency: currency.code,
+        has_parking: Boolean(data.parkingAvailable),
+        source: "api",
+      },
+    });
 
     return NextResponse.json(property);
   } catch (error) {

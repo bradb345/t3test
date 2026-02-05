@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import type { WebhookEvent } from "@clerk/nextjs/server";
 import { db } from "~/server/db";
 import { user } from "~/server/db/schema";
+import { getPostHogClient } from "~/lib/posthog-server";
 
 export async function POST(req: Request) {
   // Get the headers
@@ -47,6 +48,7 @@ export async function POST(req: Request) {
   if (eventType === "user.created" || eventType === "user.updated") {
     const { id, email_addresses, image_url, first_name, last_name } = evt.data;
     const email = email_addresses[0]?.email_address;
+    const isNewUser = eventType === "user.created";
 
     // Upsert user data
     await db
@@ -67,6 +69,32 @@ export async function POST(req: Request) {
           image_url: image_url,
         },
       });
+
+    // Track user signup/update and identify in PostHog
+    const posthog = getPostHogClient();
+
+    // Identify user with PostHog
+    posthog.identify({
+      distinctId: id,
+      properties: {
+        email: email ?? undefined,
+        first_name: first_name ?? undefined,
+        last_name: last_name ?? undefined,
+        name: first_name && last_name ? `${first_name} ${last_name}` : undefined,
+      },
+    });
+
+    // Track signup event for new users
+    if (isNewUser) {
+      posthog.capture({
+        distinctId: id,
+        event: "user_signed_up",
+        properties: {
+          email: email,
+          source: "clerk_webhook",
+        },
+      });
+    }
   }
 
   return new Response("", { status: 200 });
