@@ -4,10 +4,8 @@ import { db } from "~/server/db";
 import { units, properties } from "~/server/db/schema";
 import { eq, and } from "drizzle-orm";
 
-export async function POST(
-  req: Request,
-  { params }: { params: { id: string; unitId: string } }
-) {
+export async function POST(req: Request, props: { params: Promise<{ id: string; unitId: string }> }) {
+  const params = await props.params;
   try {
     const { userId } = await auth();
     if (!userId) {

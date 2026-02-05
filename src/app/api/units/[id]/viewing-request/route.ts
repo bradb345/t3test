@@ -8,12 +8,11 @@ import {
 } from "~/server/db/schema";
 import { eq } from "drizzle-orm";
 import { createAndEmitNotification } from "~/server/notification-emitter";
+import { capturePostHogEvent } from "~/lib/posthog-server";
 
 // POST: Submit a viewing request (public endpoint for prospective tenants)
-export async function POST(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function POST(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const unitId = parseInt(params.id);
     if (isNaN(unitId)) {
@@ -130,6 +129,19 @@ export async function POST(
         actionUrl: `/my-properties?tab=inquiries`,
       });
     }
+
+    // Track viewing request submission in PostHog (use email as distinct ID for anonymous users)
+    await capturePostHogEvent({
+      distinctId: body.email.trim().toLowerCase(),
+      event: "viewing_request_submitted",
+      properties: {
+        viewing_request_id: newRequest?.id,
+        unit_id: unitId,
+        property_id: unitData.property.id,
+        has_preferred_date: !!body.preferredDate,
+        source: "api",
+      },
+    });
 
     return NextResponse.json(
       {

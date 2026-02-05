@@ -12,6 +12,7 @@ import { createAndEmitNotification } from "~/server/notification-emitter";
 import { completeOffboardingProcess } from "~/server/offboarding";
 import { getAuthenticatedUser } from "~/server/auth";
 import type { CompleteOffboardingRequest } from "~/types/offboarding";
+import { capturePostHogEvent } from "~/lib/posthog-server";
 
 // POST /api/offboarding/[id]/complete - Complete offboarding
 export async function POST(
@@ -139,6 +140,21 @@ export async function POST(
         }),
       });
     }
+
+    // Track offboarding completion in PostHog
+    await capturePostHogEvent({
+      distinctId: dbUser.auth_id,
+      event: "offboarding_completed",
+      properties: {
+        notice_id: noticeId,
+        lease_id: lease.id,
+        unit_id: unit.id,
+        property_id: property.id,
+        deposit_status: depositStatus,
+        tenant_role_removed: tenantRoleRemoved,
+        source: "api",
+      },
+    });
 
     return NextResponse.json({
       notice: completedNotice,

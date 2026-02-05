@@ -5,11 +5,12 @@ import { eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { UnitListingContent } from "~/components/UnitListingContent";
 
-export default async function UnitListingPage({
-  params,
-}: {
-  params: { id: string };
-}) {
+export default async function UnitListingPage(
+  props: {
+    params: Promise<{ id: string }>;
+  }
+) {
+  const params = await props.params;
   const { userId: clerkUserId } = await auth();
   const clerkUser = await currentUser();
   const unitId = parseInt(params.id);

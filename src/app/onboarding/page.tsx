@@ -10,6 +10,7 @@ import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { cn } from "~/lib/utils";
 import { useUploadThing } from "~/utils/uploadthing";
+import posthog from "posthog-js";
 
 interface OnboardingData {
   personal?: Record<string, string>;
@@ -242,6 +243,16 @@ function OnboardingContent() {
       setCompletedSteps(result.progress.completedSteps);
       setAllOnboardingData(result.progress.data);
 
+      // Track onboarding step completion in PostHog
+      if (moveToNext) {
+        posthog.capture("onboarding_step_completed", {
+          step_id: stepId,
+          step_number: currentStep,
+          total_steps: ONBOARDING_STEPS.length,
+          unit_id: invitationInfo?.unitId,
+        });
+      }
+
       if (moveToNext && currentStep < ONBOARDING_STEPS.length) {
         const nextStep = currentStep + 1;
         setCurrentStep(nextStep);
@@ -291,9 +302,17 @@ function OnboardingContent() {
         throw new Error(errorData.error ?? "Failed to submit onboarding");
       }
 
+      // Track onboarding submission in PostHog
+      posthog.capture("onboarding_submitted", {
+        unit_id: invitationInfo?.unitId,
+        total_steps_completed: completedSteps.length,
+      });
+
       setIsCompleted(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to submit onboarding");
+      // Capture error in PostHog
+      posthog.captureException(err);
     } finally {
       setIsSubmitting(false);
     }

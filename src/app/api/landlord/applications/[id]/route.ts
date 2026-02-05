@@ -11,12 +11,11 @@ import {
 import { eq } from "drizzle-orm";
 import { createAndEmitNotification } from "~/server/notification-emitter";
 import { randomBytes } from "crypto";
+import { capturePostHogEvent } from "~/lib/posthog-server";
 
 // GET: Get a single application with full details
-export async function GET(
-  _request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(_request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const { userId: clerkUserId } = await auth();
     if (!clerkUserId) {
@@ -108,10 +107,8 @@ export async function GET(
 }
 
 // PATCH: Review (approve/reject) an application
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function PATCH(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const { userId: clerkUserId } = await auth();
     if (!clerkUserId) {
@@ -260,6 +257,20 @@ export async function PATCH(
         actionUrl: `/onboarding?token=${invitationToken}`,
       });
     }
+
+    // Track application review event in PostHog
+    await capturePostHogEvent({
+      distinctId: clerkUserId,
+      event: "application_reviewed",
+      properties: {
+        application_id: applicationId,
+        decision: body.decision,
+        unit_id: applicationData.unit.id,
+        property_id: applicationData.property.id,
+        applicant_id: applicationData.applicant.id,
+        source: "api",
+      },
+    });
 
     return NextResponse.json({
       success: true,
