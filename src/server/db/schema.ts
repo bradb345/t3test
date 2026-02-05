@@ -833,6 +833,64 @@ export const viewingRequests = createTable(
   })
 );
 
+// Example tenancy application data:
+/*
+{
+  id: 1,
+  unitId: 1,
+  applicantUserId: 42,
+  status: "pending",
+  // Statuses: pending, under_review, approved, rejected, withdrawn
+  applicationData: {
+    personalInfo: { firstName: "John", lastName: "Doe", dateOfBirth: "1990-05-15" },
+    employment: { employer: "Tech Corp", position: "Software Engineer", annualIncome: 85000 },
+    proofOfAddress: { documentUrl: "https://example.com/proof.pdf" },
+    emergencyContact: { name: "Jane Doe", phone: "+1-555-123-4567" },
+    photoId: { documentUrl: "https://example.com/id.pdf" }
+  },
+  paymentSetupComplete: false,
+  submittedAt: "2024-03-15T10:30:00Z",
+  reviewedAt: null,
+  reviewedByUserId: null,
+  decision: null,
+  decisionNotes: null
+}
+*/
+export const tenancyApplications = createTable(
+  "tenancy_application",
+  {
+    id: serial("id").primaryKey(),
+    unitId: integer("unit_id")
+      .notNull()
+      .references(() => units.id),
+    applicantUserId: integer("applicant_user_id")
+      .notNull()
+      .references(() => user.id),
+    status: varchar("status", { length: 20 }).notNull().default("pending"),
+    // Statuses: pending, under_review, approved, rejected, withdrawn
+    applicationData: text("application_data"), // JSON - same structure as onboarding
+    paymentSetupComplete: boolean("payment_setup_complete").notNull().default(false),
+    submittedAt: timestamp("submitted_at", { withTimezone: true }),
+    reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+    reviewedByUserId: integer("reviewed_by_user_id").references(() => user.id),
+    decision: varchar("decision", { length: 20 }),
+    decisionNotes: text("decision_notes"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).$onUpdate(
+      () => new Date()
+    ),
+  },
+  (application) => ({
+    unitIndex: index("application_unit_idx").on(application.unitId),
+    applicantIndex: index("application_applicant_idx").on(
+      application.applicantUserId
+    ),
+    statusIndex: index("application_status_idx").on(application.status),
+  })
+);
+
 // Example tenant offboarding notice data:
 /*
 {

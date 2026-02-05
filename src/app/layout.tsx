@@ -5,6 +5,7 @@ import { type Metadata } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
 import { Navbar } from "~/components/Navbar";
 import { Footer } from "~/components/Footer";
+import { PostHogAuthTracker } from "~/components/PostHogAuthTracker";
 import { Toaster } from "sonner";
 import { Suspense } from "react";
 import Script from "next/script";
@@ -42,6 +43,7 @@ export default function RootLayout({
             }}
           />
           <ThemeProvider defaultTheme="system" storageKey="theme">
+            <PostHogAuthTracker />
             <div className="flex min-h-screen flex-col">
               <Suspense fallback={<div className="h-16 border-b" />}>
                 <Navbar />

@@ -8,10 +8,8 @@ import { hasRole } from "~/lib/roles";
 const VALID_STATUSES = ["pending", "approved", "declined", "completed"];
 
 // PATCH: Update viewing request (approve/decline/complete)
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function PATCH(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const { userId: clerkUserId } = await auth();
     if (!clerkUserId) {

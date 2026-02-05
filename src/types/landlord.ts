@@ -105,6 +105,51 @@ export interface ViewingRequestWithDetails extends ViewingRequest {
   property: Property;
 }
 
+// Tenancy application types (for applications tab)
+export interface TenancyApplication {
+  id: number;
+  unitId: number;
+  applicantUserId: number;
+  status: "pending" | "under_review" | "approved" | "rejected" | "withdrawn";
+  applicationData: string | null;
+  paymentSetupComplete: boolean;
+  submittedAt: Date | null;
+  reviewedAt: Date | null;
+  reviewedByUserId: number | null;
+  decision: string | null;
+  decisionNotes: string | null;
+  createdAt: Date;
+  updatedAt: Date | null;
+}
+
+export interface TenancyApplicationWithDetails {
+  id: number;
+  status: string;
+  decision: string | null;
+  decisionNotes: string | null;
+  submittedAt: Date | null;
+  reviewedAt: Date | null;
+  paymentSetupComplete: boolean;
+  unit: {
+    id: number;
+    unitNumber: string;
+    monthlyRent: string;
+    currency: string;
+  };
+  property: {
+    id: number;
+    name: string;
+    address: string;
+  };
+  applicant: {
+    id: number;
+    name: string;
+    email: string;
+    phone: string | null;
+    imageUrl: string | null;
+  };
+}
+
 // Tab values for URL query params
 export type LandlordDashboardTab =
   | "overview"
@@ -113,4 +158,5 @@ export type LandlordDashboardTab =
   | "maintenance"
   | "documents"
   | "financials"
-  | "inquiries";
+  | "inquiries"
+  | "applications";

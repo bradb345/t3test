@@ -92,7 +92,7 @@ export async function PATCH(
       fullName: body.fullName.trim(),
       relationship: body.relationship.trim(),
       phone: body.phone.trim(),
-      email: body.email?.trim() || null,
+      email: body.email?.trim() ?? null,
     })
     .where(eq(emergencyContacts.id, contactId))
     .returning();

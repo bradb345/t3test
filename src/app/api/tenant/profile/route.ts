@@ -48,7 +48,7 @@ export async function PATCH(request: NextRequest) {
     updateData.last_name = body.lastName.trim();
   }
   if (body.phone !== undefined) {
-    updateData.phone = body.phone?.trim() || null;
+    updateData.phone = body.phone?.trim() ?? null;
   }
   if (body.preferredContactMethod !== undefined) {
     updateData.preferredContactMethod = body.preferredContactMethod;

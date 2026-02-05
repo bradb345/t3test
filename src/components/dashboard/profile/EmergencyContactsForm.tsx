@@ -43,7 +43,7 @@ interface ContactFormData {
 
 export function EmergencyContactsForm({
   contacts,
-  profileId,
+  profileId: _profileId,
   onUpdate,
 }: EmergencyContactsFormProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);

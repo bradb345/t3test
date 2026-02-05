@@ -14,6 +14,7 @@ import {
   VALID_MAINTENANCE_PRIORITIES,
 } from "~/lib/constants/maintenance";
 import { getAuthenticatedTenant } from "~/server/auth";
+import { capturePostHogEvent } from "~/lib/posthog-server";
 
 // GET: List maintenance requests for tenant
 export async function GET() {
@@ -135,6 +136,23 @@ export async function POST(request: NextRequest) {
         priority: body.priority,
       }),
       actionUrl: `/my-properties?tab=maintenance`,
+    });
+  }
+
+  // Track maintenance request creation in PostHog
+  if (newRequest) {
+    await capturePostHogEvent({
+      distinctId: dbUser.auth_id,
+      event: "maintenance_request_created",
+      properties: {
+        maintenance_request_id: newRequest.id,
+        category: body.category,
+        priority: body.priority,
+        unit_id: lease.unitId,
+        property_id: leaseData.property.id,
+        has_images: !!body.imageUrls && body.imageUrls.length > 0,
+        source: "api",
+      },
     });
   }
 

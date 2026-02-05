@@ -9,7 +9,7 @@ const DEFAULT_QUERY = "apartment";
 
 export function SearchBox({ defaultValue }: { defaultValue?: string }) {
   const { query, refine } = useSearchBox();
-  const initialValue = defaultValue || DEFAULT_QUERY;
+  const initialValue = defaultValue ?? DEFAULT_QUERY;
   const [inputValue, setInputValue] = useState(initialValue);
 
   // Sync with URL on mount - use default if no query provided

@@ -8,11 +8,12 @@ import { eq, and } from "drizzle-orm";
 import { UnitCard } from "~/components/UnitCard";
 import { EmptyUnitsState } from "~/components/EmptyUnitsState";
 
-export default async function PropertyDetailPage({
-  params,
-}: {
-  params: { id: string };
-}) {
+export default async function PropertyDetailPage(
+  props: {
+    params: Promise<{ id: string }>;
+  }
+) {
+  const params = await props.params;
   const { userId } = await auth();
 
   if (!userId) {

@@ -21,16 +21,21 @@ export function MultiSelect({
   placeholder = "Select items...",
   className = "",
 }: MultiSelectProps) {
-  // Ensure we're working with arrays
-  const safeOptions = Array.isArray(options) ? options : [];
-  const safeSelected = Array.isArray(selected) ? selected : [];
-  
   const inputRef = React.useRef<HTMLInputElement>(null);
   const [open, setOpen] = React.useState(false);
   const [inputValue, setInputValue] = React.useState("");
 
+  // Ensure we're working with arrays - memoized to avoid dependency issues
+  const safeOptions = React.useMemo(
+    () => (Array.isArray(options) ? options : []),
+    [options]
+  );
+  const safeSelected = React.useMemo(
+    () => (Array.isArray(selected) ? selected : []),
+    [selected]
+  );
+
   const handleUnselect = React.useCallback((item: string) => {
-    if (!Array.isArray(safeSelected)) return;
     onChange(safeSelected.filter((i) => i !== item));
   }, [safeSelected, onChange]);
 
@@ -39,7 +44,7 @@ export function MultiSelect({
       const input = inputRef.current;
       if (input) {
         if (e.key === "Delete" || e.key === "Backspace") {
-          if (input.value === "" && Array.isArray(safeSelected) && safeSelected.length > 0) {
+          if (input.value === "" && safeSelected.length > 0) {
             onChange(safeSelected.slice(0, -1));
           }
         }
@@ -53,7 +58,6 @@ export function MultiSelect({
   );
 
   const handleSelect = React.useCallback((item: string) => {
-    if (!Array.isArray(safeSelected)) return;
     onChange([...safeSelected, item]);
     // Keep focus and dropdown open after selection
     inputRef.current?.focus();
@@ -72,10 +76,9 @@ export function MultiSelect({
   }, []);
 
   const selectables = React.useMemo(() => {
-    if (!Array.isArray(safeOptions) || !Array.isArray(safeSelected)) return [];
     return safeOptions
       .filter((item) => !safeSelected.includes(item))
-      .filter((item) => 
+      .filter((item) =>
         item.toLowerCase().includes(inputValue.toLowerCase())
       );
   }, [safeOptions, safeSelected, inputValue]);
@@ -87,7 +90,7 @@ export function MultiSelect({
     >
       <div className="group rounded-md border border-input px-3 py-2 text-sm ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
         <div className="flex flex-wrap gap-1">
-          {Array.isArray(safeSelected) && safeSelected.map((item) => (
+          {safeSelected.map((item) => (
             <Badge key={item} variant="secondary">
               {item}
               <button

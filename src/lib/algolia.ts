@@ -11,14 +11,14 @@ type Unit = InferSelectModel<typeof units>;
 
 // Algolia client (server-side - for both indexing and searching)
 export const algoliaClient = algoliasearch(
-  env.NEXT_PUBLIC_ALGOLIA_APP_ID as string,
-  env.ALGOLIA_ADMIN_API_KEY as string
+  env.NEXT_PUBLIC_ALGOLIA_APP_ID,
+  env.ALGOLIA_ADMIN_API_KEY
 );
 
 // Search-only client for client-side use
 export const algoliaSearchClient = algoliasearch(
-  env.NEXT_PUBLIC_ALGOLIA_APP_ID as string,
-  env.NEXT_PUBLIC_ALGOLIA_SEARCH_API_KEY as string
+  env.NEXT_PUBLIC_ALGOLIA_APP_ID,
+  env.NEXT_PUBLIC_ALGOLIA_SEARCH_API_KEY
 );
 
 // Types for your search records

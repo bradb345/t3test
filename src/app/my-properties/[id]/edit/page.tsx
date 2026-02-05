@@ -5,13 +5,14 @@ import { properties } from "~/server/db/schema";
 import { eq, and } from "drizzle-orm";
 import { PropertyListingForm } from "~/components/PropertyListingForm";
 
-export default async function EditPropertyPage({
-  params,
-}: {
-  params: { id: string };
-}) {
+export default async function EditPropertyPage(
+  props: {
+    params: Promise<{ id: string }>;
+  }
+) {
+  const params = await props.params;
   const { userId } = await auth();
-  
+
   if (!userId) {
     redirect("/");
   }

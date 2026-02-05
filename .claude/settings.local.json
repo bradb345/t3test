@@ -9,7 +9,19 @@
       "Bash(npx tsc:*)",
       "Bash(npx cypress run:*)",
       "WebFetch(domain:github.com)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "Bash(npm run lint)",
+      "Bash(npm run db:push:*)",
+      "Bash(gh pr view:*)",
+      "Bash(gh api:*)",
+      "Bash(npx @next/codemod@canary next-async-request-api:*)",
+      "Bash(npm install:*)",
+      "Bash(node:*)",
+      "Bash(npm view:*)",
+      "Bash(npm ls:*)",
+      "Bash(git stash:*)",
+      "Bash(npx eslint:*)",
+      "Bash(git stash pop:*)"
     ]
   }
 }

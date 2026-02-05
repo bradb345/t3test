@@ -36,7 +36,7 @@ interface DocumentUploadModalProps {
 export function DocumentUploadModal({
   open,
   onOpenChange,
-  profileId,
+  profileId: _profileId,
   onDocumentUploaded,
 }: DocumentUploadModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
