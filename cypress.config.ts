@@ -77,6 +77,9 @@ export default defineConfig({
               RETURNING id
             `;
             const propertyId = (propertyRows[0] as { id: number } | undefined)?.id;
+            if (!propertyId) {
+              throw new Error("Failed to create test property");
+            }
 
             // Insert test unit
             const unitRows = await sql`
@@ -85,7 +88,7 @@ export default defineConfig({
                 monthly_rent, currency, is_available, is_visible,
                 description
               ) VALUES (
-                ${propertyId!},
+                ${propertyId},
                 '101',
                 2,
                 1.5,
@@ -98,8 +101,11 @@ export default defineConfig({
               RETURNING id
             `;
             const unitId = (unitRows[0] as { id: number } | undefined)?.id;
+            if (!unitId) {
+              throw new Error("Failed to create test unit");
+            }
 
-            return { propertyId, unitId } as { propertyId: number; unitId: number };
+            return { propertyId, unitId };
           } finally {
             await sql.end();
           }
@@ -175,7 +181,9 @@ export default defineConfig({
               `;
             }
 
-            // Delete messages between the landlord and journey tenant
+            // Delete messages between the landlord and journey tenant only
+            // (the cleanup script in scripts/cypress-cleanup.ts handles all
+            // three test users; this task is scoped to journey test data)
             const testUsers = await sql`
               SELECT id FROM t3test_user
               WHERE email IN ('doe+clerk_test@example.com', 'jones+clerk_test@example.com')

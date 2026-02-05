@@ -27,6 +27,13 @@ describe("Tenant Journeys", () => {
   // Shared state across tests
   let unitId: number;
 
+  // Test data constants (DRY)
+  const testTenant = {
+    name: "Test Tenant",
+    email: "jones+clerk_test@example.com",
+    phone: "(555) 999-8888",
+  };
+
   const loginAsLandlord = () => {
     cy.clearAllCookies();
     cy.clearAllLocalStorage();
@@ -37,8 +44,9 @@ describe("Tenant Journeys", () => {
     cy.contains("a", "My Properties", { timeout: 15000 }).should("be.visible");
   };
 
-  // Uses journeyTenant (jones+clerk_test) to avoid conflicts with offboarding
-  // tests that use the regular tenant (smith+clerk_test).
+  // Uses journeyTenant (jones+clerk_test) to reduce overlap with offboarding
+  // tests that use the regular tenant (smith+clerk_test). These tests must not
+  // run concurrently with offboarding tests to avoid cross-test interference.
   const loginAsTenant = () => {
     cy.clearAllCookies();
     cy.clearAllLocalStorage();
@@ -85,9 +93,9 @@ describe("Tenant Journeys", () => {
       );
 
       // Fill in the form — name and email may be pre-filled, clear and re-type
-      cy.get("#name").clear().type("Test Tenant");
-      cy.get("#email").clear().type("jones+clerk_test@example.com");
-      cy.get("#phone").clear().type("(555) 999-8888");
+      cy.get("#name").clear().type(testTenant.name);
+      cy.get("#email").clear().type(testTenant.email);
+      cy.get("#phone").clear().type(testTenant.phone);
 
       // Set preferred date to tomorrow
       const tomorrow = new Date();
@@ -121,8 +129,8 @@ describe("Tenant Journeys", () => {
       cy.contains("Viewing Requests", { timeout: 15000 }).should("be.visible");
 
       // Verify the viewing request card shows up
-      cy.contains("Test Tenant", { timeout: 10000 }).should("be.visible");
-      cy.contains("jones+clerk_test@example.com").should("be.visible");
+      cy.contains(testTenant.name, { timeout: 10000 }).should("be.visible");
+      cy.contains(testTenant.email).should("be.visible");
       cy.contains("Pending").should("be.visible");
     });
 
@@ -134,15 +142,15 @@ describe("Tenant Journeys", () => {
       cy.contains("Viewing Requests", { timeout: 15000 }).should("be.visible");
 
       // Click "Respond" on the pending viewing request card
-      cy.contains("Test Tenant", { timeout: 10000 })
+      cy.contains(testTenant.name, { timeout: 10000 })
         .closest(".hover\\:shadow-md")
         .contains("button", "Respond")
         .click();
 
       // Response modal should open
       cy.contains("Viewing Request", { timeout: 10000 }).should("be.visible");
-      cy.contains("Test Tenant").should("be.visible");
-      cy.contains("jones+clerk_test@example.com").should("be.visible");
+      cy.contains(testTenant.name).should("be.visible");
+      cy.contains(testTenant.email).should("be.visible");
 
       // Add response notes
       cy.get("#notes").type("Looking forward to showing you the unit!");
@@ -191,7 +199,7 @@ describe("Tenant Journeys", () => {
     });
 
     it("tenant sees conversation in messages", () => {
-      // Already logged in as tenant from previous test
+      loginAsTenant();
       cy.visit("/messages");
 
       // Wait for messages page to load
@@ -275,8 +283,8 @@ describe("Tenant Journeys", () => {
       // ── Step 1: Personal Info ──
       cy.get("#firstName").clear().type("Test");
       cy.get("#lastName").clear().type("Tenant");
-      cy.get("#email").clear().type("jones+clerk_test@example.com");
-      cy.get("#phone").clear().type("(555) 999-8888");
+      cy.get("#email").clear().type(testTenant.email);
+      cy.get("#phone").clear().type(testTenant.phone);
       cy.get("#dateOfBirth").clear().type("1990-01-15");
       cy.contains("button", "Continue").click();
 
@@ -327,7 +335,7 @@ describe("Tenant Journeys", () => {
       // ── Step 7: Review & Submit ──
       cy.contains("Review & Submit", { timeout: 10000 }).should("be.visible");
       // Verify summary data
-      cy.contains("Test Tenant").should("be.visible");
+      cy.contains(testTenant.name).should("be.visible");
       cy.contains("Cypress Corp").should("be.visible");
       cy.contains("Jane Doe").should("be.visible");
 
@@ -350,7 +358,7 @@ describe("Tenant Journeys", () => {
       );
 
       // Verify the application card shows up
-      cy.contains("jones+clerk_test@example.com", { timeout: 10000 }).should(
+      cy.contains(testTenant.email, { timeout: 10000 }).should(
         "be.visible"
       );
       cy.contains("Pending").should("be.visible");
@@ -366,7 +374,7 @@ describe("Tenant Journeys", () => {
       );
 
       // Click "View Details" on the application card
-      cy.contains("jones+clerk_test@example.com", { timeout: 10000 })
+      cy.contains(testTenant.email, { timeout: 10000 })
         .closest(".rounded-xl")
         .contains("button", "View Details")
         .click();
@@ -375,7 +383,7 @@ describe("Tenant Journeys", () => {
       cy.contains("Application Review", { timeout: 10000 }).should(
         "be.visible"
       );
-      cy.contains("jones+clerk_test@example.com").should("be.visible");
+      cy.contains(testTenant.email).should("be.visible");
 
       // Wait for application details to load (shows Personal tab by default)
       cy.contains("First Name", { timeout: 10000 }).should("be.visible");
