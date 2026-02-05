@@ -12,7 +12,7 @@ import { createAndEmitNotification } from "~/server/notification-emitter";
 import { completeOffboardingProcess } from "~/server/offboarding";
 import { getAuthenticatedUser } from "~/server/auth";
 import type { CompleteOffboardingRequest } from "~/types/offboarding";
-import { getPostHogClient } from "~/lib/posthog-server";
+import { capturePostHogEvent } from "~/lib/posthog-server";
 
 // POST /api/offboarding/[id]/complete - Complete offboarding
 export async function POST(
@@ -142,8 +142,7 @@ export async function POST(
     }
 
     // Track offboarding completion in PostHog
-    const posthog = getPostHogClient();
-    posthog.capture({
+    await capturePostHogEvent({
       distinctId: dbUser.auth_id,
       event: "offboarding_completed",
       properties: {

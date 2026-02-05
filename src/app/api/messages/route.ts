@@ -4,7 +4,7 @@ import { db } from "~/server/db";
 import { messages, user } from "~/server/db/schema";
 import { eq, or, desc, sql } from "drizzle-orm";
 import { createAndEmitNotification } from "~/server/notification-emitter";
-import { getPostHogClient } from "~/lib/posthog-server";
+import { capturePostHogEvent } from "~/lib/posthog-server";
 
 // GET: Fetch user's conversations (grouped by other user)
 export async function GET() {
@@ -214,8 +214,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Track message sent event in PostHog
-    const posthog = getPostHogClient();
-    posthog.capture({
+    await capturePostHogEvent({
       distinctId: clerkUserId,
       event: "message_sent",
       properties: {

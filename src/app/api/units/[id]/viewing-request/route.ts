@@ -8,7 +8,7 @@ import {
 } from "~/server/db/schema";
 import { eq } from "drizzle-orm";
 import { createAndEmitNotification } from "~/server/notification-emitter";
-import { getPostHogClient } from "~/lib/posthog-server";
+import { capturePostHogEvent } from "~/lib/posthog-server";
 
 // POST: Submit a viewing request (public endpoint for prospective tenants)
 export async function POST(request: NextRequest, props: { params: Promise<{ id: string }> }) {
@@ -131,8 +131,7 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
     }
 
     // Track viewing request submission in PostHog (use email as distinct ID for anonymous users)
-    const posthog = getPostHogClient();
-    posthog.capture({
+    await capturePostHogEvent({
       distinctId: body.email.trim().toLowerCase(),
       event: "viewing_request_submitted",
       properties: {

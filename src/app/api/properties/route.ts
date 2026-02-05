@@ -5,7 +5,7 @@ import { properties } from "~/server/db/schema";
 import { eq } from "drizzle-orm";
 import { detectCurrencyFromCoordinates } from "~/lib/currency";
 import { addRoleToUserByAuthId } from "~/lib/roles";
-import { getPostHogClient } from "~/lib/posthog-server";
+import { capturePostHogEvent } from "~/lib/posthog-server";
 
 interface PropertyData {
   name: string;
@@ -76,8 +76,7 @@ export async function POST(req: Request) {
     }
 
     // Track property creation event in PostHog
-    const posthog = getPostHogClient();
-    posthog.capture({
+    await capturePostHogEvent({
       distinctId: userId,
       event: "property_created",
       properties: {

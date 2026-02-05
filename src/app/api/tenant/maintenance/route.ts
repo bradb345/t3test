@@ -14,7 +14,7 @@ import {
   VALID_MAINTENANCE_PRIORITIES,
 } from "~/lib/constants/maintenance";
 import { getAuthenticatedTenant } from "~/server/auth";
-import { getPostHogClient } from "~/lib/posthog-server";
+import { capturePostHogEvent } from "~/lib/posthog-server";
 
 // GET: List maintenance requests for tenant
 export async function GET() {
@@ -141,8 +141,7 @@ export async function POST(request: NextRequest) {
 
   // Track maintenance request creation in PostHog
   if (newRequest) {
-    const posthog = getPostHogClient();
-    posthog.capture({
+    await capturePostHogEvent({
       distinctId: dbUser.auth_id,
       event: "maintenance_request_created",
       properties: {

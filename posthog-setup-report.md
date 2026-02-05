@@ -22,12 +22,17 @@ The wizard has completed a deep integration of your project with PostHog analyti
 | `offboarding_completed` | Landlord completes tenant move-out process | `src/app/api/offboarding/[id]/complete/route.ts` |
 | `onboarding_step_completed` | Tenant completes a step in the onboarding flow | `src/app/onboarding/page.tsx` |
 | `onboarding_submitted` | Tenant submits complete onboarding application | `src/app/onboarding/page.tsx` |
+| `user_signed_in` | User signs in via Clerk authentication | `src/components/PostHogAuthTracker.tsx` |
+| `user_signed_out` | User signs out via Clerk authentication | `src/components/PostHogAuthTracker.tsx` |
+| `search_performed` | User performs a property search | `src/app/search/SearchFilters.tsx` |
+| `search_filter_selected` | User selects a search filter option | `src/app/search/SearchFilters.tsx` |
 
 ## Files Created/Modified
 
 ### New Files
 - `instrumentation-client.ts` - Client-side PostHog initialization
 - `src/lib/posthog-server.ts` - Server-side PostHog client
+- `src/components/PostHogAuthTracker.tsx` - Auth state tracking component
 
 ### Modified Files
 - `next.config.js` - Added PostHog reverse proxy rewrites
@@ -41,6 +46,8 @@ The wizard has completed a deep integration of your project with PostHog analyti
 - `src/app/api/contact/route.ts` - Added contact_form_submitted event
 - `src/app/api/offboarding/[id]/complete/route.ts` - Added offboarding_completed event
 - `src/app/onboarding/page.tsx` - Added onboarding events
+- `src/app/layout.tsx` - Added PostHogAuthTracker component
+- `src/app/search/SearchFilters.tsx` - Added search tracking events
 
 ## Next steps
 

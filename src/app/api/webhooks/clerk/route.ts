@@ -3,7 +3,7 @@ import { headers } from "next/headers";
 import type { WebhookEvent } from "@clerk/nextjs/server";
 import { db } from "~/server/db";
 import { user } from "~/server/db/schema";
-import { getPostHogClient } from "~/lib/posthog-server";
+import { capturePostHogEvent, identifyPostHogUser } from "~/lib/posthog-server";
 
 export async function POST(req: Request) {
   // Get the headers
@@ -70,11 +70,8 @@ export async function POST(req: Request) {
         },
       });
 
-    // Track user signup/update and identify in PostHog
-    const posthog = getPostHogClient();
-
     // Identify user with PostHog
-    posthog.identify({
+    await identifyPostHogUser({
       distinctId: id,
       properties: {
         email: email ?? undefined,
@@ -86,7 +83,7 @@ export async function POST(req: Request) {
 
     // Track signup event for new users
     if (isNewUser) {
-      posthog.capture({
+      await capturePostHogEvent({
         distinctId: id,
         event: "user_signed_up",
         properties: {
