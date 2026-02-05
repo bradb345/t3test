@@ -88,7 +88,8 @@ export function ConversationList({
                   {formatRelativeTime(conversation.lastMessage.createdAt)}
                 </span>
               </div>
-              <p className="truncate text-sm text-muted-foreground">
+              <p className="truncate text-sm">{conversation.lastMessage.subject}</p>
+              <p className="truncate text-xs text-muted-foreground">
                 {conversation.lastMessage.isFromCurrentUser && "You: "}
                 {conversation.lastMessage.content}
               </p>

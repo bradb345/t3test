@@ -128,6 +128,7 @@ const db = drizzle(sql);
 const PROTECTED_EMAILS = [
   'doe+clerk_test@example.com',
   'smith+clerk_test@example.com',
+  'jones+clerk_test@example.com',
 ];
 
 // Algolia setup
@@ -278,6 +279,38 @@ async function cleanupTestProperties() {
         await deleteFilesFromUploadThingSafe(imageUrls, `property ${property.id} images`);
       } catch {
         console.warn(`   ⚠️  Failed to parse property image URLs`);
+      }
+    }
+
+    // Delete viewing requests, tenancy applications, and invitations for each unit (FK constraints)
+    for (const unit of propertyUnits) {
+      const deletedViewings = await sql`
+        DELETE FROM t3test_viewing_request WHERE unit_id = ${unit.id}
+      `;
+      if (deletedViewings.count > 0) {
+        console.log(`      🗑️  Deleted ${deletedViewings.count} viewing requests for unit ${unit.id}`);
+      }
+
+      const deletedApplications = await sql`
+        DELETE FROM t3test_tenancy_application WHERE unit_id = ${unit.id}
+      `;
+      if (deletedApplications.count > 0) {
+        console.log(`      🗑️  Deleted ${deletedApplications.count} tenancy applications for unit ${unit.id}`);
+      }
+
+      // Delete onboarding progress tied to invitations for this unit
+      await sql`
+        DELETE FROM t3test_tenant_onboarding_progress
+        WHERE invitation_id IN (
+          SELECT id FROM t3test_tenant_invitation WHERE unit_id = ${unit.id}
+        )
+      `;
+
+      const deletedInvitations = await sql`
+        DELETE FROM t3test_tenant_invitation WHERE unit_id = ${unit.id}
+      `;
+      if (deletedInvitations.count > 0) {
+        console.log(`      🗑️  Deleted ${deletedInvitations.count} tenant invitations for unit ${unit.id}`);
       }
     }
 
@@ -436,6 +469,30 @@ async function cleanupOffboardingTestData() {
 }
 
 /**
+ * Clean up messages between protected test users (tenant journey test data).
+ */
+async function cleanupTenantJourneyMessages() {
+  console.log('Cleaning up messages between test users...\n');
+
+  const testUsers = await sql`
+    SELECT id FROM t3test_user
+    WHERE email IN ('doe+clerk_test@example.com', 'smith+clerk_test@example.com', 'jones+clerk_test@example.com')
+  `;
+  const testUserIds = (testUsers as { id: number }[]).map((u) => u.id);
+
+  if (testUserIds.length >= 2) {
+    const deleted = await sql`
+      DELETE FROM t3test_message
+      WHERE from_user_id IN ${sql(testUserIds)}
+        AND to_user_id IN ${sql(testUserIds)}
+    `;
+    console.log(`🗑️  Deleted ${deleted.count} messages between test users.\n`);
+  } else {
+    console.log('⚠️  Could not find test users, skipping message cleanup.\n');
+  }
+}
+
+/**
  * Main cleanup function
  */
 async function cleanupCypressTestData() {
@@ -443,6 +500,7 @@ async function cleanupCypressTestData() {
 
   try {
     await cleanupTestProperties();
+    await cleanupTenantJourneyMessages();
     await cleanupTestUsers();
     await cleanupOffboardingTestData();
     console.log('✅ All cleanup complete!\n');

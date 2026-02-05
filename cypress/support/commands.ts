@@ -10,6 +10,10 @@ const TEST_USERS = {
     email: "smith+clerk_test@example.com",
     password: "m8QiMzxkx5!&c#9T",
   },
+  journeyTenant: {
+    email: "jones+clerk_test@example.com",
+    password: "Kx9$mPvR2wL!nQ7j",
+  },
 } as const;
 
 type UserType = keyof typeof TEST_USERS;
