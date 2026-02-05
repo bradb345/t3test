@@ -18,7 +18,10 @@
       "Bash(npm install:*)",
       "Bash(node:*)",
       "Bash(npm view:*)",
-      "Bash(npm ls:*)"
+      "Bash(npm ls:*)",
+      "Bash(git stash:*)",
+      "Bash(npx eslint:*)",
+      "Bash(git stash pop:*)"
     ]
   }
 }
