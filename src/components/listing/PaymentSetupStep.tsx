@@ -1,6 +1,7 @@
 "use client";
 
 import { CreditCard, Clock, Info } from "lucide-react";
+import { PLATFORM_FEE_PERCENT, getPlatformFee } from "~/lib/fees";
 
 interface PaymentSetupStepProps {
   monthlyRent: string;
@@ -8,9 +9,8 @@ interface PaymentSetupStepProps {
 }
 
 export function PaymentSetupStep({ monthlyRent, currency }: PaymentSetupStepProps) {
-  // Calculate platform fee (15%)
   const rentAmount = parseFloat(monthlyRent);
-  const platformFee = rentAmount * 0.15;
+  const platformFee = getPlatformFee(rentAmount);
 
   return (
     <div className="space-y-6">
@@ -51,7 +51,7 @@ export function PaymentSetupStep({ monthlyRent, currency }: PaymentSetupStepProp
           </div>
           <div className="flex justify-between text-sm">
             <span className="text-gray-600 dark:text-gray-400">
-              Platform Fee (15%)
+              Platform Fee ({PLATFORM_FEE_PERCENT}%)
             </span>
             <span className="font-medium text-gray-900 dark:text-gray-100">
               {currency} {platformFee.toLocaleString(undefined, { minimumFractionDigits: 2 })}
@@ -79,7 +79,7 @@ export function PaymentSetupStep({ monthlyRent, currency }: PaymentSetupStepProp
             <li>Secure payments via Stripe</li>
             <li>Automatic monthly billing on your chosen date</li>
             <li>Payment confirmations sent to your email</li>
-            <li>Landlord receives 85% of rent directly</li>
+            <li>Landlord receives {100 - PLATFORM_FEE_PERCENT}% of rent directly</li>
           </ul>
         </div>
       </div>
