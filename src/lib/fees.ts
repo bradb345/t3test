@@ -14,7 +14,7 @@ export const PLATFORM_FEE_PERCENT = 15;
 
 /** Convert a dollar amount to cents. */
 export function toCents(dollars: number): number {
-  return Math.round(dollars * 100);
+  return Math.round((dollars + Number.EPSILON) * 100);
 }
 
 /** Convert cents to a dollar amount. */

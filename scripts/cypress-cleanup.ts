@@ -469,16 +469,21 @@ async function cleanupOffboardingTestData() {
 }
 
 /**
- * Clean up messages between protected test users (tenant journey test data).
+ * Resolve protected test user emails to database IDs.
  */
-async function cleanupTenantJourneyMessages() {
-  console.log('Cleaning up messages between test users...\n');
-
+async function getProtectedTestUserIds(): Promise<number[]> {
   const testUsers = await sql`
     SELECT id FROM t3test_user
-    WHERE email IN ('doe+clerk_test@example.com', 'smith+clerk_test@example.com', 'jones+clerk_test@example.com')
+    WHERE email IN ${sql(PROTECTED_EMAILS)}
   `;
-  const testUserIds = (testUsers as { id: number }[]).map((u) => u.id);
+  return (testUsers as { id: number }[]).map((u) => u.id);
+}
+
+/**
+ * Clean up messages between protected test users (tenant journey test data).
+ */
+async function cleanupTenantJourneyMessages(testUserIds: number[]) {
+  console.log('Cleaning up messages between test users...\n');
 
   if (testUserIds.length >= 2) {
     const deleted = await sql`
@@ -495,14 +500,8 @@ async function cleanupTenantJourneyMessages() {
 /**
  * Clean up notifications for protected test users.
  */
-async function cleanupTestUserNotifications() {
+async function cleanupTestUserNotifications(testUserIds: number[]) {
   console.log('Cleaning up notifications for test users...\n');
-
-  const testUsers = await sql`
-    SELECT id FROM t3test_user
-    WHERE email IN ('doe+clerk_test@example.com', 'smith+clerk_test@example.com', 'jones+clerk_test@example.com')
-  `;
-  const testUserIds = (testUsers as { id: number }[]).map((u) => u.id);
 
   if (testUserIds.length > 0) {
     const deleted = await sql`
@@ -523,8 +522,9 @@ async function cleanupCypressTestData() {
 
   try {
     await cleanupTestProperties();
-    await cleanupTenantJourneyMessages();
-    await cleanupTestUserNotifications();
+    const testUserIds = await getProtectedTestUserIds();
+    await cleanupTenantJourneyMessages(testUserIds);
+    await cleanupTestUserNotifications(testUserIds);
     await cleanupTestUsers();
     await cleanupOffboardingTestData();
     console.log('✅ All cleanup complete!\n');

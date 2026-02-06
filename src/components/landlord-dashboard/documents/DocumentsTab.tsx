@@ -118,7 +118,7 @@ export function DocumentsTab({ documents, properties }: DocumentsTabProps) {
             <SelectItem value="all">All Units</SelectItem>
             {availableUnits.map((unit) => (
               <SelectItem key={unit.id} value={unit.id.toString()}>
-                {unit.propertyName ? `${unit.propertyName} - ${unit.name}` : unit.name}
+                {unit.propertyName ? `${unit.propertyName} - ${unit.unitNumber}` : unit.unitNumber}
               </SelectItem>
             ))}
           </SelectContent>
