@@ -493,6 +493,29 @@ async function cleanupTenantJourneyMessages() {
 }
 
 /**
+ * Clean up notifications for protected test users.
+ */
+async function cleanupTestUserNotifications() {
+  console.log('Cleaning up notifications for test users...\n');
+
+  const testUsers = await sql`
+    SELECT id FROM t3test_user
+    WHERE email IN ('doe+clerk_test@example.com', 'smith+clerk_test@example.com', 'jones+clerk_test@example.com')
+  `;
+  const testUserIds = (testUsers as { id: number }[]).map((u) => u.id);
+
+  if (testUserIds.length > 0) {
+    const deleted = await sql`
+      DELETE FROM t3test_notification
+      WHERE user_id IN ${sql(testUserIds)}
+    `;
+    console.log(`🗑️  Deleted ${deleted.count} notifications for test users.\n`);
+  } else {
+    console.log('⚠️  Could not find test users, skipping notification cleanup.\n');
+  }
+}
+
+/**
  * Main cleanup function
  */
 async function cleanupCypressTestData() {
@@ -501,6 +524,7 @@ async function cleanupCypressTestData() {
   try {
     await cleanupTestProperties();
     await cleanupTenantJourneyMessages();
+    await cleanupTestUserNotifications();
     await cleanupTestUsers();
     await cleanupOffboardingTestData();
     console.log('✅ All cleanup complete!\n');

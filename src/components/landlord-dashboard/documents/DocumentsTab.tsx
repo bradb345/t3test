@@ -32,7 +32,17 @@ const documentTypes = [
 export function DocumentsTab({ documents, properties }: DocumentsTabProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [propertyFilter, setPropertyFilter] = useState<string>("all");
+  const [unitFilter, setUnitFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
+
+  const availableUnits = propertyFilter === "all"
+    ? properties.flatMap((p) => p.units.map((u) => ({ ...u, propertyName: p.name })))
+    : (properties.find((p) => p.id.toString() === propertyFilter)?.units.map((u) => ({ ...u, propertyName: undefined })) ?? []);
+
+  const handlePropertyFilterChange = (value: string) => {
+    setPropertyFilter(value);
+    setUnitFilter("all");
+  };
 
   const filteredDocuments = documents.filter((doc) => {
     const searchLower = searchQuery.toLowerCase();
@@ -42,19 +52,22 @@ export function DocumentsTab({ documents, properties }: DocumentsTabProps) {
       doc.tenant?.last_name.toLowerCase().includes(searchLower);
     const matchesProperty =
       propertyFilter === "all" || doc.property?.id.toString() === propertyFilter;
+    const matchesUnit =
+      unitFilter === "all" || doc.unit?.id.toString() === unitFilter;
     const matchesType = typeFilter === "all" || doc.documentType === typeFilter;
 
-    return matchesSearch && matchesProperty && matchesType;
+    return matchesSearch && matchesProperty && matchesUnit && matchesType;
   });
 
   const clearFilters = () => {
     setSearchQuery("");
     setPropertyFilter("all");
+    setUnitFilter("all");
     setTypeFilter("all");
   };
 
   const hasActiveFilters =
-    searchQuery !== "" || propertyFilter !== "all" || typeFilter !== "all";
+    searchQuery !== "" || propertyFilter !== "all" || unitFilter !== "all" || typeFilter !== "all";
 
   return (
     <div className="space-y-6">
@@ -83,7 +96,7 @@ export function DocumentsTab({ documents, properties }: DocumentsTabProps) {
           <Filter className="h-4 w-4 text-muted-foreground" />
         </div>
 
-        <Select value={propertyFilter} onValueChange={setPropertyFilter}>
+        <Select value={propertyFilter} onValueChange={handlePropertyFilterChange}>
           <SelectTrigger className="w-[160px]">
             <SelectValue placeholder="Property" />
           </SelectTrigger>
@@ -92,6 +105,20 @@ export function DocumentsTab({ documents, properties }: DocumentsTabProps) {
             {properties.map((property) => (
               <SelectItem key={property.id} value={property.id.toString()}>
                 {property.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select value={unitFilter} onValueChange={setUnitFilter}>
+          <SelectTrigger className="w-[160px]">
+            <SelectValue placeholder="Unit" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Units</SelectItem>
+            {availableUnits.map((unit) => (
+              <SelectItem key={unit.id} value={unit.id.toString()}>
+                {unit.propertyName ? `${unit.propertyName} - ${unit.name}` : unit.name}
               </SelectItem>
             ))}
           </SelectContent>
