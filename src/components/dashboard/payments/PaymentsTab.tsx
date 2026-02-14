@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -10,16 +11,22 @@ import {
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import {
-  CreditCard,
   Clock,
   CheckCircle2,
   AlertCircle,
   Calendar,
   DollarSign,
+  Info,
 } from "lucide-react";
 import type { leases, units, properties, payments } from "~/server/db/schema";
 import { formatDate } from "~/lib/date";
-import { formatCurrency } from "~/lib/currency";
+import { formatCurrency } from "~/lib/currency/formatter";
+import { isOnlinePaymentSupported } from "~/lib/payments";
+import { initiateCheckout } from "~/lib/payments/checkout";
+import { formatPaymentType } from "~/lib/payments/format";
+import { parseMoveInNotes } from "~/lib/payments/types";
+import { toast } from "sonner";
+import { useSearchParams } from "next/navigation";
 
 type Lease = typeof leases.$inferSelect;
 type Unit = typeof units.$inferSelect;
@@ -43,6 +50,11 @@ const statusConfig = {
     variant: "secondary" as const,
     icon: Clock,
   },
+  processing: {
+    label: "Processing",
+    variant: "secondary" as const,
+    icon: Clock,
+  },
   completed: {
     label: "Paid",
     variant: "default" as const,
@@ -61,6 +73,41 @@ const statusConfig = {
 };
 
 export function PaymentsTab({ payments, lease }: PaymentsTabProps) {
+  const currency = lease.lease.currency;
+  const onlineSupported = isOnlinePaymentSupported(currency);
+  const searchParams = useSearchParams();
+
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+
+  // Handle return from Stripe Checkout
+  useEffect(() => {
+    const paymentStatus = searchParams.get("payment");
+    if (paymentStatus === "success") {
+      toast.success("Payment submitted successfully! You'll receive a confirmation once it's processed.");
+    } else if (paymentStatus === "cancelled") {
+      toast.info("Payment was cancelled. You can try again when you're ready.");
+    }
+
+    // Clean up the query params
+    if (paymentStatus) {
+      const url = new URL(window.location.href);
+      url.searchParams.delete("payment");
+      window.history.replaceState({}, "", url.toString());
+    }
+  }, [searchParams]);
+
+  // Find next pending payment
+  const nextPending = payments.find((p) => p.status === "pending");
+
+  const handleMakePayment = async (payment: Payment) => {
+    setIsProcessingPayment(true);
+    const error = await initiateCheckout(payment.id);
+    if (error) {
+      toast.error(error);
+      setIsProcessingPayment(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -70,63 +117,90 @@ export function PaymentsTab({ payments, lease }: PaymentsTabProps) {
         </p>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
-        {/* Payment Methods Placeholder */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <CreditCard className="h-5 w-5" />
-              Payment Methods
-            </CardTitle>
-            <CardDescription>
-              Manage your payment methods for rent payments
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
+      {/* Make a Payment */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <DollarSign className="h-5 w-5" />
+            Make a Payment
+          </CardTitle>
+          <CardDescription>
+            Pay your rent or make additional payments
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {!onlineSupported ? (
             <div className="flex flex-col items-center justify-center py-8 text-center">
-              <CreditCard className="mb-4 h-12 w-12 text-muted-foreground" />
-              <p className="font-medium">Coming Soon</p>
+              <Info className="mb-4 h-12 w-12 text-muted-foreground" />
+              <p className="font-medium">Online payments not available</p>
               <p className="mt-1 text-sm text-muted-foreground">
-                Online payment setup will be available soon.
+                Online payment is not yet supported for {currency} properties.
+                Please contact your landlord for payment instructions.
               </p>
-              <Button className="mt-4" disabled>
-                Add Payment Method
+            </div>
+          ) : nextPending ? (
+            <div className="flex flex-col items-center justify-center py-4 text-center">
+              <p className="text-3xl font-bold">
+                {formatCurrency(nextPending.amount, nextPending.currency)}
+              </p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {formatPaymentType(nextPending.type)} payment
+              </p>
+              {nextPending.type === "move_in" && (() => {
+                const notes = parseMoveInNotes(nextPending.notes);
+                if (!notes) return null;
+                const showDeposit = parseFloat(notes.securityDeposit) > 0;
+                return (
+                  <div className="mt-2 w-full rounded-md border p-3 text-sm space-y-1 text-left">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">First Month&apos;s Rent</span>
+                      <span className="font-medium">
+                        {formatCurrency(notes.rentAmount, nextPending.currency)}
+                      </span>
+                    </div>
+                    {showDeposit && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Security Deposit</span>
+                        <span className="font-medium">
+                          {formatCurrency(notes.securityDeposit, nextPending.currency)}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+              <p className="mt-2 text-sm text-muted-foreground">
+                Due {formatDate(nextPending.dueDate)}
+              </p>
+              <Button
+                className="mt-4 w-full"
+                disabled={isProcessingPayment}
+                onClick={() => void handleMakePayment(nextPending)}
+              >
+                {isProcessingPayment
+                  ? "Redirecting..."
+                  : nextPending.type === "move_in"
+                    ? "Pay Move-In"
+                    : "Make Payment"}
               </Button>
             </div>
-          </CardContent>
-        </Card>
-
-        {/* Make Payment Placeholder */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <DollarSign className="h-5 w-5" />
-              Make a Payment
-            </CardTitle>
-            <CardDescription>
-              Pay your rent or make additional payments
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
+          ) : (
             <div className="flex flex-col items-center justify-center py-8 text-center">
-              <DollarSign className="mb-4 h-12 w-12 text-muted-foreground" />
-              <p className="font-medium">Coming Soon</p>
+              <CheckCircle2 className="mb-4 h-12 w-12 text-green-500" />
+              <p className="font-medium">All caught up!</p>
               <p className="mt-1 text-sm text-muted-foreground">
-                Online payments will be available soon.
+                No pending payments at this time.
               </p>
               <p className="mt-2 text-sm text-muted-foreground">
                 Monthly rent:{" "}
                 <span className="font-medium">
-                  {formatCurrency(lease.lease.monthlyRent, lease.lease.currency)}
+                  {formatCurrency(lease.lease.monthlyRent, currency)}
                 </span>
               </p>
-              <Button className="mt-4" disabled>
-                Make Payment
-              </Button>
             </div>
-          </CardContent>
-        </Card>
-      </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Billing History */}
       <Card>
@@ -171,7 +245,7 @@ export function PaymentsTab({ payments, lease }: PaymentsTabProps) {
                         <td className="p-3 text-sm">
                           {formatDate(payment.dueDate)}
                         </td>
-                        <td className="p-3 text-sm capitalize">{payment.type}</td>
+                        <td className="p-3 text-sm">{formatPaymentType(payment.type)}</td>
                         <td className="p-3 text-sm font-medium">
                           {formatCurrency(payment.amount, payment.currency)}
                         </td>
@@ -190,6 +264,7 @@ export function PaymentsTab({ payments, lease }: PaymentsTabProps) {
           )}
         </CardContent>
       </Card>
+
     </div>
   );
 }

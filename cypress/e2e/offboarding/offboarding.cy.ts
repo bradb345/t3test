@@ -9,8 +9,9 @@
  * Flow:
  * 1. Landlord invites tenant with lease document
  * 2. Tenant completes 6-step onboarding
- * 3. Landlord gives 2-month notice, then cancels it
- * 4. Landlord gives notice again, then completes the move-out
+ * 3. Tenant verifies move-in payment on dashboard
+ * 4-5. Landlord gives 2-month notice, then cancels it
+ * 6-7. Landlord gives notice again, then completes the move-out
  */
 
 describe("Tenant Offboarding", () => {
@@ -226,10 +227,33 @@ describe("Tenant Offboarding", () => {
         "be.visible"
       );
     });
+
+    it("3. should show move-in payment on tenant dashboard", () => {
+      loginAsTenant();
+
+      // Navigate to tenant dashboard
+      cy.visit("/dashboard");
+      cy.contains("Welcome back", { timeout: 15000 }).should("be.visible");
+
+      // Click the Payments tab
+      cy.contains('[role="tab"]', "Payments").click();
+
+      // Verify the Make a Payment card shows the move-in payment
+      cy.contains("Move-In payment", { timeout: 10000 }).should("be.visible");
+      cy.contains("First Month's Rent").should("be.visible");
+      cy.contains("Pay Move-In").should("be.visible");
+
+      // Verify the billing history shows the Move-In type
+      cy.contains("Billing History").should("be.visible");
+      cy.get("table").within(() => {
+        cy.contains("td", "Move-In").should("be.visible");
+        cy.contains("Pending").should("be.visible");
+      });
+    });
   });
 
   describe("Give Notice and Cancel", () => {
-    it("3. should give 2-month notice to tenant", () => {
+    it("4. should give 2-month notice to tenant", () => {
       loginAsLandlord();
       openTenantDetail("active");
 
@@ -256,7 +280,7 @@ describe("Tenant Offboarding", () => {
       );
     });
 
-    it("4. should cancel the notice", () => {
+    it("5. should cancel the notice", () => {
       loginAsLandlord();
 
       // Tenant now has notice_given status, must use that filter
@@ -298,7 +322,7 @@ describe("Tenant Offboarding", () => {
   });
 
   describe("Give Notice and Complete Move-Out", () => {
-    it("5. should give notice again", () => {
+    it("6. should give notice again", () => {
       loginAsLandlord();
 
       // After cancellation, lease is back to active
@@ -319,7 +343,7 @@ describe("Tenant Offboarding", () => {
       );
     });
 
-    it("6. should complete move-out via Complete Move-Out button", () => {
+    it("7. should complete move-out via Complete Move-Out button", () => {
       loginAsLandlord();
 
       // Tenant now has notice_given status

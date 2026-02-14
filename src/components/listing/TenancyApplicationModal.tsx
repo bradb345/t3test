@@ -195,7 +195,8 @@ export function TenancyApplicationModal({
       case 5:
         return !!stepFormData.photoIdFileName;
       case 6:
-        return true; // Payment step always valid (coming soon)
+        // Informational step — always valid
+        return true;
       case 7:
         return true; // Review step always valid
       default:
@@ -805,7 +806,10 @@ export function TenancyApplicationModal({
           )}
 
           {currentStep === 6 && (
-            <PaymentSetupStep monthlyRent={monthlyRent} currency={currency} />
+            <PaymentSetupStep
+              monthlyRent={monthlyRent}
+              currency={currency}
+            />
           )}
 
           {currentStep === 7 && (

@@ -12,15 +12,17 @@ import {
 import { Button } from "~/components/ui/button";
 import { PaymentStatusSummary } from "./PaymentStatusSummary";
 import { RentCollectionTable } from "./RentCollectionTable";
+import { StripeConnectCard } from "./StripeConnectCard";
 import type { PaymentWithDetails, PropertyWithUnits } from "~/types/landlord";
 
 interface FinancialsTabProps {
   payments: PaymentWithDetails[];
   properties: PropertyWithUnits[];
   currency: string;
+  stripeConnectedAccountStatus: string | null;
 }
 
-export function FinancialsTab({ payments, properties, currency }: FinancialsTabProps) {
+export function FinancialsTab({ payments, properties, currency, stripeConnectedAccountStatus }: FinancialsTabProps) {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [propertyFilter, setPropertyFilter] = useState<string>("all");
   const [monthFilter, setMonthFilter] = useState<string>("all");
@@ -80,6 +82,9 @@ export function FinancialsTab({ payments, properties, currency }: FinancialsTabP
           </p>
         </div>
       </div>
+
+      {/* Stripe Connect Status */}
+      <StripeConnectCard initialStatus={stripeConnectedAccountStatus} />
 
       {/* Summary Cards */}
       <PaymentStatusSummary payments={payments} currency={currency} />

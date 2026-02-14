@@ -58,6 +58,8 @@ export const user = createTable(
     preferredContactMethod: varchar("preferred_contact_method", { length: 20 }),
     notifications: text("notifications"),
     stripeCustomerId: varchar("stripe_customer_id", { length: 256 }),
+    stripeConnectedAccountId: varchar("stripe_connected_account_id", { length: 256 }),
+    stripeConnectedAccountStatus: varchar("stripe_connected_account_status", { length: 50 }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .default(sql`CURRENT_TIMESTAMP`)
       .notNull(),
@@ -340,6 +342,11 @@ export const payments = createTable(
     paidAt: timestamp("paid_at", { withTimezone: true }),
     paymentMethod: varchar("payment_method", { length: 50 }),
     transactionId: varchar("transaction_id", { length: 256 }),
+    platformFee: decimal("platform_fee", { precision: 10, scale: 2 }),
+    landlordPayout: decimal("landlord_payout", { precision: 10, scale: 2 }),
+    stripePaymentIntentId: varchar("stripe_payment_intent_id", { length: 256 }),
+    stripeCheckoutSessionId: varchar("stripe_checkout_session_id", { length: 256 }),
+    stripeTransferId: varchar("stripe_transfer_id", { length: 256 }),
     notes: text("notes"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .default(sql`CURRENT_TIMESTAMP`)
@@ -350,6 +357,8 @@ export const payments = createTable(
     tenantPaymentIndex: index("tenant_payment_idx").on(payment.tenantId, payment.dueDate),
     statusIndex: index("payment_status_idx").on(payment.status),
     leaseIndex: index("payment_lease_idx").on(payment.leaseId),
+    stripePaymentIntentIndex: index("stripe_pi_idx").on(payment.stripePaymentIntentId),
+    stripeCheckoutSessionIndex: index("stripe_cs_idx").on(payment.stripeCheckoutSessionId),
   })
 );
 

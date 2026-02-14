@@ -1,12 +1,15 @@
 /**
  * Platform fee configuration — single source of truth.
  *
+ * The fee is INCLUSIVE: taken from the rent, not added on top.
+ * e.g. $2,000 rent → tenant pays $2,000, platform gets $300, landlord gets $1,700.
+ *
  * All fee calculations operate in cents (integers) to avoid
  * floating-point rounding issues. Use toCents/toDollars to convert
  * at the boundary (e.g., from DB decimals or for UI display).
  *
  * Change PLATFORM_FEE_PERCENT here and all fee calculations,
- * UI labels, and (future) Stripe integration will update accordingly.
+ * UI labels, and Stripe integration will update accordingly.
  */
 
 /** Platform fee as a whole-number percentage (e.g. 15 means 15%). */
@@ -40,4 +43,19 @@ export function getPlatformFee(dollars: number): number {
 /** Calculate the landlord payout in dollars for a given dollar amount. */
 export function getLandlordPayout(dollars: number): number {
   return toDollars(getLandlordPayoutCents(toCents(dollars)));
+}
+
+/**
+ * Move-in payment fee: platform fee applies only to the rent portion.
+ * Security deposit passes through in full (no platform fee).
+ */
+export function getMoveInFeeCents(rentCents: number): number {
+  return getPlatformFeeCents(rentCents);
+}
+
+/**
+ * Move-in landlord payout: rent minus platform fee, plus full deposit.
+ */
+export function getMoveInLandlordPayoutCents(rentCents: number, depositCents: number): number {
+  return getLandlordPayoutCents(rentCents) + depositCents;
 }
