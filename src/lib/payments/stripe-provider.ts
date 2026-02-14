@@ -157,9 +157,12 @@ export class StripeProvider implements PaymentProvider {
       cancel_url: params.cancelUrl,
       metadata: params.metadata,
     });
+    if (!session.url) {
+      throw new Error("Stripe checkout session created without a URL");
+    }
     return {
       id: session.id,
-      url: session.url!,
+      url: session.url,
     };
   }
 

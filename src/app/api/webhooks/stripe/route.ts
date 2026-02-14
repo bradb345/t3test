@@ -47,9 +47,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ received: true });
   } catch (error) {
     console.error("Stripe webhook error:", error);
+    const isSignatureError =
+      error instanceof Error &&
+      error.message.includes("signature");
     return NextResponse.json(
       { error: "Webhook handler failed" },
-      { status: 400 }
+      { status: isSignatureError ? 401 : 400 }
     );
   }
 }

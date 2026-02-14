@@ -69,6 +69,9 @@ export function StripeConnectCard({ initialStatus }: StripeConnectCardProps) {
         setIsConnecting(false);
       } else if (data.url) {
         window.location.href = data.url;
+      } else {
+        setError("Unexpected response from server. Please try again.");
+        setIsConnecting(false);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to connect");

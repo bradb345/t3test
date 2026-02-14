@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (payment.status !== "pending") {
+    if (payment.status !== "pending" && payment.status !== "failed") {
       return NextResponse.json(
         { error: "Payment is not in pending status" },
         { status: 400 }
@@ -95,7 +95,10 @@ export async function POST(request: NextRequest) {
 
     if (!landlord?.stripeConnectedAccountId) {
       return NextResponse.json(
-        { error: "Landlord has not set up payment receiving" },
+        {
+          error:
+            "This landlord hasn't completed their payment setup yet. Please contact them directly to arrange payment.",
+        },
         { status: 400 }
       );
     }

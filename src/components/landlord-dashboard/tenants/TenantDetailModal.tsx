@@ -518,7 +518,13 @@ export function TenantDetailModal({
 
       <AlertModal
         open={alertModal.open}
-        onOpenChange={(open) => setAlertModal((prev) => ({ ...prev, open }))}
+        onOpenChange={(isOpen) => {
+          if (isOpen) {
+            setAlertModal((prev) => ({ ...prev, open: true }));
+          } else {
+            setAlertModal({ open: false, title: "", description: "", variant: "info" });
+          }
+        }}
         title={alertModal.title}
         description={alertModal.description}
         variant={alertModal.variant}

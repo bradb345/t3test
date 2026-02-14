@@ -88,7 +88,10 @@ export function RentCollectionTable({ payments, currency }: RentCollectionTableP
         <TableBody>
           {payments.map((payment) => {
             const status = getPaymentStatus(payment);
-            const config = statusConfig[status] ?? statusConfig.pending!;
+            const config =
+              statusConfig[status] ??
+              statusConfig.pending ??
+              { color: "", icon: null };
 
             return (
               <TableRow key={payment.id}>
