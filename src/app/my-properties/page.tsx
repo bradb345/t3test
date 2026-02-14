@@ -228,6 +228,8 @@ export default async function MyPropertiesPage() {
             preferredContactMethod: null,
             notifications: null,
             stripeCustomerId: null,
+            stripeConnectedAccountId: null,
+            stripeConnectedAccountStatus: null,
             createdAt: new Date(),
             updatedAt: null,
             admin: false,

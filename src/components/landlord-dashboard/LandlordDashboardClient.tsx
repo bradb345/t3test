@@ -206,6 +206,7 @@ export function LandlordDashboardClient({
               payments={payments}
               properties={properties}
               currency={stats.currency}
+              stripeConnectedAccountStatus={user.stripeConnectedAccountStatus ?? null}
             />
           </TabsContent>
 

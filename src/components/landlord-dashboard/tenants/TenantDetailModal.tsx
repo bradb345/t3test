@@ -30,7 +30,19 @@ import type { OffboardingNotice } from "~/types/offboarding";
 import { GiveNoticeModal } from "~/components/GiveNoticeModal";
 import { CancelNoticeModal } from "./CancelNoticeModal";
 import { CompleteOffboardingModal } from "./CompleteOffboardingModal";
+import { AlertModal } from "~/components/AlertModal";
 import { getDaysUntilMoveOut, formatMoveOutDate } from "~/lib/offboarding";
+
+interface AlertModalState {
+  open: boolean;
+  title: string;
+  description: string;
+  variant: "success" | "error" | "warning" | "info";
+  actionLabel?: string;
+  onAction?: () => void;
+  cancelLabel?: string;
+  onCancel?: () => void;
+}
 
 interface TenantDetailModalProps {
   open: boolean;
@@ -53,6 +65,19 @@ export function TenantDetailModal({
   const [activeNotice, setActiveNotice] = useState<OffboardingNotice | null>(null);
   const [isLoadingNotice, setIsLoadingNotice] = useState(false);
   const [isFastTracking, setIsFastTracking] = useState(false);
+  const [isGeneratingPayment, setIsGeneratingPayment] = useState(false);
+  const [alertModal, setAlertModal] = useState<AlertModalState>({
+    open: false,
+    title: "",
+    description: "",
+    variant: "info",
+  });
+
+  const showAlert = (
+    props: Omit<AlertModalState, "open">,
+  ) => {
+    setAlertModal({ ...props, open: true });
+  };
 
   const fetchActiveNotice = useCallback(async () => {
     if (!tenant) return;
@@ -140,11 +165,7 @@ export function TenantDetailModal({
     onOffboardingChange?.();
   };
 
-  const handleFastTrack = async () => {
-    if (!confirm("Are you sure you want to fast-track this offboarding? This will immediately terminate the lease and make the unit available.")) {
-      return;
-    }
-
+  const executeFastTrack = async () => {
     setIsFastTracking(true);
     try {
       const response = await fetch("/api/admin/fast-track-offboarding", {
@@ -162,9 +183,64 @@ export function TenantDetailModal({
       onOffboardingChange?.();
       onOpenChange(false);
     } catch (error) {
-      alert(error instanceof Error ? error.message : "An error occurred");
+      showAlert({
+        title: "Offboarding Failed",
+        description: error instanceof Error ? error.message : "An error occurred",
+        variant: "error",
+      });
     } finally {
       setIsFastTracking(false);
+    }
+  };
+
+  const handleFastTrack = () => {
+    showAlert({
+      title: "Fast-Track Offboarding",
+      description:
+        "Are you sure you want to fast-track this offboarding? This will immediately terminate the lease and make the unit available.",
+      variant: "warning",
+      actionLabel: "Confirm",
+      onAction: () => void executeFastTrack(),
+      cancelLabel: "Cancel",
+    });
+  };
+
+  const handleGeneratePayment = async () => {
+    setIsGeneratingPayment(true);
+    try {
+      const response = await fetch("/api/admin/generate-payment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tenantId: tenant.user.id }),
+      });
+
+      if (!response.ok) {
+        const data = (await response.json()) as { error?: string };
+        throw new Error(data.error ?? "Failed to generate payment");
+      }
+
+      const data = (await response.json()) as {
+        payment: { amount: string; dueDate: string };
+      };
+      const amt = parseFloat(data.payment.amount);
+      const due = new Date(data.payment.dueDate).toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      });
+      showAlert({
+        title: "Payment Created",
+        description: `${formatCurrency(amt)} due ${due}`,
+        variant: "success",
+      });
+    } catch (error) {
+      showAlert({
+        title: "Payment Failed",
+        description: error instanceof Error ? error.message : "An error occurred",
+        variant: "error",
+      });
+    } finally {
+      setIsGeneratingPayment(false);
     }
   };
 
@@ -372,19 +448,31 @@ export function TenantDetailModal({
                 <Separator />
                 <div className="space-y-2">
                   <h4 className="text-sm font-medium text-purple-700">Admin Actions</h4>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleFastTrack}
-                    disabled={isFastTracking}
-                    className="text-purple-600 border-purple-200 hover:bg-purple-50"
-                    data-testid="admin-fast-track-offboarding"
-                  >
-                    <Zap className="h-4 w-4 mr-1" />
-                    {isFastTracking ? "Processing..." : "Fast-Track Offboarding"}
-                  </Button>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleGeneratePayment}
+                      disabled={isGeneratingPayment}
+                      className="text-purple-600 border-purple-200 hover:bg-purple-50"
+                    >
+                      <DollarSign className="h-4 w-4 mr-1" />
+                      {isGeneratingPayment ? "Generating..." : "Generate Payment"}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleFastTrack}
+                      disabled={isFastTracking}
+                      className="text-purple-600 border-purple-200 hover:bg-purple-50"
+                      data-testid="admin-fast-track-offboarding"
+                    >
+                      <Zap className="h-4 w-4 mr-1" />
+                      {isFastTracking ? "Processing..." : "Fast-Track Offboarding"}
+                    </Button>
+                  </div>
                   <p className="text-xs text-muted-foreground">
-                    Immediately terminates the lease (for testing)
+                    Generate a pending rent payment or immediately terminate the lease (for testing)
                   </p>
                 </div>
               </>
@@ -427,6 +515,18 @@ export function TenantDetailModal({
           />
         </>
       )}
+
+      <AlertModal
+        open={alertModal.open}
+        onOpenChange={(open) => setAlertModal((prev) => ({ ...prev, open }))}
+        title={alertModal.title}
+        description={alertModal.description}
+        variant={alertModal.variant}
+        actionLabel={alertModal.actionLabel}
+        onAction={alertModal.onAction}
+        cancelLabel={alertModal.cancelLabel}
+        onCancel={alertModal.onCancel}
+      />
     </>
   );
 }

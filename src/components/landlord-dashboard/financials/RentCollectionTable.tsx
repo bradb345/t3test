@@ -11,6 +11,7 @@ import {
 } from "~/components/ui/table";
 import { Badge } from "~/components/ui/badge";
 import type { PaymentWithDetails } from "~/types/landlord";
+import { formatPaymentType } from "~/lib/payments/format";
 
 interface RentCollectionTableProps {
   payments: PaymentWithDetails[];
@@ -78,6 +79,8 @@ export function RentCollectionTable({ payments, currency }: RentCollectionTableP
             <TableHead>Type</TableHead>
             <TableHead>Due Date</TableHead>
             <TableHead>Amount</TableHead>
+            <TableHead>Platform Fee</TableHead>
+            <TableHead>Your Payout</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Paid On</TableHead>
           </TableRow>
@@ -85,7 +88,7 @@ export function RentCollectionTable({ payments, currency }: RentCollectionTableP
         <TableBody>
           {payments.map((payment) => {
             const status = getPaymentStatus(payment);
-            const config = statusConfig[status] ?? statusConfig.pending;
+            const config = statusConfig[status] ?? statusConfig.pending!;
 
             return (
               <TableRow key={payment.id}>
@@ -113,10 +116,16 @@ export function RentCollectionTable({ payments, currency }: RentCollectionTableP
                     Unit {payment.unit.unitNumber}
                   </p>
                 </TableCell>
-                <TableCell className="capitalize">{payment.type}</TableCell>
+                <TableCell>{formatPaymentType(payment.type)}</TableCell>
                 <TableCell>{formatDate(payment.dueDate)}</TableCell>
                 <TableCell className="font-medium">
                   {formatCurrency(payment.amount)}
+                </TableCell>
+                <TableCell className="text-sm text-muted-foreground">
+                  {payment.platformFee ? formatCurrency(payment.platformFee) : "-"}
+                </TableCell>
+                <TableCell className="text-sm font-medium">
+                  {payment.landlordPayout ? formatCurrency(payment.landlordPayout) : "-"}
                 </TableCell>
                 <TableCell>
                   <Badge className={config.color}>
