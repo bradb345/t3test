@@ -11,7 +11,7 @@ import {
 import { eq } from "drizzle-orm";
 import { createAndEmitNotification } from "~/server/notification-emitter";
 import { randomBytes } from "crypto";
-import { capturePostHogEvent } from "~/lib/posthog-server";
+import { trackServerEvent } from "~/lib/posthog-events/server";
 
 // GET: Get a single application with full details
 export async function GET(_request: NextRequest, props: { params: Promise<{ id: string }> }) {
@@ -259,18 +259,14 @@ export async function PATCH(request: NextRequest, props: { params: Promise<{ id:
     }
 
     // Track application review event in PostHog
-    await capturePostHogEvent({
-      distinctId: clerkUserId,
-      event: "application_reviewed",
-      properties: {
+    await trackServerEvent(clerkUserId, "application_reviewed", {
         application_id: applicationId,
         decision: body.decision,
         unit_id: applicationData.unit.id,
         property_id: applicationData.property.id,
         applicant_id: applicationData.applicant.id,
         source: "api",
-      },
-    });
+      });
 
     return NextResponse.json({
       success: true,

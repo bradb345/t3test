@@ -10,6 +10,7 @@ import {
   PopoverTrigger,
 } from "~/components/ui/popover";
 import posthog from "posthog-js";
+import { trackClientEvent } from "~/lib/posthog-events/client";
 
 // Bedroom/Bathroom button options
 const BEDROOM_OPTIONS = [
@@ -101,7 +102,7 @@ export function SearchFilters({ initialFilters }: SearchFiltersProps) {
 
   // Track search button click
   const handleSearchClick = () => {
-    posthog.capture("search_performed", {
+    trackClientEvent(posthog, "search_performed", {
       search_query: query?.trim() ?? "",
       query_length: query?.trim().length ?? 0,
       filters: {
@@ -219,7 +220,7 @@ export function SearchFilters({ initialFilters }: SearchFiltersProps) {
                   onClick={() => {
                     setMinPrice(range.min);
                     setMaxPrice(range.max);
-                    posthog.capture("search_filter_selected", {
+                    trackClientEvent(posthog, "search_filter_selected", {
                       filter_type: "price",
                       min_price: range.min,
                       max_price: range.max,
@@ -259,7 +260,7 @@ export function SearchFilters({ initialFilters }: SearchFiltersProps) {
                   key={option.label}
                   onClick={() => {
                     setMinBedrooms(option.value);
-                    posthog.capture("search_filter_selected", {
+                    trackClientEvent(posthog, "search_filter_selected", {
                       filter_type: "bedrooms",
                       min_bedrooms: option.value,
                     });
@@ -298,7 +299,7 @@ export function SearchFilters({ initialFilters }: SearchFiltersProps) {
                   key={option.label}
                   onClick={() => {
                     setMinBathrooms(option.value);
-                    posthog.capture("search_filter_selected", {
+                    trackClientEvent(posthog, "search_filter_selected", {
                       filter_type: "bathrooms",
                       min_bathrooms: option.value,
                     });
@@ -343,7 +344,7 @@ export function SearchFilters({ initialFilters }: SearchFiltersProps) {
                     onChange={() => {
                       const isAdding = !selectedPropertyTypes.includes(type.value);
                       togglePropertyType(type.value);
-                      posthog.capture("search_filter_selected", {
+                      trackClientEvent(posthog, "search_filter_selected", {
                         filter_type: "property_type",
                         property_type: type.value,
                         action: isAdding ? "added" : "removed",

@@ -11,6 +11,7 @@ import { Label } from "~/components/ui/label";
 import { cn } from "~/lib/utils";
 import { useUploadThing } from "~/utils/uploadthing";
 import posthog from "posthog-js";
+import { trackClientEvent } from "~/lib/posthog-events/client";
 
 interface OnboardingData {
   personal?: Record<string, string>;
@@ -245,7 +246,7 @@ function OnboardingContent() {
 
       // Track onboarding step completion in PostHog
       if (moveToNext) {
-        posthog.capture("onboarding_step_completed", {
+        trackClientEvent(posthog, "onboarding_step_completed", {
           step_id: stepId,
           step_number: currentStep,
           total_steps: ONBOARDING_STEPS.length,
@@ -303,7 +304,7 @@ function OnboardingContent() {
       }
 
       // Track onboarding submission in PostHog
-      posthog.capture("onboarding_submitted", {
+      trackClientEvent(posthog, "onboarding_submitted", {
         unit_id: invitationInfo?.unitId,
         total_steps_completed: completedSteps.length,
       });

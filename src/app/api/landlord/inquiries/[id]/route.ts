@@ -4,6 +4,7 @@ import { db } from "~/server/db";
 import { viewingRequests, units, properties, user, notifications } from "~/server/db/schema";
 import { eq, and, like } from "drizzle-orm";
 import { hasRole } from "~/lib/roles";
+import { trackServerEvent } from "~/lib/posthog-events/server";
 
 const VALID_STATUSES = ["pending", "approved", "declined", "completed"];
 
@@ -108,6 +109,14 @@ export async function PATCH(request: NextRequest, props: { params: Promise<{ id:
           like(notifications.data, `%"viewingRequestId":${String(requestId)}%`)
         )
       );
+
+    // Track viewing_request_responded
+    if (body.status && body.status !== existingRequest.request.status) {
+      void trackServerEvent(clerkUserId, "viewing_request_responded", {
+        request_id: requestId,
+        response_status: body.status,
+      });
+    }
 
     return NextResponse.json(updatedRequest);
   } catch (error) {

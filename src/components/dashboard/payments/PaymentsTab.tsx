@@ -27,6 +27,8 @@ import { formatPaymentType } from "~/lib/payments/format";
 import { parseMoveInNotes } from "~/lib/payments/types";
 import { toast } from "sonner";
 import { useSearchParams } from "next/navigation";
+import { usePostHog } from "posthog-js/react";
+import { trackClientEvent } from "~/lib/posthog-events/client";
 
 type Lease = typeof leases.$inferSelect;
 type Unit = typeof units.$inferSelect;
@@ -77,14 +79,17 @@ export function PaymentsTab({ payments, lease }: PaymentsTabProps) {
   const onlineSupported = isOnlinePaymentSupported(currency);
   const searchParams = useSearchParams();
 
+  const posthog = usePostHog();
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
 
   // Handle return from Stripe Checkout
   useEffect(() => {
     const paymentStatus = searchParams.get("payment");
     if (paymentStatus === "success") {
+      trackClientEvent(posthog, "payment_return", { status: "success" });
       toast.success("Payment submitted successfully! You'll receive a confirmation once it's processed.");
     } else if (paymentStatus === "cancelled") {
+      trackClientEvent(posthog, "payment_return", { status: "cancelled" });
       toast.info("Payment was cancelled. You can try again when you're ready.");
     }
 
@@ -94,7 +99,7 @@ export function PaymentsTab({ payments, lease }: PaymentsTabProps) {
       url.searchParams.delete("payment");
       window.history.replaceState({}, "", url.toString());
     }
-  }, [searchParams]);
+  }, [searchParams, posthog]);
 
   // Find next pending payment
   const nextPending = payments.find((p) => p.status === "pending");

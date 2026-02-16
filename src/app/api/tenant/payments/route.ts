@@ -14,6 +14,7 @@ import {
 } from "~/lib/fees";
 import { parseMoveInNotes, type CheckoutLineItem } from "~/lib/payments/types";
 import { env } from "~/env";
+import { trackServerEvent } from "~/lib/posthog-events/server";
 
 // POST: Initiate a payment via Stripe Checkout Session
 export async function POST(request: NextRequest) {
@@ -198,6 +199,15 @@ export async function POST(request: NextRequest) {
         paymentMethod: "card",
       })
       .where(eq(payments.id, payment.id));
+
+    // Track payment_initiated
+    void trackServerEvent(dbUser.auth_id, "payment_initiated", {
+      payment_id: payment.id,
+      amount: payment.amount,
+      currency: payment.currency,
+      payment_type: payment.type,
+      lease_id: payment.leaseId,
+    });
 
     return NextResponse.json({
       checkoutUrl: session.url,

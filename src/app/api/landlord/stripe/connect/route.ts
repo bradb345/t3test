@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm";
 import { env } from "~/env";
 import { getAuthenticatedLandlord } from "~/server/auth";
 import { getPaymentProvider } from "~/lib/payments";
+import { trackServerEvent } from "~/lib/posthog-events/server";
 
 export async function POST() {
   try {
@@ -67,6 +68,12 @@ export async function POST() {
         stripeConnectedAccountStatus: accountStatus,
       })
       .where(eq(user.id, dbUser.id));
+
+    // Track stripe_connect_initiated
+    void trackServerEvent(dbUser.auth_id, "stripe_connect_initiated", {
+      is_test_mode: isTestMode,
+      account_status: accountStatus,
+    });
 
     // If already complete (test mode), no redirect needed
     if (status.onboardingComplete) {

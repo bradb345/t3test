@@ -1,3 +1,6 @@
+import posthog from "posthog-js";
+import { trackClientEvent } from "~/lib/posthog-events/client";
+
 /**
  * Initiates a Stripe Checkout session for a payment and redirects the browser.
  * Returns an error message string on failure, or never returns on success (redirect).
@@ -21,6 +24,7 @@ export async function initiateCheckout(paymentId: number): Promise<string> {
   try {
     const data = (await res.json()) as { checkoutUrl?: string };
     if (data.checkoutUrl) {
+      trackClientEvent(posthog, "checkout_redirect", { payment_id: paymentId });
       window.location.href = data.checkoutUrl;
       return "";
     }

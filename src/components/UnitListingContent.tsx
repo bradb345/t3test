@@ -21,6 +21,8 @@ import {
   FileText,
 } from "lucide-react";
 import { formatCurrency } from "~/lib/currency";
+import { trackClientEvent } from "~/lib/posthog-events/client";
+import { usePostHog } from "posthog-js/react";
 import {
   ViewingRequestModal,
   ContactLandlordModal,
@@ -74,10 +76,21 @@ export function UnitListingContent({
   currentUserName,
   currentUserEmail,
 }: UnitListingContentProps) {
+  const posthog = usePostHog();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
   const [lightboxImageIndex, setLightboxImageIndex] = useState(0);
+
+  // Track unit_listing_viewed on mount
+  useEffect(() => {
+    trackClientEvent(posthog, "unit_listing_viewed", {
+      unit_id: unit.id,
+      property_id: unit.propertyId,
+      monthly_rent: unit.monthlyRent,
+      currency: unit.currency,
+    });
+  }, [posthog, unit.id, unit.propertyId, unit.monthlyRent, unit.currency]);
 
   // Modal states
   const [showViewingModal, setShowViewingModal] = useState(false);
