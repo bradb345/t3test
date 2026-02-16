@@ -241,6 +241,11 @@ export default defineConfig({
                 )
               `;
 
+              // Delete payments for the tenant's leases (FK constraint)
+              await sql`
+                DELETE FROM t3test_payment WHERE tenant_id = ${tenantId}
+              `;
+
               // Get unit IDs from the tenant's leases before deleting them
               const leaseUnits = await sql`
                 SELECT unit_id FROM t3test_lease WHERE tenant_id = ${tenantId}

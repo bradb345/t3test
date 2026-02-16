@@ -423,6 +423,12 @@ async function cleanupOffboardingTestData() {
       `;
       console.log(`   🗑️  Deleted ${deletedNotices.count} offboarding notices`);
 
+      // Delete payments for the tenant's leases (FK constraint)
+      const deletedPayments = await sql`
+        DELETE FROM t3test_payment WHERE tenant_id = ${tenantId}
+      `;
+      console.log(`   🗑️  Deleted ${deletedPayments.count} payments`);
+
       // Get unit IDs from the tenant's leases before deleting them
       const leaseUnits = await sql`
         SELECT unit_id FROM t3test_lease WHERE tenant_id = ${tenantId}

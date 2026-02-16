@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { db } from "~/server/db";
-import { tenantInvitations, tenantOnboardingProgress, units, properties, user, notifications, leases } from "~/server/db/schema";
+import { tenantInvitations, tenantOnboardingProgress, units, properties, user, notifications, leases, payments } from "~/server/db/schema";
 import { createAndEmitNotification } from "~/server/notification-emitter";
 import { eq, and, gt } from "drizzle-orm";
 import { sendEmail } from "~/lib/email";
@@ -462,7 +462,7 @@ export async function POST(request: NextRequest) {
       const leaseEnd = new Date();
       leaseEnd.setFullYear(leaseEnd.getFullYear() + 1);
 
-      await db.insert(leases).values({
+      const [newLease] = await db.insert(leases).values({
         unitId: invitation.unit.id,
         tenantId: tenantUser.id,
         landlordId: invitation.landlord.id,
@@ -473,7 +473,58 @@ export async function POST(request: NextRequest) {
         rentDueDay: invitation.invitation.rentDueDay ?? 1,
         documents: invitation.invitation.leaseDocuments,
         status: "active",
-      });
+      }).returning();
+
+      // Create move-in payment (first month's rent + security deposit)
+      if (newLease) {
+        const rentAmount = parseFloat(invitation.unit.monthlyRent ?? "0");
+        const depositAmount = parseFloat(invitation.unit.deposit ?? "0");
+        const totalAmount = rentAmount + depositAmount;
+
+        if (totalAmount > 0) {
+          // Guard against duplicates (e.g. retried POST)
+          const [existingMoveIn] = await db
+            .select({ id: payments.id })
+            .from(payments)
+            .where(
+              and(
+                eq(payments.leaseId, newLease.id),
+                eq(payments.type, "move_in")
+              )
+            )
+            .limit(1);
+
+          if (!existingMoveIn) {
+            await db.insert(payments).values({
+              tenantId: tenantUser.id,
+              leaseId: newLease.id,
+              amount: totalAmount.toFixed(2),
+              currency: newLease.currency,
+              type: "move_in",
+              status: "pending",
+              dueDate: leaseStart,
+              notes: JSON.stringify({
+                rentAmount: rentAmount.toFixed(2),
+                securityDeposit: depositAmount.toFixed(2),
+              }),
+            });
+
+            // Notify tenant about move-in payment
+            await createAndEmitNotification({
+              userId: tenantUser.id,
+              type: "payment_due",
+              title: "Move-In Payment Required",
+              message: `Your move-in payment of $${totalAmount.toFixed(2)} is due before your move-in date.`,
+              data: JSON.stringify({
+                leaseId: newLease.id,
+                amount: totalAmount.toFixed(2),
+                currency: newLease.currency,
+              }),
+              actionUrl: "/dashboard?tab=payments",
+            });
+          }
+        }
+      }
 
       // Mark the unit as unavailable and hide from search
       await db
