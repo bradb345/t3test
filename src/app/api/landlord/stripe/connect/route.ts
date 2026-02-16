@@ -15,7 +15,7 @@ export async function POST() {
     const provider = getPaymentProvider();
     const isTestMode = env.STRIPE_SECRET_KEY.startsWith("sk_test_");
 
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+    const baseUrl = env.NEXT_PUBLIC_APP_URL;
     const refreshUrl = `${baseUrl}/my-properties?tab=financials&stripe=refresh`;
     const returnUrl = `${baseUrl}/my-properties?tab=financials&stripe=complete`;
 

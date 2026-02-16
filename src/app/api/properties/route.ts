@@ -93,7 +93,7 @@ export async function POST(req: Request) {
   } catch (error) {
     console.error("Error creating property:", error);
     return new NextResponse(
-      `Internal Server Error: ${error instanceof Error ? error.message : "Unknown error"}`,
+      "Internal server error",
       { status: 500 }
     );
   }
@@ -116,7 +116,7 @@ export async function GET(_req: Request) {
   } catch (error) {
     console.error("Error fetching properties:", error);
     return new NextResponse(
-      `Internal Server Error: ${error instanceof Error ? error.message : "Unknown error"}`,
+      "Internal server error",
       { status: 500 }
     );
   }

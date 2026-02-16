@@ -1,6 +1,25 @@
 import { db } from "~/server/db";
-import { payments, user, notifications } from "~/server/db/schema";
+import { payments, leases, user, notifications } from "~/server/db/schema";
 import { eq } from "drizzle-orm";
+
+function formatAmount(amount: string, currency: string): string {
+  const num = parseFloat(amount);
+  if (Number.isNaN(num)) return `${currency} ${amount}`;
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency,
+  }).format(num);
+}
+
+/** Derive landlordId from the payment's lease (DB lookup, not metadata). */
+async function getLandlordIdForPayment(leaseId: number): Promise<number | null> {
+  const [lease] = await db
+    .select({ landlordId: leases.landlordId })
+    .from(leases)
+    .where(eq(leases.id, leaseId))
+    .limit(1);
+  return lease?.landlordId ?? null;
+}
 
 /**
  * Handle checkout.session.completed — mark payment as completed and notify.
@@ -10,7 +29,6 @@ export async function handleCheckoutSessionCompleted(
 ) {
   const sessionId = data.id as string;
   const paymentIntentId = data.payment_intent as string | null;
-  const metadata = data.metadata as Record<string, string> | undefined;
 
   if (!sessionId) return;
 
@@ -45,7 +63,7 @@ export async function handleCheckoutSessionCompleted(
     userId: payment.tenantId,
     type: "payment_completed",
     title: "Payment Successful",
-    message: `Your ${paymentLabel} of $${payment.amount} has been processed successfully.`,
+    message: `Your ${paymentLabel} of ${formatAmount(payment.amount, payment.currency)} has been processed successfully.`,
     data: JSON.stringify({
       paymentId: payment.id,
       amount: payment.amount,
@@ -53,13 +71,14 @@ export async function handleCheckoutSessionCompleted(
     }),
   });
 
-  // Notify landlord if we have the metadata
-  if (metadata?.landlordId) {
+  // Notify landlord — derive from DB, not metadata
+  const landlordId = await getLandlordIdForPayment(payment.leaseId);
+  if (landlordId) {
     await db.insert(notifications).values({
-      userId: parseInt(metadata.landlordId),
+      userId: landlordId,
       type: "payment_received",
       title: "Payment Received",
-      message: `A ${paymentLabel} of $${payment.amount} has been received. Your payout of $${payment.landlordPayout} will be transferred.`,
+      message: `A ${paymentLabel} of ${formatAmount(payment.amount, payment.currency)} has been received. Your payout of ${formatAmount(payment.landlordPayout ?? "0", payment.currency)} will be transferred.`,
       data: JSON.stringify({
         paymentId: payment.id,
         amount: payment.amount,
@@ -109,7 +128,6 @@ export async function handlePaymentIntentSucceeded(
   data: Record<string, unknown>
 ) {
   const paymentIntentId = data.id as string;
-  const metadata = data.metadata as Record<string, string> | undefined;
   const transferId =
     ((data.latest_charge as Record<string, unknown>)?.transfer as string) ??
     (data.transfer as string) ??
@@ -159,7 +177,7 @@ export async function handlePaymentIntentSucceeded(
     userId: payment.tenantId,
     type: "payment_completed",
     title: "Payment Successful",
-    message: `Your ${intentPaymentLabel} of $${payment.amount} has been processed successfully.`,
+    message: `Your ${intentPaymentLabel} of ${formatAmount(payment.amount, payment.currency)} has been processed successfully.`,
     data: JSON.stringify({
       paymentId: payment.id,
       amount: payment.amount,
@@ -167,13 +185,14 @@ export async function handlePaymentIntentSucceeded(
     }),
   });
 
-  // Notify landlord if we have the metadata
-  if (metadata?.landlordId) {
+  // Notify landlord — derive from DB, not metadata
+  const intentLandlordId = await getLandlordIdForPayment(payment.leaseId);
+  if (intentLandlordId) {
     await db.insert(notifications).values({
-      userId: parseInt(metadata.landlordId),
+      userId: intentLandlordId,
       type: "payment_received",
       title: "Payment Received",
-      message: `A ${intentPaymentLabel} of $${payment.amount} has been received. Your payout of $${payment.landlordPayout} will be transferred.`,
+      message: `A ${intentPaymentLabel} of ${formatAmount(payment.amount, payment.currency)} has been received. Your payout of ${formatAmount(payment.landlordPayout ?? "0", payment.currency)} will be transferred.`,
       data: JSON.stringify({
         paymentId: payment.id,
         amount: payment.amount,
@@ -216,7 +235,7 @@ export async function handlePaymentIntentFailed(
     userId: payment.tenantId,
     type: "payment_failed",
     title: "Payment Failed",
-    message: `Your payment of $${payment.amount} could not be processed. Please try again with a different payment method.`,
+    message: `Your payment of ${formatAmount(payment.amount, payment.currency)} could not be processed. Please try again with a different payment method.`,
     data: JSON.stringify({
       paymentId: payment.id,
       amount: payment.amount,

@@ -514,7 +514,7 @@ export async function POST(request: NextRequest) {
               userId: tenantUser.id,
               type: "payment_due",
               title: "Move-In Payment Required",
-              message: `Your move-in payment of $${totalAmount.toFixed(2)} is due before your move-in date.`,
+              message: `Your move-in payment of ${new Intl.NumberFormat("en-US", { style: "currency", currency: newLease.currency }).format(totalAmount)} is due before your move-in date.`,
               data: JSON.stringify({
                 leaseId: newLease.id,
                 amount: totalAmount.toFixed(2),

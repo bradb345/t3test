@@ -27,6 +27,7 @@ export const env = createEnv({
   client: {
     NEXT_PUBLIC_ALGOLIA_APP_ID: z.string().min(1),
     NEXT_PUBLIC_ALGOLIA_SEARCH_API_KEY: z.string().min(1),
+    NEXT_PUBLIC_APP_URL: z.string().url().default("http://localhost:3000"),
   },
 
   /**
@@ -41,6 +42,7 @@ export const env = createEnv({
     ALGOLIA_ADMIN_API_KEY: process.env.ALGOLIA_ADMIN_API_KEY,
     NEXT_PUBLIC_ALGOLIA_APP_ID: process.env.NEXT_PUBLIC_ALGOLIA_APP_ID,
     NEXT_PUBLIC_ALGOLIA_SEARCH_API_KEY: process.env.NEXT_PUBLIC_ALGOLIA_SEARCH_API_KEY,
+    NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
     STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
     STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET,
     CRON_SECRET: process.env.CRON_SECRET,

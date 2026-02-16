@@ -37,7 +37,10 @@
       "Bash(npm run test:e2e:*)",
       "Bash(kill:*)",
       "Bash(xargs kill:*)",
-      "Bash(npm run dev:*)"
+      "Bash(npm run dev:*)",
+      "Bash(git -C /Users/bradleybernard/Documents/code/t3test log --all --oneline -- .env)",
+      "Bash(git -C /Users/bradleybernard/Documents/code/t3test show HEAD:.gitignore)",
+      "Bash(npm run lint:*)"
     ]
   }
 }

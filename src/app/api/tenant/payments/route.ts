@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { db } from "~/server/db";
 import { payments, leases, user } from "~/server/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import { getAuthenticatedTenant } from "~/server/auth";
 import { getPaymentProvider, isOnlinePaymentSupported } from "~/lib/payments";
 import {
@@ -13,6 +13,7 @@ import {
   getMoveInLandlordPayoutCents,
 } from "~/lib/fees";
 import { parseMoveInNotes, type CheckoutLineItem } from "~/lib/payments/types";
+import { env } from "~/env";
 
 // POST: Initiate a payment via Stripe Checkout Session
 export async function POST(request: NextRequest) {
@@ -50,30 +51,36 @@ export async function POST(request: NextRequest) {
         .where(eq(user.id, dbUser.id));
     }
 
-    // Fetch the payment and verify ownership
+    // Atomically claim the payment by updating status to "processing" only if
+    // it's currently in a retryable state. This prevents race conditions where
+    // two concurrent requests both see "pending" and create duplicate checkout sessions.
+    const retryableStatuses = ["pending", "failed", "processing"];
     const [payment] = await db
-      .select()
-      .from(payments)
+      .update(payments)
+      .set({ status: "processing" })
       .where(
-        and(eq(payments.id, body.paymentId), eq(payments.tenantId, dbUser.id))
+        and(
+          eq(payments.id, body.paymentId),
+          eq(payments.tenantId, dbUser.id),
+          inArray(payments.status, retryableStatuses),
+        )
       )
-      .limit(1);
+      .returning();
 
     if (!payment) {
+      // Either payment doesn't exist, doesn't belong to this tenant, or is not retryable
       return NextResponse.json(
-        { error: "Payment not found" },
-        { status: 404 }
-      );
-    }
-
-    if (payment.status !== "pending" && payment.status !== "failed") {
-      return NextResponse.json(
-        { error: "Payment is not in pending status" },
+        { error: "Payment not found or is not in a retryable status" },
         { status: 400 }
       );
     }
 
     if (!isOnlinePaymentSupported(payment.currency)) {
+      // Reset status back since we claimed it
+      await db
+        .update(payments)
+        .set({ status: "pending" })
+        .where(eq(payments.id, payment.id));
       return NextResponse.json(
         { error: "Online payments are not supported for this currency" },
         { status: 400 }
@@ -111,13 +118,38 @@ export async function POST(request: NextRequest) {
     }
 
     // Calculate fees — move-in payments only charge platform fee on rent portion
-    const amountCents = toCents(parseFloat(payment.amount));
+    const amountDollars = parseFloat(payment.amount);
+    if (!Number.isFinite(amountDollars) || amountDollars <= 0) {
+      return NextResponse.json(
+        { error: "Invalid payment amount" },
+        { status: 400 }
+      );
+    }
+    const amountCents = toCents(amountDollars);
     let feeCents: number;
     let payoutCents: number;
     let lineItems: CheckoutLineItem[] | undefined;
 
     if (payment.type === "move_in") {
       const moveInNotes = parseMoveInNotes(payment.notes);
+
+      if (moveInNotes) {
+        const rentDollars = parseFloat(moveInNotes.rentAmount);
+        const depositDollars = parseFloat(moveInNotes.securityDeposit);
+        if (!Number.isFinite(rentDollars) || rentDollars <= 0) {
+          return NextResponse.json(
+            { error: "Invalid move-in rent amount" },
+            { status: 400 }
+          );
+        }
+        if (!Number.isFinite(depositDollars) || depositDollars < 0) {
+          return NextResponse.json(
+            { error: "Invalid move-in security deposit amount" },
+            { status: 400 }
+          );
+        }
+      }
+
       const rentCents = moveInNotes ? toCents(parseFloat(moveInNotes.rentAmount)) : amountCents;
       const depositCents = moveInNotes ? toCents(parseFloat(moveInNotes.securityDeposit)) : 0;
 
@@ -133,10 +165,10 @@ export async function POST(request: NextRequest) {
       payoutCents = getLandlordPayoutCents(amountCents);
     }
 
-    // Build success/cancel URLs
-    const origin = request.headers.get("origin") ?? request.nextUrl.origin;
-    const successUrl = `${origin}/dashboard?tab=payments&payment=success`;
-    const cancelUrl = `${origin}/dashboard?tab=payments&payment=cancelled`;
+    // Build success/cancel URLs using validated app URL (never trust Origin header)
+    const baseUrl = env.NEXT_PUBLIC_APP_URL;
+    const successUrl = `${baseUrl}/dashboard?tab=payments&payment=success`;
+    const cancelUrl = `${baseUrl}/dashboard?tab=payments&payment=cancelled`;
 
     // Create Checkout Session
     const session = await provider.createCheckoutSession({
@@ -156,11 +188,10 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Update payment record with checkout session info
+    // Update payment record with checkout session info (status already set to "processing" above)
     await db
       .update(payments)
       .set({
-        status: "processing",
         stripeCheckoutSessionId: session.id,
         platformFee: toDollars(feeCents).toFixed(2),
         landlordPayout: toDollars(payoutCents).toFixed(2),

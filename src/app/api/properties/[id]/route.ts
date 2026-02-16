@@ -149,7 +149,7 @@ export async function DELETE(req: Request, props: { params: Promise<{ id: string
   } catch (error) {
     console.error("Error deleting property:", error);
     return new NextResponse(
-      `Internal Server Error: ${error instanceof Error ? error.message : "Unknown error"}`,
+      "Internal server error",
       { status: 500 }
     );
   }
@@ -263,7 +263,7 @@ export async function PATCH(req: Request, props: { params: Promise<{ id: string 
   } catch (error) {
     console.error("Error updating property:", error);
     return new NextResponse(
-      `Internal Server Error: ${error instanceof Error ? error.message : "Unknown error"}`,
+      "Internal server error",
       { status: 500 }
     );
   }

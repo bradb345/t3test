@@ -46,10 +46,9 @@ function calculateDueDate(
 
 export async function GET(request: NextRequest) {
   try {
-    // Verify authorization: allow either Bearer token or Vercel's cron header
+    // Verify authorization via Bearer token
     const authHeader = request.headers.get("authorization");
-    const isVercelCron = request.headers.get("x-vercel-cron") !== null;
-    if (authHeader !== `Bearer ${env.CRON_SECRET}` && !isVercelCron) {
+    if (authHeader !== `Bearer ${env.CRON_SECRET}`) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 

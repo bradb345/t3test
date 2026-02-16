@@ -23,25 +23,31 @@ export async function POST(request: Request) {
     const provider = getPaymentProvider();
     const event = provider.constructWebhookEvent(body, signature);
 
-    switch (event.type) {
-      case "checkout.session.completed":
-        await handleCheckoutSessionCompleted(event.data);
-        break;
-      case "checkout.session.expired":
-        await handleCheckoutSessionExpired(event.data);
-        break;
-      case "payment_intent.succeeded":
-        await handlePaymentIntentSucceeded(event.data);
-        break;
-      case "payment_intent.payment_failed":
-        await handlePaymentIntentFailed(event.data);
-        break;
-      case "account.updated":
-        await handleAccountUpdated(event.data);
-        break;
-      default:
-        // Unhandled event type — acknowledge receipt
-        break;
+    // Handle each event type — errors are caught per-handler so we can
+    // still return 200 to Stripe (preventing unnecessary retries).
+    try {
+      switch (event.type) {
+        case "checkout.session.completed":
+          await handleCheckoutSessionCompleted(event.data);
+          break;
+        case "checkout.session.expired":
+          await handleCheckoutSessionExpired(event.data);
+          break;
+        case "payment_intent.succeeded":
+          await handlePaymentIntentSucceeded(event.data);
+          break;
+        case "payment_intent.payment_failed":
+          await handlePaymentIntentFailed(event.data);
+          break;
+        case "account.updated":
+          await handleAccountUpdated(event.data);
+          break;
+        default:
+          // Unhandled event type — acknowledge receipt
+          break;
+      }
+    } catch (handlerError) {
+      console.error(`Error handling ${event.type}:`, handlerError);
     }
 
     return NextResponse.json({ received: true });

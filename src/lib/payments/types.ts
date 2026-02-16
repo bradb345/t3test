@@ -86,6 +86,11 @@ export function parseMoveInNotes(notes: string | null): MoveInPaymentNotes | nul
   try {
     const parsed = JSON.parse(notes) as Record<string, unknown>;
     if (typeof parsed.rentAmount === "string" && typeof parsed.securityDeposit === "string") {
+      // Validate that the values are numeric
+      if (Number.isNaN(parseFloat(parsed.rentAmount)) || Number.isNaN(parseFloat(parsed.securityDeposit))) {
+        console.warn("parseMoveInNotes: non-numeric values in notes", { notes });
+        return null;
+      }
       return { rentAmount: parsed.rentAmount, securityDeposit: parsed.securityDeposit };
     }
     return null;
