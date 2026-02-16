@@ -21,7 +21,26 @@
       "Bash(npm ls:*)",
       "Bash(git stash:*)",
       "Bash(npx eslint:*)",
-      "Bash(git stash pop:*)"
+      "Bash(git stash pop:*)",
+      "Bash(git log:*)",
+      "Bash(SKIP_ENV_VALIDATION=1 npx tsc:*)",
+      "Bash(SKIP_ENV_VALIDATION=1 npx eslint:*)",
+      "Bash(curl:*)",
+      "Bash(stripe accounts delete:*)",
+      "Bash(npx tsx:*)",
+      "Bash(npm uninstall:*)",
+      "Bash(SKIP_ENV_VALIDATION=1 npm run build:*)",
+      "Bash(SKIP_ENV_VALIDATION=1 npm run lint:*)",
+      "Bash(grep:*)",
+      "Bash(ls:*)",
+      "Bash(lsof:*)",
+      "Bash(npm run test:e2e:*)",
+      "Bash(kill:*)",
+      "Bash(xargs kill:*)",
+      "Bash(npm run dev:*)",
+      "Bash(git -C /Users/bradleybernard/Documents/code/t3test log --all --oneline -- .env)",
+      "Bash(git -C /Users/bradleybernard/Documents/code/t3test show HEAD:.gitignore)",
+      "Bash(npm run lint:*)"
     ]
   }
 }

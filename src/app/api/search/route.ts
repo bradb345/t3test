@@ -58,7 +58,7 @@ export async function GET(req: Request) {
   } catch (error) {
     console.error("Search error:", error);
     return NextResponse.json(
-      { error: "Search failed", message: error instanceof Error ? error.message : "Unknown error" },
+      { error: "Search failed" },
       { status: 500 }
     );
   }

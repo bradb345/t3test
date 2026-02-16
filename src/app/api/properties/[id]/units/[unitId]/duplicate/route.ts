@@ -77,7 +77,7 @@ export async function POST(req: Request, props: { params: Promise<{ id: string; 
   } catch (error) {
     console.error("Error duplicating unit:", error);
     return new NextResponse(
-      `Internal Server Error: ${error instanceof Error ? error.message : "Unknown error"}`,
+      "Internal server error",
       { status: 500 }
     );
   }

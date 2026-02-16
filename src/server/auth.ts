@@ -58,6 +58,20 @@ export async function getAuthenticatedTenant(): Promise<AuthSuccess | AuthError>
 }
 
 /**
+ * Authenticate and verify the user has the landlord role.
+ */
+export async function getAuthenticatedLandlord(): Promise<AuthSuccess | AuthError> {
+  const result = await getAuthenticatedUser();
+  if (result.error) return result;
+
+  if (!hasRole(result.user.roles, "landlord")) {
+    return { error: NextResponse.json({ error: "Forbidden" }, { status: 403 }) };
+  }
+
+  return { user: result.user };
+}
+
+/**
  * Authenticate, verify tenant role, and fetch tenant profile.
  */
 export async function getAuthenticatedTenantWithProfile(): Promise<AuthWithProfileSuccess | AuthWithProfileError> {

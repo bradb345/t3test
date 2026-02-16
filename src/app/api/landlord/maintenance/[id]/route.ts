@@ -134,7 +134,7 @@ export async function PATCH(request: NextRequest, props: { params: Promise<{ id:
           eq(notifications.userId, dbUser.id),
           eq(notifications.type, "maintenance_request"),
           eq(notifications.read, false),
-          like(notifications.data, `%"maintenanceRequestId":${requestId}%`)
+          like(notifications.data, `%"maintenanceRequestId":${String(requestId)}%`)
         )
       );
 

@@ -43,12 +43,17 @@ export function OverviewTab({
   onOffboardingChange,
 }: OverviewTabProps) {
   // Find next upcoming payment (pending status, future due date)
+  // Move-in payments always surface first, then sorted by due date
   const now = new Date();
   const upcomingPayments = payments
     .filter(
       (p) => p.status === "pending" && new Date(p.dueDate) >= now
     )
-    .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
+    .sort((a, b) => {
+      if (a.type === "move_in" && b.type !== "move_in") return -1;
+      if (a.type !== "move_in" && b.type === "move_in") return 1;
+      return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+    });
 
   const nextPayment = upcomingPayments[0] ?? null;
 
