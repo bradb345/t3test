@@ -10,14 +10,22 @@ export async function initiateCheckout(paymentId: number): Promise<string> {
   });
 
   if (!res.ok) {
-    const data = (await res.json()) as { error: string };
-    return data.error;
+    try {
+      const data = (await res.json()) as { error?: string };
+      return data.error ?? "Failed to initiate checkout. Please try again.";
+    } catch {
+      return "An unexpected error occurred while initiating checkout.";
+    }
   }
 
-  const data = (await res.json()) as { checkoutUrl: string };
-  window.location.href = data.checkoutUrl;
-
-  // The redirect means we never reach here in practice,
-  // but return empty string to satisfy the type system.
-  return "";
+  try {
+    const data = (await res.json()) as { checkoutUrl?: string };
+    if (data.checkoutUrl) {
+      window.location.href = data.checkoutUrl;
+      return "";
+    }
+    return "Failed to initiate checkout. Please try again.";
+  } catch {
+    return "Failed to initiate checkout. Please try again.";
+  }
 }

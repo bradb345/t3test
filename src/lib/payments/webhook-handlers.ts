@@ -205,7 +205,7 @@ export async function handlePaymentIntentFailed(
     return;
   }
 
-  // Reset to pending so tenant can retry
+  // Mark as failed so tenant can retry
   await db
     .update(payments)
     .set({ status: "failed" })

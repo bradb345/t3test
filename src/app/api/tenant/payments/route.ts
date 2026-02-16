@@ -3,7 +3,7 @@ import { db } from "~/server/db";
 import { payments, leases, user } from "~/server/db/schema";
 import { eq, and } from "drizzle-orm";
 import { getAuthenticatedTenant } from "~/server/auth";
-import { getPaymentProvider } from "~/lib/payments";
+import { getPaymentProvider, isOnlinePaymentSupported } from "~/lib/payments";
 import {
   toCents,
   toDollars,
@@ -69,6 +69,13 @@ export async function POST(request: NextRequest) {
     if (payment.status !== "pending" && payment.status !== "failed") {
       return NextResponse.json(
         { error: "Payment is not in pending status" },
+        { status: 400 }
+      );
+    }
+
+    if (!isOnlinePaymentSupported(payment.currency)) {
+      return NextResponse.json(
+        { error: "Online payments are not supported for this currency" },
         { status: 400 }
       );
     }

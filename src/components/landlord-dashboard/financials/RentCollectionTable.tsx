@@ -27,6 +27,10 @@ const statusConfig: Record<string, { color: string; icon: React.ReactNode }> = {
     color: "bg-yellow-100 text-yellow-800",
     icon: <Clock className="h-3 w-3" />,
   },
+  processing: {
+    color: "bg-blue-100 text-blue-800",
+    icon: <Clock className="h-3 w-3" />,
+  },
   failed: {
     color: "bg-red-100 text-red-800",
     icon: <AlertCircle className="h-3 w-3" />,
