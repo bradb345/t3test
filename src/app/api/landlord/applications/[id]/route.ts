@@ -207,7 +207,18 @@ export async function PATCH(request: NextRequest, props: { params: Promise<{ id:
         await persistTenantProfile(applicationData.applicant.id, appDataParsed);
       }
 
-      // 2. Create lease
+      // 2. End any existing active lease on this unit before creating a new one
+      await db
+        .update(leases)
+        .set({ status: "ended", leaseEnd: new Date() })
+        .where(
+          and(
+            eq(leases.unitId, applicationData.unit.id),
+            eq(leases.status, "active")
+          )
+        );
+
+      // 3. Create lease
       const rentDueDay = body.rentDueDay && body.rentDueDay >= 1 && body.rentDueDay <= 28
         ? body.rentDueDay
         : 1;

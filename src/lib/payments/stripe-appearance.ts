@@ -2,6 +2,10 @@ import type { Appearance } from "@stripe/stripe-js";
 
 /** Build a Stripe Appearance object that matches the app's theme. */
 export function getStripeAppearance(isDark: boolean): Appearance {
+  if (typeof document === "undefined") {
+    return { theme: isDark ? "night" : "stripe" };
+  }
+
   const style = getComputedStyle(document.documentElement);
   const cssVar = (name: string) => style.getPropertyValue(name).trim();
 

@@ -79,8 +79,8 @@ export function PaymentModal({
   }, [open, payment.id]);
 
   const handleClose = useCallback(() => {
-    // If user closes without completing payment, reset to pending
-    if (phase !== "success") {
+    // Only cancel the PaymentIntent if one was actually created
+    if (phase === "form" || phase === "processing") {
       void cancelPaymentIntent(payment.id);
     }
     onOpenChange(false);

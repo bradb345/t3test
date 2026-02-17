@@ -1,9 +1,0 @@
-{
-  "hasCard": true,
-  "hasFirstName": false,
-  "hasLastName": false,
-  "hasPassword": true,
-  "hasUserButton": false,
-  "allInputNames": ", password",
-  "cardText": "Fill in missing fieldsPlease fill in the remaining details to continue.PasswordYour password meets all the necessary requirements.Your password meets all the necessary requirements.Continue"
-}
