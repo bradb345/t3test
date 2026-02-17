@@ -76,6 +76,7 @@ export function ApplicationReviewModal({
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [decisionNotes, setDecisionNotes] = useState("");
+  const [rentDueDay, setRentDueDay] = useState(1);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -117,6 +118,7 @@ export function ApplicationReviewModal({
           body: JSON.stringify({
             decision,
             decisionNotes: decisionNotes.trim() || undefined,
+            ...(decision === "approved" && { rentDueDay }),
           }),
         }
       );
@@ -399,6 +401,23 @@ export function ApplicationReviewModal({
                   />
                 </div>
 
+                <div className="space-y-2">
+                  <Label htmlFor="rentDueDay">Rent Due Day (1-28)</Label>
+                  <select
+                    id="rentDueDay"
+                    value={rentDueDay}
+                    onChange={(e) => setRentDueDay(Number(e.target.value))}
+                    disabled={isSubmitting}
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  >
+                    {Array.from({ length: 28 }, (_, i) => i + 1).map((day) => (
+                      <option key={day} value={day}>
+                        {day}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
                 <div className="flex gap-3">
                   <Button
                     variant="outline"
@@ -428,8 +447,8 @@ export function ApplicationReviewModal({
                 </div>
 
                 <p className="text-xs text-muted-foreground">
-                  Approving will send a tenant invitation to the applicant so
-                  they can complete their onboarding.
+                  Approving will create a lease and move-in payment for this
+                  tenant.
                 </p>
               </div>
             )}

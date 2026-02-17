@@ -15,10 +15,10 @@ import type { leases, units, properties, payments } from "~/server/db/schema";
 import { formatDate } from "~/lib/date";
 import { formatCurrency } from "~/lib/currency/formatter";
 import { isOnlinePaymentSupported } from "~/lib/payments";
-import { initiateCheckout } from "~/lib/payments/checkout";
 import { formatPaymentType } from "~/lib/payments/format";
 import { parseMoveInNotes } from "~/lib/payments/types";
-import { toast } from "sonner";
+import { useRouter } from "next/navigation";
+import { PaymentModal } from "~/components/dashboard/payments/PaymentModal";
 
 type Lease = typeof leases.$inferSelect;
 type Unit = typeof units.$inferSelect;
@@ -39,8 +39,9 @@ interface NextPaymentCardProps {
 export function NextPaymentCard({ payment, lease }: NextPaymentCardProps) {
   const currency = lease.lease.currency;
   const onlineSupported = isOnlinePaymentSupported(currency);
+  const router = useRouter();
 
-  const [isProcessing, setIsProcessing] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
 
   const getDaysUntilDue = (dueDate: Date) => {
     const now = new Date();
@@ -83,6 +84,7 @@ export function NextPaymentCard({ payment, lease }: NextPaymentCardProps) {
   const showDeposit = moveInNotes && parseFloat(moveInNotes.securityDeposit) > 0;
 
   return (
+    <>
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -156,25 +158,24 @@ export function NextPaymentCard({ payment, lease }: NextPaymentCardProps) {
 
           <Button
             className="w-full"
-            disabled={!canPay || isProcessing}
-            onClick={async () => {
-              setIsProcessing(true);
-              const error = await initiateCheckout(payment.id);
-              if (error) {
-                toast.error(error);
-                setIsProcessing(false);
-              }
-            }}
+            disabled={!canPay}
+            onClick={() => setModalOpen(true)}
           >
             {!onlineSupported
               ? "Online payments not available"
-              : isProcessing
-                ? "Redirecting..."
-                : isMoveIn
-                  ? "Pay Move-In"
-                  : "Make Payment"}
+              : isMoveIn
+                ? "Pay Move-In"
+                : "Make Payment"}
           </Button>
         </CardContent>
       </Card>
+
+      <PaymentModal
+        open={modalOpen}
+        onOpenChange={setModalOpen}
+        payment={payment}
+        onPaymentComplete={() => router.refresh()}
+      />
+    </>
   );
 }

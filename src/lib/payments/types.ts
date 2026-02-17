@@ -16,6 +16,8 @@ export interface CreateConnectedAccountParams {
   email: string;
   country: string;
   businessType?: "individual" | "company";
+  firstName?: string;
+  lastName?: string;
 }
 
 export interface GetOnboardingLinkParams {
@@ -55,6 +57,16 @@ export interface CreatePaymentIntentParams {
   connectedAccountId: string;
   applicationFeeCents: number;
   metadata?: Record<string, string>;
+}
+
+export interface CreateElementsIntentParams {
+  amountCents: number;
+  currency: string;
+  customerId: string;
+  connectedAccountId: string;
+  applicationFeeCents: number;
+  metadata?: Record<string, string>;
+  idempotencyKey?: string;
 }
 
 export interface ConnectedAccountStatus {
@@ -121,6 +133,9 @@ export interface PaymentProvider {
 
   /** Create a Checkout Session for a one-time rent payment. */
   createCheckoutSession(params: CreateCheckoutSessionParams): Promise<CheckoutSessionResult>;
+
+  /** Create an unconfirmed PaymentIntent for Stripe Elements (client-side confirmation). */
+  createPaymentIntentForElements(params: CreateElementsIntentParams): Promise<PaymentIntentResult>;
 
   /** Create a PaymentIntent to charge a tenant. */
   createPaymentIntent(params: CreatePaymentIntentParams): Promise<PaymentIntentResult>;

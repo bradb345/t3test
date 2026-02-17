@@ -7,6 +7,7 @@ import type {
   GetOnboardingLinkParams,
   CreateCheckoutSessionParams,
   CreatePaymentIntentParams,
+  CreateElementsIntentParams,
   ConnectedAccountStatus,
   CheckoutSessionResult,
   PaymentIntentResult,
@@ -55,8 +56,8 @@ export class StripeProvider implements PaymentProvider {
           transfers: { requested: true },
         },
         individual: {
-          first_name: "Test",
-          last_name: "Landlord",
+          first_name: params.firstName ?? "Test",
+          last_name: params.lastName ?? "Landlord",
           dob: { day: 1, month: 1, year: 1990 },
           address: {
             line1: "123 Test St",
@@ -163,6 +164,32 @@ export class StripeProvider implements PaymentProvider {
     return {
       id: session.id,
       url: session.url,
+    };
+  }
+
+  async createPaymentIntentForElements(
+    params: CreateElementsIntentParams
+  ): Promise<PaymentIntentResult> {
+    const intent = await this.stripe.paymentIntents.create(
+      {
+        amount: params.amountCents,
+        currency: params.currency.toLowerCase(),
+        customer: params.customerId,
+        automatic_payment_methods: { enabled: true },
+        application_fee_amount: params.applicationFeeCents,
+        transfer_data: {
+          destination: params.connectedAccountId,
+        },
+        metadata: params.metadata,
+      },
+      params.idempotencyKey
+        ? { idempotencyKey: params.idempotencyKey }
+        : undefined,
+    );
+    return {
+      id: intent.id,
+      status: intent.status,
+      clientSecret: intent.client_secret,
     };
   }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   Card,
   CardContent,
@@ -22,13 +22,10 @@ import type { leases, units, properties, payments } from "~/server/db/schema";
 import { formatDate } from "~/lib/date";
 import { formatCurrency } from "~/lib/currency/formatter";
 import { isOnlinePaymentSupported } from "~/lib/payments";
-import { initiateCheckout } from "~/lib/payments/checkout";
 import { formatPaymentType } from "~/lib/payments/format";
 import { parseMoveInNotes } from "~/lib/payments/types";
-import { toast } from "sonner";
-import { useSearchParams } from "next/navigation";
-import { usePostHog } from "posthog-js/react";
-import { trackClientEvent } from "~/lib/posthog-events/client";
+import { useRouter } from "next/navigation";
+import { PaymentModal } from "./PaymentModal";
 
 type Lease = typeof leases.$inferSelect;
 type Unit = typeof units.$inferSelect;
@@ -77,40 +74,21 @@ const statusConfig = {
 export function PaymentsTab({ payments, lease }: PaymentsTabProps) {
   const currency = lease.lease.currency;
   const onlineSupported = isOnlinePaymentSupported(currency);
-  const searchParams = useSearchParams();
+  const router = useRouter();
 
-  const posthog = usePostHog();
-  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
-
-  // Handle return from Stripe Checkout
-  useEffect(() => {
-    const paymentStatus = searchParams.get("payment");
-    if (paymentStatus === "success") {
-      trackClientEvent(posthog, "payment_return", { status: "success" });
-      toast.success("Payment submitted successfully! You'll receive a confirmation once it's processed.");
-    } else if (paymentStatus === "cancelled") {
-      trackClientEvent(posthog, "payment_return", { status: "cancelled" });
-      toast.info("Payment was cancelled. You can try again when you're ready.");
-    }
-
-    // Clean up the query params
-    if (paymentStatus) {
-      const url = new URL(window.location.href);
-      url.searchParams.delete("payment");
-      window.history.replaceState({}, "", url.toString());
-    }
-  }, [searchParams, posthog]);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
 
   // Find next pending payment
   const nextPending = payments.find((p) => p.status === "pending");
 
-  const handleMakePayment = async (payment: Payment) => {
-    setIsProcessingPayment(true);
-    const error = await initiateCheckout(payment.id);
-    if (error) {
-      toast.error(error);
-      setIsProcessingPayment(false);
-    }
+  const handleMakePayment = (payment: Payment) => {
+    setSelectedPayment(payment);
+    setModalOpen(true);
+  };
+
+  const handlePaymentComplete = () => {
+    router.refresh();
   };
 
   return (
@@ -179,14 +157,11 @@ export function PaymentsTab({ payments, lease }: PaymentsTabProps) {
               </p>
               <Button
                 className="mt-4 w-full"
-                disabled={isProcessingPayment}
-                onClick={() => void handleMakePayment(nextPending)}
+                onClick={() => handleMakePayment(nextPending)}
               >
-                {isProcessingPayment
-                  ? "Redirecting..."
-                  : nextPending.type === "move_in"
-                    ? "Pay Move-In"
-                    : "Make Payment"}
+                {nextPending.type === "move_in"
+                  ? "Pay Move-In"
+                  : "Make Payment"}
               </Button>
             </div>
           ) : (
@@ -270,6 +245,15 @@ export function PaymentsTab({ payments, lease }: PaymentsTabProps) {
         </CardContent>
       </Card>
 
+      {/* Payment Modal */}
+      {selectedPayment && (
+        <PaymentModal
+          open={modalOpen}
+          onOpenChange={setModalOpen}
+          payment={selectedPayment}
+          onPaymentComplete={handlePaymentComplete}
+        />
+      )}
     </div>
   );
 }

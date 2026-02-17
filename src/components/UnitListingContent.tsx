@@ -696,8 +696,6 @@ export function UnitListingContent({
         unitId={unit.id}
         unitNumber={unit.unitNumber}
         propertyName={property.name}
-        monthlyRent={unit.monthlyRent}
-        currency={unit.currency}
         defaultName={currentUserName}
         defaultEmail={currentUserEmail}
       />

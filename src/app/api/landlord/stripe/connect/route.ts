@@ -54,6 +54,8 @@ export async function POST() {
     const accountId = await provider.createConnectedAccount({
       email: dbUser.email,
       country: "US",
+      firstName: dbUser.first_name ?? undefined,
+      lastName: dbUser.last_name ?? undefined,
     });
 
     // Check if the account is already fully onboarded (test mode Custom accounts)

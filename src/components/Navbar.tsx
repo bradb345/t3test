@@ -89,6 +89,12 @@ export function Navbar() {
                 </Link>
               )}
               <Link
+                href="/applications"
+                className="text-sm font-medium text-muted-foreground hover:text-primary"
+              >
+                My Applications
+              </Link>
+              <Link
                 href="/messages"
                 className="text-sm font-medium text-muted-foreground hover:text-primary"
               >
