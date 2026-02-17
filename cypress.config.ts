@@ -24,13 +24,13 @@ export default defineConfig({
 
           const sql = pg(connectionString);
           try {
-            const rows = await sql`
+            const rows = (await sql`
               SELECT invitation_token
               FROM t3test_tenant_invitation
               WHERE tenant_email = ${email}
               ORDER BY created_at DESC
               LIMIT 1
-            `;
+            `) as unknown as { invitation_token: string }[];
             return rows[0]?.invitation_token ?? null;
           } finally {
             await sql.end();
@@ -72,7 +72,7 @@ export default defineConfig({
                 'KY',
                 19.2869,
                 -81.3674,
-                'USD',
+                'KYD',
                 'apartment',
                 'Test property for Cypress tenant journey tests'
               )
@@ -95,7 +95,7 @@ export default defineConfig({
                 2,
                 1.5,
                 2500.00,
-                'USD',
+                'KYD',
                 true,
                 true,
                 'Test unit for Cypress tenant journey tests'
@@ -130,7 +130,7 @@ export default defineConfig({
               SELECT id FROM t3test_property
               WHERE name = 'Cypress Test Property Journey'
             `;
-            const propertyIds = (properties as { id: number }[]).map(
+            const propertyIds = (properties as unknown as { id: number }[]).map(
               (p) => p.id
             );
 
@@ -140,7 +140,7 @@ export default defineConfig({
                 SELECT id FROM t3test_unit
                 WHERE property_id IN ${sql(propertyIds)}
               `;
-              const unitIds = (units as { id: number }[]).map((u) => u.id);
+              const unitIds = (units as unknown as { id: number }[]).map((u) => u.id);
 
               if (unitIds.length > 0) {
                 // Delete viewing requests for these units
@@ -160,7 +160,7 @@ export default defineConfig({
                   SELECT id FROM t3test_lease
                   WHERE unit_id IN ${sql(unitIds)}
                 `;
-                const leaseIds = (leases as { id: number }[]).map(
+                const leaseIds = (leases as unknown as { id: number }[]).map(
                   (l) => l.id
                 );
 
@@ -219,7 +219,7 @@ export default defineConfig({
               SELECT id FROM t3test_user
               WHERE email IN ('doe+clerk_test@example.com', 'jones+clerk_test@example.com')
             `;
-            const testUserIds = (testUsers as { id: number }[]).map(
+            const testUserIds = (testUsers as unknown as { id: number }[]).map(
               (u) => u.id
             );
 
@@ -251,10 +251,10 @@ export default defineConfig({
           const sql = pg(connectionString);
           try {
             // Find the test tenant user
-            const users = await sql`
+            const users = (await sql`
               SELECT id FROM t3test_user WHERE email = ${email} LIMIT 1
-            `;
-            const tenantId = users[0]?.id;
+            `) as unknown as { id: number }[];
+            const tenantId: number | undefined = users[0]?.id;
 
             if (tenantId) {
               // Update the user's name to match what the test expects
@@ -278,9 +278,9 @@ export default defineConfig({
               `;
 
               // Get unit IDs from the tenant's leases before deleting them
-              const leaseUnits = await sql`
+              const leaseUnits = (await sql`
                 SELECT unit_id FROM t3test_lease WHERE tenant_id = ${tenantId}
-              `;
+              `) as unknown as { unit_id: number }[];
 
               // Delete the tenant's leases
               await sql`
@@ -412,7 +412,7 @@ export default defineConfig({
               // No account exists — create one
               const account = await stripe.accounts.create({
                 type: "custom",
-                country: "US",
+                country: "KY",
                 email: "doe+clerk_test@example.com",
                 business_type: "individual",
                 capabilities: {
@@ -425,9 +425,9 @@ export default defineConfig({
                   dob: { day: 1, month: 1, year: 1990 },
                   address: {
                     line1: "address_full_match",
-                    city: "New York",
-                    state: "NY",
-                    postal_code: "10001",
+                    city: "George Town",
+                    state: "KY",
+                    postal_code: "KY1 0AA",
                   },
                   id_number: "000000000",
                   ssn_last_4: "0000",
@@ -440,8 +440,8 @@ export default defineConfig({
                 },
                 external_account: {
                   object: "bank_account" as const,
-                  country: "US",
-                  currency: "usd",
+                  country: "KY",
+                  currency: "KYD",
                   routing_number: "110000000",
                   account_number: "000123456789",
                 },
@@ -463,7 +463,7 @@ export default defineConfig({
 
             // Poll until transfers capability is active (up to 30 seconds)
             for (let i = 0; i < 30; i++) {
-              const acct = await stripe.accounts.retrieve(accountId!);
+              const acct = await stripe.accounts.retrieve(accountId);
               const transfersCap = acct.capabilities?.transfers;
               if (transfersCap === "active") break;
               if (i === 29) {
