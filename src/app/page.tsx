@@ -6,7 +6,7 @@ export default async function HomePage() {
   return (
     <>
       <main className="flex min-h-screen flex-col items-center bg-background">
-        <div className="w-full max-w-6xl px-4 pb-16 pt-60">
+        <div className="w-full max-w-6xl px-4 pb-16 pt-24 sm:pt-60">
           {/* Hero Section */}
           <div className="space-y-4 text-center">
             <h1 className="text-4xl font-bold tracking-tight sm:text-6xl">
