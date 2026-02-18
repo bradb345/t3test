@@ -12,10 +12,10 @@ import {
   getMoveInFeeCents,
   getMoveInLandlordPayoutCents,
 } from "~/lib/fees";
-import { parseMoveInNotes, type CheckoutLineItem } from "~/lib/payments/types";
-import { env } from "~/env";
+import { parseMoveInNotes } from "~/lib/payments/types";
+import { trackServerEvent } from "~/lib/posthog-events/server";
 
-// POST: Initiate a payment via Stripe Checkout Session
+// POST: Create a PaymentIntent for Stripe Elements (client-side confirmation)
 export async function POST(request: NextRequest) {
   try {
     const auth = await getAuthenticatedTenant();
@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
 
     // Atomically claim the payment by updating status to "processing" only if
     // it's currently in a retryable state. This prevents race conditions where
-    // two concurrent requests both see "pending" and create duplicate checkout sessions.
+    // two concurrent requests both see "pending" and create duplicate intents.
     const retryableStatuses = ["pending", "failed", "processing"];
     const [payment] = await db
       .update(payments)
@@ -117,6 +117,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // If there's already a PaymentIntent for this payment, reuse it instead
+    // of creating a duplicate. This handles React Strict Mode double-mounts
+    // and users re-opening the modal after closing without paying.
+    if (payment.stripePaymentIntentId) {
+      const existingIntent = await provider.getPaymentIntent(payment.stripePaymentIntentId);
+      if (existingIntent.clientSecret && existingIntent.status !== "succeeded" && existingIntent.status !== "canceled") {
+        return NextResponse.json({
+          clientSecret: existingIntent.clientSecret,
+          paymentIntentId: existingIntent.id,
+        });
+      }
+    }
+
     // Calculate fees — move-in payments only charge platform fee on rent portion
     const amountDollars = parseFloat(payment.amount);
     if (!Number.isFinite(amountDollars) || amountDollars <= 0) {
@@ -128,7 +141,6 @@ export async function POST(request: NextRequest) {
     const amountCents = toCents(amountDollars);
     let feeCents: number;
     let payoutCents: number;
-    let lineItems: CheckoutLineItem[] | undefined;
 
     if (payment.type === "move_in") {
       const moveInNotes = parseMoveInNotes(payment.notes);
@@ -155,57 +167,110 @@ export async function POST(request: NextRequest) {
 
       feeCents = getMoveInFeeCents(rentCents);
       payoutCents = getMoveInLandlordPayoutCents(rentCents, depositCents);
-
-      lineItems = [{ name: "First Month's Rent", amountCents: rentCents }];
-      if (depositCents > 0) {
-        lineItems.push({ name: "Security Deposit", amountCents: depositCents });
-      }
     } else {
       feeCents = getPlatformFeeCents(amountCents);
       payoutCents = getLandlordPayoutCents(amountCents);
     }
 
-    // Build success/cancel URLs using validated app URL (never trust Origin header)
-    const baseUrl = env.NEXT_PUBLIC_APP_URL;
-    const successUrl = `${baseUrl}/dashboard?tab=payments&payment=success`;
-    const cancelUrl = `${baseUrl}/dashboard?tab=payments&payment=cancelled`;
-
-    // Create Checkout Session
-    const session = await provider.createCheckoutSession({
+    // Create unconfirmed PaymentIntent for Elements.
+    // Use an idempotency key tied to the payment ID so that concurrent
+    // requests (e.g. React Strict Mode double-mount) don't create duplicates.
+    const intent = await provider.createPaymentIntentForElements({
       amountCents,
       currency: payment.currency,
       customerId: stripeCustomerId,
       connectedAccountId: landlord.stripeConnectedAccountId,
       applicationFeeCents: feeCents,
-      successUrl,
-      cancelUrl,
-      lineItems,
       metadata: {
         paymentId: payment.id.toString(),
         leaseId: lease.id.toString(),
         tenantId: dbUser.id.toString(),
         landlordId: landlord.id.toString(),
       },
+      idempotencyKey: `payment_intent_${payment.id}_${amountCents}`,
     });
 
-    // Update payment record with checkout session info (status already set to "processing" above)
+    // Update payment record with intent info (status already set to "processing" above)
     await db
       .update(payments)
       .set({
-        stripeCheckoutSessionId: session.id,
+        stripePaymentIntentId: intent.id,
         platformFee: toDollars(feeCents).toFixed(2),
         landlordPayout: toDollars(payoutCents).toFixed(2),
         paymentMethod: "card",
       })
       .where(eq(payments.id, payment.id));
 
+    // Track payment_initiated
+    void trackServerEvent(dbUser.auth_id, "payment_initiated", {
+      payment_id: payment.id,
+      amount: payment.amount,
+      currency: payment.currency,
+      payment_type: payment.type,
+      lease_id: payment.leaseId,
+    });
+
     return NextResponse.json({
-      checkoutUrl: session.url,
+      clientSecret: intent.clientSecret,
+      paymentIntentId: intent.id,
     });
   } catch (error) {
     console.error("Make payment error:", error);
     return NextResponse.json(
       { error: "Failed to process payment" },
+      { status: 500 }
+    );
+  }
+}
+
+// PATCH: Reset a payment back to pending (e.g. user closed modal without paying)
+export async function PATCH(request: NextRequest) {
+  try {
+    const auth = await getAuthenticatedTenant();
+    if (auth.error) return auth.error;
+
+    const dbUser = auth.user;
+
+    const body = (await request.json()) as {
+      paymentId: number;
+      action: string;
+    };
+
+    if (!body.paymentId || body.action !== "cancel") {
+      return NextResponse.json(
+        { error: "paymentId and action='cancel' are required" },
+        { status: 400 }
+      );
+    }
+
+    // Only reset if currently "processing" and belongs to this tenant.
+    // Keep stripePaymentIntentId so the intent can be reused on next open.
+    const [payment] = await db
+      .update(payments)
+      .set({
+        status: "pending",
+      })
+      .where(
+        and(
+          eq(payments.id, body.paymentId),
+          eq(payments.tenantId, dbUser.id),
+          eq(payments.status, "processing"),
+        )
+      )
+      .returning();
+
+    if (!payment) {
+      return NextResponse.json(
+        { error: "Payment not found or not in processing status" },
+        { status: 400 }
+      );
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Cancel payment error:", error);
+    return NextResponse.json(
+      { error: "Failed to cancel payment" },
       { status: 500 }
     );
   }

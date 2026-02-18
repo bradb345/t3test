@@ -13,6 +13,7 @@ cypress.env.json
 cypress/videos
 cypress/screenshots
 cypress/downloads
+cypress/debug-output.json
 
 # database
 /prisma/db.sqlite

@@ -14,6 +14,7 @@ import {
   MAINTENANCE_STATUS_TRANSITIONS,
 } from "~/lib/constants/maintenance";
 import { getAuthenticatedUser } from "~/server/auth";
+import { trackServerEvent } from "~/lib/posthog-events/server";
 
 // PATCH: Update maintenance request status/notes
 export async function PATCH(request: NextRequest, props: { params: Promise<{ id: string }> }) {
@@ -137,6 +138,15 @@ export async function PATCH(request: NextRequest, props: { params: Promise<{ id:
           like(notifications.data, `%"maintenanceRequestId":${String(requestId)}%`)
         )
       );
+
+    // Track maintenance_status_updated
+    if (body.status && body.status !== existingRequest.request.status) {
+      void trackServerEvent(dbUser.auth_id, "maintenance_status_updated", {
+        request_id: requestId,
+        old_status: existingRequest.request.status,
+        new_status: body.status,
+      });
+    }
 
     // Notify tenant if status changed
     if (body.status && body.status !== existingRequest.request.status) {

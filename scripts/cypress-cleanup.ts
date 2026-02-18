@@ -312,6 +312,36 @@ async function cleanupTestProperties() {
       if (deletedInvitations.count > 0) {
         console.log(`      🗑️  Deleted ${deletedInvitations.count} tenant invitations for unit ${unit.id}`);
       }
+
+      // Delete offboarding notices for leases on this unit
+      const deletedNotices = await sql`
+        DELETE FROM t3test_tenant_offboarding_notice
+        WHERE lease_id IN (
+          SELECT id FROM t3test_lease WHERE unit_id = ${unit.id}
+        )
+      `;
+      if (deletedNotices.count > 0) {
+        console.log(`      🗑️  Deleted ${deletedNotices.count} offboarding notices for unit ${unit.id}`);
+      }
+
+      // Delete payments for leases on this unit
+      const deletedPayments = await sql`
+        DELETE FROM t3test_payment
+        WHERE lease_id IN (
+          SELECT id FROM t3test_lease WHERE unit_id = ${unit.id}
+        )
+      `;
+      if (deletedPayments.count > 0) {
+        console.log(`      🗑️  Deleted ${deletedPayments.count} payments for unit ${unit.id}`);
+      }
+
+      // Delete leases for this unit
+      const deletedLeases = await sql`
+        DELETE FROM t3test_lease WHERE unit_id = ${unit.id}
+      `;
+      if (deletedLeases.count > 0) {
+        console.log(`      🗑️  Deleted ${deletedLeases.count} leases for unit ${unit.id}`);
+      }
     }
 
     // Delete units from database

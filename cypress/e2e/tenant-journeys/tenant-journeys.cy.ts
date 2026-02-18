@@ -3,10 +3,11 @@
 /**
  * Tenant Journeys E2E Tests
  *
- * Tests three tenant journeys end-to-end:
+ * Tests four tenant journeys end-to-end:
  * 1. Viewing Requests — tenant submits, landlord sees and approves it
  * 2. Contact & Messaging — tenant contacts landlord, both exchange messages
- * 3. Tenancy Applications — tenant submits full application, landlord reviews and approves it
+ * 3. Tenancy Applications — tenant submits full application, landlord reviews and approves it (creates lease + payment)
+ * 4. Move-In Payment — tenant signs in and pays move-in via Stripe (lease created on approval)
  *
  * Uses DB tasks to create a test property + unit (avoids flaky Google Places UI).
  */
@@ -60,6 +61,9 @@ describe("Tenant Journeys", () => {
   before(() => {
     // Clean up any leftover data from previous runs
     cy.task("cleanupTenantJourneyData");
+
+    // Ensure landlord has a Stripe connected account for payment tests
+    cy.task("ensureLandlordStripeAccount");
 
     // Create test property + unit
     cy.task("setupTenantJourneyTest").then((result) => {
@@ -328,11 +332,7 @@ describe("Tenant Journeys", () => {
       cy.contains("Uploaded:", { timeout: 30000 }).should("be.visible");
       cy.contains("button", "Continue").click();
 
-      // ── Step 6: Payment Setup ──
-      cy.contains("Payment Setup", { timeout: 10000 }).should("be.visible");
-      cy.contains("button", "Continue").click();
-
-      // ── Step 7: Review & Submit ──
+      // ── Step 6: Review & Submit ──
       cy.contains("Review & Submit", { timeout: 10000 }).should("be.visible");
       // Verify summary data
       cy.contains(testTenant.name).should("be.visible");
@@ -416,6 +416,8 @@ describe("Tenant Journeys", () => {
           cy.get("#decisionNotes").type("Application looks great. Approved!", {
             force: true,
           });
+          // Select rent due day
+          cy.get("#rentDueDay").select("1", { force: true });
           cy.get('[role="dialog"]')
             .contains("button", "Approve")
             .click({ force: true });
@@ -427,6 +429,60 @@ describe("Tenant Journeys", () => {
         "not.exist"
       );
       cy.contains("Approved", { timeout: 10000 }).should("be.visible");
+    });
+  });
+
+  // ─── Journey 4: Move-In Payment (via approval) ─────────────────
+
+  describe("Journey 4: Move-In Payment", () => {
+    it("tenant completes move-in payment with test card", () => {
+      loginAsTenant();
+
+      // Intercept the payment API to capture the PaymentIntent ID
+      cy.intercept("POST", "/api/tenant/payments").as("createPayment");
+
+      // Navigate to tenant dashboard (lease + payment created on approval)
+      cy.visit("/dashboard");
+      cy.contains("Welcome back", { timeout: 15000 }).should("be.visible");
+
+      // Click the Payments tab
+      cy.contains('[role="tab"]', "Payments").click();
+
+      // Verify the move-in payment is visible and click Pay
+      cy.contains("Move-In payment", { timeout: 10000 }).should("be.visible");
+      cy.contains("button", "Pay Move-In").click();
+
+      // Wait for payment modal to open
+      cy.get('[role="dialog"]', { timeout: 15000 }).should("be.visible");
+      cy.contains("Complete Payment", { timeout: 10000 }).should("be.visible");
+
+      // Wait for the API to create the PaymentIntent, then confirm it
+      // server-side with pm_card_visa (bypasses flaky Stripe iframe filling)
+      cy.wait("@createPayment")
+        .its("response.body")
+        .then((body: { paymentIntentId: string }) => {
+          cy.log(`Confirming PaymentIntent: ${body.paymentIntentId}`);
+          cy.task("confirmPaymentIntent", body.paymentIntentId);
+        });
+
+      // Close the modal using Escape key (the React component is still
+      // waiting on stripe.confirmPayment which will never resolve)
+      cy.get("body").type("{esc}");
+      cy.get('[role="dialog"]', { timeout: 5000 }).should("not.exist");
+
+      // Wait for the Stripe webhook to update the payment status
+      cy.wait(3000);
+
+      // Reload to see the updated payment status
+      cy.reload();
+      cy.contains("Welcome back", { timeout: 15000 }).should("be.visible");
+      cy.contains('[role="tab"]', "Payments").click();
+
+      // Verify billing history shows the confirmed payment
+      cy.contains("Billing History").should("be.visible");
+      cy.get("table").within(() => {
+        cy.contains("Move-In").should("be.visible");
+      });
     });
   });
 });

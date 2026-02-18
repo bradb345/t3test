@@ -1,6 +1,7 @@
 import { db } from "~/server/db";
 import { payments, leases, user, notifications } from "~/server/db/schema";
 import { eq } from "drizzle-orm";
+import { trackServerEvent } from "~/lib/posthog-events/server";
 
 function formatAmount(amount: string, currency: string): string {
   const num = parseFloat(amount);
@@ -9,6 +10,16 @@ function formatAmount(amount: string, currency: string): string {
     style: "currency",
     currency,
   }).format(num);
+}
+
+/** Look up auth_id for a user by their DB id (needed in webhook context). */
+async function getAuthIdForUser(userId: number): Promise<string | null> {
+  const [result] = await db
+    .select({ authId: user.auth_id })
+    .from(user)
+    .where(eq(user.id, userId))
+    .limit(1);
+  return result?.authId ?? null;
 }
 
 /** Derive landlordId from the payment's lease (DB lookup, not metadata). */
@@ -85,6 +96,17 @@ export async function handleCheckoutSessionCompleted(
         landlordPayout: payment.landlordPayout,
         currency: payment.currency,
       }),
+    });
+  }
+
+  // Track payment_completed
+  const tenantAuthId = await getAuthIdForUser(payment.tenantId);
+  if (tenantAuthId) {
+    void trackServerEvent(tenantAuthId, "payment_completed", {
+      payment_id: payment.id,
+      amount: payment.amount,
+      currency: payment.currency,
+      payment_type: payment.type,
     });
   }
 }
@@ -242,6 +264,16 @@ export async function handlePaymentIntentFailed(
       currency: payment.currency,
     }),
   });
+
+  // Track payment_failed
+  const failedTenantAuthId = await getAuthIdForUser(payment.tenantId);
+  if (failedTenantAuthId) {
+    void trackServerEvent(failedTenantAuthId, "payment_failed", {
+      payment_id: payment.id,
+      amount: payment.amount,
+      currency: payment.currency,
+    });
+  }
 }
 
 /**
@@ -261,4 +293,18 @@ export async function handleAccountUpdated(data: Record<string, unknown>) {
     .update(user)
     .set({ stripeConnectedAccountStatus: newStatus })
     .where(eq(user.stripeConnectedAccountId, accountId));
+
+  // Track stripe_connect_completed when onboarding finishes
+  if (newStatus === "complete") {
+    const [landlord] = await db
+      .select({ authId: user.auth_id })
+      .from(user)
+      .where(eq(user.stripeConnectedAccountId, accountId))
+      .limit(1);
+    if (landlord?.authId) {
+      void trackServerEvent(landlord.authId, "stripe_connect_completed", {
+        account_id: accountId,
+      });
+    }
+  }
 }

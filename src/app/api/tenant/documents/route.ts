@@ -4,6 +4,7 @@ import { tenantDocuments } from "~/server/db/schema";
 import { eq, desc } from "drizzle-orm";
 import { isValidDocumentType } from "~/lib/document-constants";
 import { getAuthenticatedTenantWithProfile } from "~/server/auth";
+import { trackServerEvent } from "~/lib/posthog-events/server";
 
 // GET: List documents for tenant
 export async function GET() {
@@ -77,6 +78,11 @@ export async function POST(request: NextRequest) {
       status: "pending_review",
     })
     .returning();
+
+  // Track document_uploaded
+  void trackServerEvent(auth.user.auth_id, "document_uploaded", {
+    document_type: body.documentType,
+  });
 
   return NextResponse.json(newDocument, { status: 201 });
 }

@@ -6,12 +6,16 @@ import {
   units,
   properties,
   user,
-  tenantInvitations,
+  leases,
+  payments,
 } from "~/server/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { createAndEmitNotification } from "~/server/notification-emitter";
-import { randomBytes } from "crypto";
-import { capturePostHogEvent } from "~/lib/posthog-server";
+import { persistTenantProfile } from "~/lib/tenant-profile";
+import type { OnboardingData } from "~/lib/tenant-profile";
+import { addRoleToUserById } from "~/lib/roles";
+import { updateUnitIndex } from "~/lib/algolia";
+import { trackServerEvent } from "~/lib/posthog-events/server";
 
 // GET: Get a single application with full details
 export async function GET(_request: NextRequest, props: { params: Promise<{ id: string }> }) {
@@ -172,6 +176,7 @@ export async function PATCH(request: NextRequest, props: { params: Promise<{ id:
     const body = (await request.json()) as {
       decision: "approved" | "rejected";
       decisionNotes?: string;
+      rentDueDay?: number;
     };
 
     if (!body.decision || !["approved", "rejected"].includes(body.decision)) {
@@ -193,6 +198,102 @@ export async function PATCH(request: NextRequest, props: { params: Promise<{ id:
       })
       .where(eq(tenancyApplications.id, applicationId));
 
+    // If approved, create lease + payment directly (no invitation needed)
+    if (body.decision === "approved") {
+      // 1. Persist tenant profile from application data
+      const rawAppData = applicationData.application.applicationData;
+      if (rawAppData) {
+        const appDataParsed = JSON.parse(rawAppData) as OnboardingData;
+        await persistTenantProfile(applicationData.applicant.id, appDataParsed);
+      }
+
+      // 2. End any existing active lease on this unit before creating a new one
+      await db
+        .update(leases)
+        .set({ status: "ended", leaseEnd: new Date() })
+        .where(
+          and(
+            eq(leases.unitId, applicationData.unit.id),
+            eq(leases.status, "active")
+          )
+        );
+
+      // 3. Create lease
+      const rentDueDay = body.rentDueDay && body.rentDueDay >= 1 && body.rentDueDay <= 28
+        ? body.rentDueDay
+        : 1;
+      const leaseStart = new Date();
+      const leaseEnd = new Date();
+      leaseEnd.setFullYear(leaseEnd.getFullYear() + 1);
+
+      const [newLease] = await db.insert(leases).values({
+        unitId: applicationData.unit.id,
+        tenantId: applicationData.applicant.id,
+        landlordId: currentUser.id,
+        leaseStart,
+        leaseEnd,
+        monthlyRent: applicationData.unit.monthlyRent ?? "0",
+        securityDeposit: applicationData.unit.deposit,
+        rentDueDay,
+        status: "active",
+      }).returning();
+
+      // 3. Create move-in payment
+      if (newLease) {
+        const rentAmount = parseFloat(applicationData.unit.monthlyRent ?? "0");
+        const depositAmount = parseFloat(applicationData.unit.deposit ?? "0");
+        const totalAmount = rentAmount + depositAmount;
+
+        if (totalAmount > 0) {
+          const [existingMoveIn] = await db
+            .select({ id: payments.id })
+            .from(payments)
+            .where(
+              and(
+                eq(payments.leaseId, newLease.id),
+                eq(payments.type, "move_in")
+              )
+            )
+            .limit(1);
+
+          if (!existingMoveIn) {
+            await db.insert(payments).values({
+              tenantId: applicationData.applicant.id,
+              leaseId: newLease.id,
+              amount: totalAmount.toFixed(2),
+              currency: newLease.currency,
+              type: "move_in",
+              status: "pending",
+              dueDate: leaseStart,
+              notes: JSON.stringify({
+                rentAmount: rentAmount.toFixed(2),
+                securityDeposit: depositAmount.toFixed(2),
+              }),
+            });
+          }
+        }
+      }
+
+      // 4. Mark unit as unavailable and hidden
+      await db
+        .update(units)
+        .set({
+          isAvailable: false,
+          isVisible: false,
+          updatedAt: new Date(),
+        })
+        .where(eq(units.id, applicationData.unit.id));
+
+      // 5. Sync to Algolia
+      await updateUnitIndex(applicationData.unit.id, {
+        isAvailable: false,
+        isVisible: false,
+      });
+
+      // 6. Assign tenant role
+      await addRoleToUserById(applicationData.applicant.id, "tenant");
+    }
+
     // Send notification to applicant
     const notificationTitle =
       body.decision === "approved"
@@ -200,7 +301,7 @@ export async function PATCH(request: NextRequest, props: { params: Promise<{ id:
         : "Application Update";
     const notificationMessage =
       body.decision === "approved"
-        ? `Your application for Unit ${applicationData.unit.unitNumber} at ${applicationData.property.name} has been approved! You will receive an invitation to complete the onboarding process.`
+        ? `Your application for Unit ${applicationData.unit.unitNumber} at ${applicationData.property.name} has been approved! Your lease has been created. Please sign in to make your move-in payment.`
         : `Your application for Unit ${applicationData.unit.unitNumber} at ${applicationData.property.name} has not been approved.${
             body.decisionNotes ? ` Reason: ${body.decisionNotes}` : ""
           }`;
@@ -221,56 +322,19 @@ export async function PATCH(request: NextRequest, props: { params: Promise<{ id:
       }),
       actionUrl:
         body.decision === "approved"
-          ? `/units/${applicationData.unit.id}`
+          ? "/dashboard?tab=payments"
           : undefined,
     });
 
-    // If approved, create tenant invitation
-    if (body.decision === "approved") {
-      const invitationToken = randomBytes(32).toString("hex");
-      const expiresAt = new Date();
-      expiresAt.setDate(expiresAt.getDate() + 30); // 30 days expiration
-
-      await db.insert(tenantInvitations).values({
-        unitId: applicationData.unit.id,
-        landlordId: currentUser.id,
-        tenantEmail: applicationData.applicant.email,
-        tenantName: `${applicationData.applicant.first_name} ${applicationData.applicant.last_name}`,
-        invitationToken,
-        isExistingTenant: true, // They already have an account
-        status: "sent",
-        expiresAt,
-        tenantUserId: applicationData.applicant.id,
-      });
-
-      // Send another notification about the invitation
-      await createAndEmitNotification({
-        userId: applicationData.applicant.id,
-        type: "tenant_invitation",
-        title: "Complete Your Tenancy Setup",
-        message: `Please complete your tenancy onboarding for Unit ${applicationData.unit.unitNumber} at ${applicationData.property.name}`,
-        data: JSON.stringify({
-          invitationToken,
-          unitId: applicationData.unit.id,
-          propertyId: applicationData.property.id,
-        }),
-        actionUrl: `/onboarding?token=${invitationToken}`,
-      });
-    }
-
     // Track application review event in PostHog
-    await capturePostHogEvent({
-      distinctId: clerkUserId,
-      event: "application_reviewed",
-      properties: {
+    await trackServerEvent(clerkUserId, "application_reviewed", {
         application_id: applicationId,
         decision: body.decision,
         unit_id: applicationData.unit.id,
         property_id: applicationData.property.id,
         applicant_id: applicationData.applicant.id,
         source: "api",
-      },
-    });
+      });
 
     return NextResponse.json({
       success: true,

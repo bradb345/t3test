@@ -3,6 +3,7 @@ import { db } from "~/server/db";
 import { user } from "~/server/db/schema";
 import { eq } from "drizzle-orm";
 import { getAuthenticatedTenant } from "~/server/auth";
+import { trackServerEvent } from "~/lib/posthog-events/server";
 
 // GET: Get current user profile
 export async function GET() {
@@ -59,6 +60,11 @@ export async function PATCH(request: NextRequest) {
     .set(updateData)
     .where(eq(user.id, auth.user.id))
     .returning();
+
+  // Track profile_updated
+  void trackServerEvent(auth.user.auth_id, "profile_updated", {
+    fields_updated: Object.keys(updateData),
+  });
 
   return NextResponse.json(updatedUser);
 }

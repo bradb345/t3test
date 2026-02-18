@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { sendEmail } from "~/lib/email";
 import { escapeHtml } from "~/lib/html";
-import { capturePostHogEvent } from "~/lib/posthog-server";
+import { trackServerEvent } from "~/lib/posthog-events/server";
 
 const contactSchema = z.object({
   name: z.string().min(1, "Name is required").max(100, "Name is too long"),
@@ -66,14 +66,10 @@ export async function POST(request: Request) {
     }
 
     // Track contact form submission in PostHog (use email as distinct ID for anonymous users)
-    await capturePostHogEvent({
-      distinctId: email,
-      event: "contact_form_submitted",
-      properties: {
+    await trackServerEvent(email, "contact_form_submitted", {
         subject_category: subject,
         source: "api",
-      },
-    });
+      });
 
     return NextResponse.json({ success: true });
   } catch (error) {

@@ -7,6 +7,7 @@ import { sendEmail } from "~/lib/email";
 import { getTenantInvitationEmailHtml } from "~/emails/tenant-invitation";
 import { getAuthenticatedUser } from "~/server/auth";
 import crypto from "crypto";
+import { trackServerEvent } from "~/lib/posthog-events/server";
 
 export async function POST(request: NextRequest, props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
@@ -186,6 +187,14 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
         actionUrl: onboardingUrl,
       });
     }
+
+    // Track tenant_invited
+    void trackServerEvent(userId, "tenant_invited", {
+      unit_id: unitId,
+      property_id: unit.propertyId,
+      rent_due_day: rentDueDay,
+      is_existing_tenant: actualIsExistingTenant,
+    });
 
     return NextResponse.json({
       success: true,
