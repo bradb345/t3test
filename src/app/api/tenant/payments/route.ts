@@ -165,8 +165,8 @@ export async function POST(request: NextRequest) {
       const rentCents = moveInNotes ? toCents(parseFloat(moveInNotes.rentAmount)) : amountCents;
       const depositCents = moveInNotes ? toCents(parseFloat(moveInNotes.securityDeposit)) : 0;
 
-      feeCents = getMoveInFeeCents(rentCents);
-      payoutCents = getMoveInLandlordPayoutCents(rentCents, depositCents);
+      feeCents = getMoveInFeeCents(rentCents, depositCents);
+      payoutCents = getMoveInLandlordPayoutCents(rentCents);
     } else {
       feeCents = getPlatformFeeCents(amountCents);
       payoutCents = getLandlordPayoutCents(amountCents);
