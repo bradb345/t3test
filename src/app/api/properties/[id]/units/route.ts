@@ -4,6 +4,7 @@ import { db } from "~/server/db";
 import { units, properties } from "~/server/db/schema";
 import { eq } from "drizzle-orm";
 import { indexUnit, buildUnitSearchRecord } from "~/lib/algolia";
+import { trackServerEvent } from "~/lib/posthog-events/server";
 
 interface UnitData {
   unitNumber: string;
@@ -124,6 +125,19 @@ export async function POST(req: Request, props: { params: Promise<{ id: string }
       .update(properties)
       .set({ totalUnits: unitCount.length })
       .where(eq(properties.id, propertyId));
+
+    // Track unit_created
+    if (unit) {
+      void trackServerEvent(userId, "unit_created", {
+        unit_id: unit.id,
+        unit_number: unit.unitNumber,
+        property_id: propertyId,
+        monthly_rent: unit.monthlyRent,
+        currency: unit.currency,
+        bedrooms: unit.numBedrooms,
+        bathrooms: unit.numBathrooms,
+      });
+    }
 
     console.log("Created unit:", unit);
     return NextResponse.json(unit);

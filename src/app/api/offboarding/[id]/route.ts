@@ -12,6 +12,7 @@ import { canCancelNotice } from "~/lib/offboarding";
 import { createAndEmitNotification } from "~/server/notification-emitter";
 import { getAuthenticatedUser } from "~/server/auth";
 import type { UpdateOffboardingRequest, CancelOffboardingRequest } from "~/types/offboarding";
+import { trackServerEvent } from "~/lib/posthog-events/server";
 
 // GET /api/offboarding/[id] - Get offboarding notice details
 export async function GET(
@@ -313,6 +314,12 @@ export async function DELETE(
         cancelledBy: isTenant ? "tenant" : "landlord",
       }),
       actionUrl: isTenant ? `/my-properties?tab=tenants` : `/dashboard`,
+    });
+
+    // Track notice_cancelled
+    void trackServerEvent(dbUser.auth_id, "notice_cancelled", {
+      lease_id: lease.id,
+      notice_id: noticeId,
     });
 
     return NextResponse.json({

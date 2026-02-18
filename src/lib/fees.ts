@@ -46,16 +46,17 @@ export function getLandlordPayout(dollars: number): number {
 }
 
 /**
- * Move-in payment fee: platform fee applies only to the rent portion.
- * Security deposit passes through in full (no platform fee).
+ * Move-in payment fee: platform fee on rent + full security deposit.
+ * The deposit stays with the platform (not forwarded to the landlord).
  */
-export function getMoveInFeeCents(rentCents: number): number {
-  return getPlatformFeeCents(rentCents);
+export function getMoveInFeeCents(rentCents: number, depositCents: number): number {
+  return getPlatformFeeCents(rentCents) + depositCents;
 }
 
 /**
- * Move-in landlord payout: rent minus platform fee, plus full deposit.
+ * Move-in landlord payout: rent minus platform fee only.
+ * Security deposit is retained by the platform.
  */
-export function getMoveInLandlordPayoutCents(rentCents: number, depositCents: number): number {
-  return getLandlordPayoutCents(rentCents) + depositCents;
+export function getMoveInLandlordPayoutCents(rentCents: number): number {
+  return getLandlordPayoutCents(rentCents);
 }

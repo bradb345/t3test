@@ -40,7 +40,10 @@
       "Bash(npm run dev:*)",
       "Bash(git -C /Users/bradleybernard/Documents/code/t3test log --all --oneline -- .env)",
       "Bash(git -C /Users/bradleybernard/Documents/code/t3test show HEAD:.gitignore)",
-      "Bash(npm run lint:*)"
+      "Bash(npm run lint:*)",
+      "Bash(done)",
+      "Bash(npm run cy:clean:*)",
+      "Bash(npx dotenv:*)"
     ]
   }
 }

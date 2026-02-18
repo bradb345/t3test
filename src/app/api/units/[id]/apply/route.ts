@@ -9,7 +9,7 @@ import {
 } from "~/server/db/schema";
 import { eq, and } from "drizzle-orm";
 import { createAndEmitNotification } from "~/server/notification-emitter";
-import { capturePostHogEvent } from "~/lib/posthog-server";
+import { trackServerEvent } from "~/lib/posthog-events/server";
 
 // POST: Submit a tenancy application
 export async function POST(request: NextRequest, props: { params: Promise<{ id: string }> }) {
@@ -136,18 +136,14 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
     }
 
     // Track tenancy application submission in PostHog
-    await capturePostHogEvent({
-      distinctId: clerkUserId,
-      event: "tenancy_application_submitted",
-      properties: {
+    await trackServerEvent(clerkUserId, "tenancy_application_submitted", {
         application_id: newApplication?.id,
         unit_id: unitId,
         property_id: unitData.property.id,
         monthly_rent: unitData.unit.monthlyRent,
         currency: unitData.unit.currency,
         source: "api",
-      },
-    });
+      });
 
     return NextResponse.json(
       {

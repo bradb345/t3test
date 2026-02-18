@@ -3,6 +3,7 @@
 import { useAuth, useUser } from "@clerk/nextjs";
 import { useEffect } from "react";
 import posthog from "posthog-js";
+import { trackClientEvent } from "~/lib/posthog-events/client";
 
 const AUTH_STATE_KEY = "posthog_auth_state";
 
@@ -29,7 +30,7 @@ export function PostHogAuthTracker() {
 
       // If previously recorded as signed out, this is a real sign-in
       if (prevState === "signed_out") {
-        posthog.capture("user_signed_in", {
+        trackClientEvent(posthog, "user_signed_in", {
           method: "clerk",
         });
       }
@@ -38,7 +39,7 @@ export function PostHogAuthTracker() {
     } else if (!isSignedIn) {
       // If previously recorded as signed in, this is a real sign-out
       if (prevState === "signed_in") {
-        posthog.capture("user_signed_out", {
+        trackClientEvent(posthog, "user_signed_out", {
           method: "clerk",
         });
         posthog.reset();

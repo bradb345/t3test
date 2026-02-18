@@ -14,7 +14,6 @@ import { Label } from "~/components/ui/label";
 import { Loader2, Check, CheckCircle } from "lucide-react";
 import { cn } from "~/lib/utils";
 import { useUploadThing } from "~/utils/uploadthing";
-import { PaymentSetupStep } from "./PaymentSetupStep";
 
 interface TenancyApplicationModalProps {
   open: boolean;
@@ -22,8 +21,6 @@ interface TenancyApplicationModalProps {
   unitId: number;
   unitNumber: string;
   propertyName: string;
-  monthlyRent: string;
-  currency: string;
   defaultName?: string | null;
   defaultEmail?: string | null;
 }
@@ -34,7 +31,6 @@ interface ApplicationData {
   proofOfAddress?: Record<string, string>;
   emergencyContact?: Record<string, string>;
   photoId?: Record<string, string>;
-  payment?: Record<string, string>;
 }
 
 const APPLICATION_STEPS = [
@@ -43,7 +39,6 @@ const APPLICATION_STEPS = [
   { id: "proofOfAddress", title: "Proof of Address" },
   { id: "emergencyContact", title: "Emergency Contact" },
   { id: "photoId", title: "Photo ID" },
-  { id: "payment", title: "Payment Setup" },
   { id: "review", title: "Review & Submit" },
 ];
 
@@ -55,8 +50,6 @@ export function TenancyApplicationModal({
   unitId,
   unitNumber,
   propertyName,
-  monthlyRent,
-  currency,
   defaultName,
   defaultEmail,
 }: TenancyApplicationModalProps) {
@@ -195,9 +188,6 @@ export function TenancyApplicationModal({
       case 5:
         return !!stepFormData.photoIdFileName;
       case 6:
-        // Informational step — always valid
-        return true;
-      case 7:
         return true; // Review step always valid
       default:
         return false;
@@ -218,7 +208,7 @@ export function TenancyApplicationModal({
       setStepFormData(
         allApplicationData[nextStepId as keyof ApplicationData] ?? {}
       );
-    } else if (nextStepId !== "review" && nextStepId !== "payment") {
+    } else if (nextStepId !== "review") {
       setStepFormData({});
     }
   };
@@ -806,13 +796,6 @@ export function TenancyApplicationModal({
           )}
 
           {currentStep === 6 && (
-            <PaymentSetupStep
-              monthlyRent={monthlyRent}
-              currency={currency}
-            />
-          )}
-
-          {currentStep === 7 && (
             <div className="space-y-4">
               <div className="rounded-lg bg-gray-50 p-4 dark:bg-gray-800">
                 <h4 className="mb-3 font-medium">Personal Information</h4>
@@ -861,17 +844,21 @@ export function TenancyApplicationModal({
               <div className="rounded-lg bg-gray-50 p-4 dark:bg-gray-800">
                 <h4 className="mb-3 font-medium">Documents</h4>
                 <div className="grid grid-cols-2 gap-2 text-sm">
-                  <p>
+                  <p className="min-w-0">
                     <span className="text-muted-foreground">
                       Proof of Address:
                     </span>{" "}
-                    {allApplicationData.proofOfAddress?.proofOfAddressFileName ??
-                      "Not uploaded"}
+                    <span className="block truncate">
+                      {allApplicationData.proofOfAddress?.proofOfAddressFileName ??
+                        "Not uploaded"}
+                    </span>
                   </p>
-                  <p>
+                  <p className="min-w-0">
                     <span className="text-muted-foreground">Photo ID:</span>{" "}
-                    {allApplicationData.photoId?.photoIdFileName ??
-                      "Not uploaded"}
+                    <span className="block truncate">
+                      {allApplicationData.photoId?.photoIdFileName ??
+                        "Not uploaded"}
+                    </span>
                   </p>
                 </div>
               </div>

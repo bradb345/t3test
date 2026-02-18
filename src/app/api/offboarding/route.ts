@@ -15,6 +15,7 @@ import { sendEmail } from "~/lib/email";
 import { getNoticeGivenEmailHtml, getNoticeGivenEmailSubject } from "~/emails/notice-given";
 import { getAuthenticatedUser } from "~/server/auth";
 import type { CreateOffboardingRequest } from "~/types/offboarding";
+import { trackServerEvent } from "~/lib/posthog-events/server";
 
 // GET /api/offboarding - List offboarding notices for current user (as tenant or landlord)
 export async function GET() {
@@ -283,6 +284,13 @@ export async function POST(request: NextRequest) {
         reason: reason ?? undefined,
         dashboardUrl,
       }),
+    });
+
+    // Track notice_given
+    void trackServerEvent(dbUser.auth_id, "notice_given", {
+      lease_id: leaseId,
+      initiated_by: initiatedBy,
+      move_out_date: moveOutDate.toISOString(),
     });
 
     return NextResponse.json({
