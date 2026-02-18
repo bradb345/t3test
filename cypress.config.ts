@@ -87,13 +87,14 @@ export default defineConfig({
             const unitRows = await sql`
               INSERT INTO t3test_unit (
                 property_id, unit_number, num_bedrooms, num_bathrooms,
-                monthly_rent, currency, is_available, is_visible,
+                monthly_rent, deposit, currency, is_available, is_visible,
                 description
               ) VALUES (
                 ${propertyId},
                 '101',
                 2,
                 1.5,
+                2500.00,
                 2500.00,
                 'KYD',
                 true,
