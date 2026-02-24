@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import {
   User,
@@ -14,6 +15,9 @@ import {
   XCircle,
   CheckCircle2,
   Zap,
+  FileCheck,
+  Loader2,
+  Info,
 } from "lucide-react";
 import {
   Dialog,
@@ -27,6 +31,7 @@ import { Separator } from "~/components/ui/separator";
 import Link from "next/link";
 import type { TenantWithLease, User as UserType } from "~/types/landlord";
 import type { OffboardingNotice } from "~/types/offboarding";
+import { useUploadThing } from "~/utils/uploadthing";
 import { GiveNoticeModal } from "~/components/GiveNoticeModal";
 import { CancelNoticeModal } from "./CancelNoticeModal";
 import { CompleteOffboardingModal } from "./CompleteOffboardingModal";
@@ -59,13 +64,19 @@ export function TenantDetailModal({
   currentUser,
   onOffboardingChange,
 }: TenantDetailModalProps) {
+  const router = useRouter();
   const [showGiveNotice, setShowGiveNotice] = useState(false);
   const [showCancelNotice, setShowCancelNotice] = useState(false);
   const [showCompleteOffboarding, setShowCompleteOffboarding] = useState(false);
+  const [isConfirmingSigning, setIsConfirmingSigning] = useState(false);
   const [activeNotice, setActiveNotice] = useState<OffboardingNotice | null>(null);
   const [isLoadingNotice, setIsLoadingNotice] = useState(false);
   const [isFastTracking, setIsFastTracking] = useState(false);
   const [isGeneratingPayment, setIsGeneratingPayment] = useState(false);
+  const [selectedLeaseFile, setSelectedLeaseFile] = useState<File | null>(null);
+  const [uploadedLeaseUrl, setUploadedLeaseUrl] = useState<string | null>(null);
+  const [isUploadingLease, setIsUploadingLease] = useState(false);
+  const { startUpload: startLeaseUpload } = useUploadThing("documents");
   const [alertModal, setAlertModal] = useState<AlertModalState>({
     open: false,
     title: "",
@@ -121,6 +132,9 @@ export function TenantDetailModal({
   const canComplete = activeNotice && activeNotice.status !== "completed" && activeNotice.status !== "cancelled";
 
   const getStatusBadge = () => {
+    if (tenant.lease.status === "pending_signature") {
+      return <Badge className="bg-blue-100 text-blue-800">Pending Signature</Badge>;
+    }
     if (tenant.lease.status === "notice_given" && activeNotice) {
       const daysLeft = getDaysUntilMoveOut(new Date(activeNotice.moveOutDate));
       return (
@@ -346,6 +360,118 @@ export function TenantDetailModal({
               </div>
             </div>
 
+            {/* Confirm Lease Signing */}
+            {tenant.lease.status === "pending_signature" && (
+              <>
+                <Separator />
+                <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 space-y-3">
+                  <div className="flex items-start gap-2">
+                    <Info className="h-4 w-4 flex-shrink-0 text-blue-600 mt-0.5" />
+                    <p className="text-sm text-blue-800">
+                      Upload the signed lease document, then confirm the signing below.
+                    </p>
+                  </div>
+
+                  {/* File upload area */}
+                  {!uploadedLeaseUrl ? (
+                    <div>
+                      <input
+                        type="file"
+                        accept=".pdf,image/*"
+                        data-testid="lease-document-upload"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          setSelectedLeaseFile(file);
+                          setIsUploadingLease(true);
+                          try {
+                            const uploadedFiles = await startLeaseUpload([file]);
+                            if (uploadedFiles?.[0]) {
+                              setUploadedLeaseUrl(uploadedFiles[0].url);
+                            }
+                          } catch {
+                            showAlert({
+                              title: "Upload Failed",
+                              description: "Failed to upload lease document. Please try again.",
+                              variant: "error",
+                            });
+                            setSelectedLeaseFile(null);
+                          } finally {
+                            setIsUploadingLease(false);
+                          }
+                        }}
+                        className="hidden"
+                        id="lease-file-input"
+                      />
+                      <label
+                        htmlFor="lease-file-input"
+                        className="flex cursor-pointer items-center justify-center gap-2 rounded-md border-2 border-dashed border-blue-300 bg-blue-50 p-3 text-sm text-blue-700 hover:bg-blue-100 transition-colors"
+                      >
+                        {isUploadingLease ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Uploading {selectedLeaseFile?.name}...
+                          </>
+                        ) : (
+                          <>
+                            <FileText className="h-4 w-4" />
+                            Select signed lease document (PDF or image)
+                          </>
+                        )}
+                      </label>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 rounded-md border border-green-200 bg-green-50 p-2 text-sm text-green-800">
+                      <CheckCircle2 className="h-4 w-4 flex-shrink-0 text-green-600" />
+                      <span className="truncate">{selectedLeaseFile?.name ?? "Lease document"} uploaded</span>
+                    </div>
+                  )}
+
+                  <Button
+                    onClick={async () => {
+                      setIsConfirmingSigning(true);
+                      try {
+                        const response = await fetch(
+                          `/api/landlord/leases/${tenant.lease.id}/confirm-signing`,
+                          {
+                            method: "PATCH",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ documentUrl: uploadedLeaseUrl }),
+                          }
+                        );
+                        if (!response.ok) {
+                          const data = (await response.json()) as { error?: string };
+                          throw new Error(data.error ?? "Failed to confirm signing");
+                        }
+                        setUploadedLeaseUrl(null);
+                        setSelectedLeaseFile(null);
+                        onOpenChange(false);
+                        router.refresh();
+                      } catch (error) {
+                        showAlert({
+                          title: "Confirmation Failed",
+                          description:
+                            error instanceof Error ? error.message : "An error occurred",
+                          variant: "error",
+                        });
+                      } finally {
+                        setIsConfirmingSigning(false);
+                      }
+                    }}
+                    disabled={isConfirmingSigning || !uploadedLeaseUrl}
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    {isConfirmingSigning ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <FileCheck className="h-4 w-4 mr-2" />
+                    )}
+                    {isConfirmingSigning ? "Confirming..." : "Confirm Lease Signed"}
+                  </Button>
+                </div>
+              </>
+            )}
+
             {/* Active Notice Display */}
             {activeNotice && activeNotice.status !== "cancelled" && activeNotice.status !== "completed" && (
               <>
@@ -397,7 +523,7 @@ export function TenantDetailModal({
             </div>
 
             {/* Offboarding Actions */}
-            {tenant.lease.status !== "terminated" && (
+            {tenant.lease.status !== "terminated" && tenant.lease.status !== "pending_signature" && (
               <>
                 <Separator />
                 <div className="space-y-2">

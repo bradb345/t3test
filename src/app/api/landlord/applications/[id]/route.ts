@@ -7,7 +7,6 @@ import {
   properties,
   user,
   leases,
-  payments,
 } from "~/server/db/schema";
 import { eq, and } from "drizzle-orm";
 import { createAndEmitNotification } from "~/server/notification-emitter";
@@ -235,44 +234,8 @@ export async function PATCH(request: NextRequest, props: { params: Promise<{ id:
         monthlyRent: applicationData.unit.monthlyRent ?? "0",
         securityDeposit: applicationData.unit.deposit,
         rentDueDay,
-        status: "active",
+        status: "pending_signature",
       }).returning();
-
-      // 3. Create move-in payment
-      if (newLease) {
-        const rentAmount = parseFloat(applicationData.unit.monthlyRent ?? "0");
-        const depositAmount = parseFloat(applicationData.unit.deposit ?? "0");
-        const totalAmount = rentAmount + depositAmount;
-
-        if (totalAmount > 0) {
-          const [existingMoveIn] = await db
-            .select({ id: payments.id })
-            .from(payments)
-            .where(
-              and(
-                eq(payments.leaseId, newLease.id),
-                eq(payments.type, "move_in")
-              )
-            )
-            .limit(1);
-
-          if (!existingMoveIn) {
-            await db.insert(payments).values({
-              tenantId: applicationData.applicant.id,
-              leaseId: newLease.id,
-              amount: totalAmount.toFixed(2),
-              currency: newLease.currency,
-              type: "move_in",
-              status: "pending",
-              dueDate: leaseStart,
-              notes: JSON.stringify({
-                rentAmount: rentAmount.toFixed(2),
-                securityDeposit: depositAmount.toFixed(2),
-              }),
-            });
-          }
-        }
-      }
 
       // 4. Mark unit as unavailable and hidden
       await db
@@ -301,7 +264,7 @@ export async function PATCH(request: NextRequest, props: { params: Promise<{ id:
         : "Application Update";
     const notificationMessage =
       body.decision === "approved"
-        ? `Your application for Unit ${applicationData.unit.unitNumber} at ${applicationData.property.name} has been approved! Your lease has been created. Please sign in to make your move-in payment.`
+        ? `Your application for Unit ${applicationData.unit.unitNumber} at ${applicationData.property.name} has been approved! Your landlord will finalize the lease signing. You'll be notified once the lease is active.`
         : `Your application for Unit ${applicationData.unit.unitNumber} at ${applicationData.property.name} has not been approved.${
             body.decisionNotes ? ` Reason: ${body.decisionNotes}` : ""
           }`;
@@ -322,7 +285,7 @@ export async function PATCH(request: NextRequest, props: { params: Promise<{ id:
       }),
       actionUrl:
         body.decision === "approved"
-          ? "/dashboard?tab=payments"
+          ? "/dashboard"
           : undefined,
     });
 
@@ -333,6 +296,7 @@ export async function PATCH(request: NextRequest, props: { params: Promise<{ id:
         unit_id: applicationData.unit.id,
         property_id: applicationData.property.id,
         applicant_id: applicationData.applicant.id,
+        message_body: body.decisionNotes?.trim() ?? null,
         source: "api",
       });
 

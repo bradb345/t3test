@@ -447,8 +447,11 @@ export function ApplicationReviewModal({
                 </div>
 
                 <p className="text-xs text-muted-foreground">
-                  Approving will create a lease and move-in payment for this
-                  tenant.
+                  Approving will create a lease in pending status. You are
+                  responsible for providing and executing the lease agreement
+                  with your tenant outside of this platform. Once the lease is
+                  signed, confirm it from the Tenants tab to activate the lease
+                  and trigger the move-in payment.
                 </p>
               </div>
             )}

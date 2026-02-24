@@ -470,14 +470,15 @@ async function cleanupOffboardingTestData() {
       `;
       console.log(`   🗑️  Deleted ${deletedLeases.count} leases`);
 
-      // Mark those units as available
+      // Mark those units as available and remove from Algolia
       for (const row of leaseUnits) {
         await sql`
           UPDATE t3test_unit
           SET is_available = true, is_visible = false, updated_at = NOW()
           WHERE id = ${row.unit_id}
         `;
-        console.log(`   🏠 Reset unit ${row.unit_id} to available`);
+        await removeUnitFromAlgolia(row.unit_id as number);
+        console.log(`   🏠 Reset unit ${row.unit_id} to available and removed from Algolia`);
       }
     } else {
       console.log(`   ⚠️  User not found in database, skipping lease/notice cleanup`);

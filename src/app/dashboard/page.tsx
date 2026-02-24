@@ -54,7 +54,7 @@ export default async function TenantDashboard() {
     .where(
       and(
         eq(leases.tenantId, dbUser.id),
-        or(eq(leases.status, "active"), eq(leases.status, "notice_given"))
+        or(eq(leases.status, "active"), eq(leases.status, "notice_given"), eq(leases.status, "pending_signature"))
       )
     )
     .orderBy(asc(leases.status), desc(leases.createdAt))
