@@ -63,9 +63,16 @@ export async function DELETE(
     return NextResponse.json({ error: "Document not found" }, { status: 404 });
   }
 
-  // Delete the file from UploadThing
+  // Delete the file from UploadThing (best-effort, don't block DB deletion)
   if (document.fileUrl) {
-    await deleteFilesFromUploadThing([document.fileUrl], "tenant-document-delete");
+    try {
+      await deleteFilesFromUploadThing([document.fileUrl], "tenant-document-delete");
+    } catch (error) {
+      console.error("Failed to delete file from UploadThing", {
+        error,
+        fileUrl: document.fileUrl,
+      });
+    }
   }
 
   // Delete the document record

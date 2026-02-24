@@ -26,6 +26,29 @@ export async function PATCH(
       );
     }
 
+    // Validate documentUrl is a safe HTTPS URL from a known upload host
+    try {
+      const parsedUrl = new URL(body.documentUrl);
+      const isHttps = parsedUrl.protocol === "https:";
+      const hostname = parsedUrl.hostname;
+      const isAllowedHost =
+        hostname === "utfs.io" ||
+        hostname === "uploadthing.com" ||
+        hostname.endsWith(".ufs.sh") ||
+        hostname.endsWith(".uploadthing.com");
+      if (!isHttps || !isAllowedHost) {
+        return NextResponse.json(
+          { error: "Invalid document URL" },
+          { status: 400 }
+        );
+      }
+    } catch {
+      return NextResponse.json(
+        { error: "Invalid document URL" },
+        { status: 400 }
+      );
+    }
+
     const leaseId = parseInt(params.id);
     if (isNaN(leaseId)) {
       return NextResponse.json(
@@ -106,7 +129,7 @@ export async function PATCH(
             currency: updatedLease.currency,
             type: "move_in",
             status: "pending",
-            dueDate: new Date(),
+            dueDate: leaseData.lease.leaseStart,
             notes: JSON.stringify({
               rentAmount: rentAmount.toFixed(2),
               securityDeposit: depositAmount.toFixed(2),

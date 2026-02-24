@@ -398,6 +398,7 @@ export function TenantDetailModal({
                             setSelectedLeaseFile(null);
                           } finally {
                             setIsUploadingLease(false);
+                            e.target.value = "";
                           }
                         }}
                         className="hidden"
