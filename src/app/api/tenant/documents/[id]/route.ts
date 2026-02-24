@@ -4,6 +4,7 @@ import { db } from "~/server/db";
 import { tenantDocuments, tenantProfiles, user } from "~/server/db/schema";
 import { eq, and } from "drizzle-orm";
 import { hasRole } from "~/lib/roles";
+import { deleteFilesFromUploadThing } from "~/lib/uploadthing";
 
 // DELETE: Delete a document
 export async function DELETE(
@@ -60,6 +61,18 @@ export async function DELETE(
 
   if (!document) {
     return NextResponse.json({ error: "Document not found" }, { status: 404 });
+  }
+
+  // Delete the file from UploadThing (best-effort, don't block DB deletion)
+  if (document.fileUrl) {
+    try {
+      await deleteFilesFromUploadThing([document.fileUrl], "tenant-document-delete");
+    } catch (error) {
+      console.error("Failed to delete file from UploadThing", {
+        error,
+        fileUrl: document.fileUrl,
+      });
+    }
   }
 
   // Delete the document record

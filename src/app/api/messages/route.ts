@@ -218,6 +218,7 @@ export async function POST(request: NextRequest) {
         message_id: newMessage?.id,
         message_type: body.type ?? "general",
         has_property_context: !!body.propertyId,
+        message_body: body.content.trim(),
         source: "api",
       });
 

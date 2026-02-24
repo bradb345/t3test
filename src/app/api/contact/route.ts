@@ -68,6 +68,7 @@ export async function POST(request: Request) {
     // Track contact form submission in PostHog (use email as distinct ID for anonymous users)
     await trackServerEvent(email, "contact_form_submitted", {
         subject_category: subject,
+        message_body: message,
         source: "api",
       });
 

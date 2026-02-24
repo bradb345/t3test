@@ -3,11 +3,12 @@
 /**
  * Tenant Journeys E2E Tests
  *
- * Tests four tenant journeys end-to-end:
+ * Tests five tenant journeys end-to-end:
  * 1. Viewing Requests — tenant submits, landlord sees and approves it
  * 2. Contact & Messaging — tenant contacts landlord, both exchange messages
- * 3. Tenancy Applications — tenant submits full application, landlord reviews and approves it (creates lease + payment)
- * 4. Move-In Payment — tenant signs in and pays move-in via Stripe (lease created on approval)
+ * 3. Tenancy Applications — tenant submits full application, landlord reviews and approves it (creates lease)
+ * 4. Confirm Lease Signing — landlord uploads signed lease document and confirms signing (creates payment)
+ * 5. Move-In Payment — tenant signs in and pays move-in via Stripe
  *
  * Uses DB tasks to create a test property + unit (avoids flaky Google Places UI).
  */
@@ -432,9 +433,56 @@ describe("Tenant Journeys", () => {
     });
   });
 
-  // ─── Journey 4: Move-In Payment (via approval) ─────────────────
+  // ─── Journey 4: Confirm Lease Signing ────────────────────────────
 
-  describe("Journey 4: Move-In Payment", () => {
+  describe("Journey 4: Landlord confirms lease signing", () => {
+    it("landlord uploads signed lease and confirms signing", () => {
+      loginAsLandlord();
+      cy.visit("/my-properties?tab=tenants");
+
+      // Wait for tenants tab to load
+      cy.contains("Tenants", { timeout: 15000 }).should("be.visible");
+
+      // Find the tenant with Pending Signature badge and open details
+      cy.contains("Pending Signature", { timeout: 10000 }).should("be.visible");
+      cy.contains("Pending Signature")
+        .closest(".rounded-xl, .hover\\:shadow-md, [class*='card'], [class*='Card']")
+        .contains("button", "View Details")
+        .click();
+
+      // Modal should open with pending signature section
+      cy.get('[role="dialog"]', { timeout: 10000 }).should("be.visible");
+      cy.contains("Upload the signed lease document").should("be.visible");
+
+      // Confirm button should be disabled before upload
+      cy.contains("button", "Confirm Lease Signed").should("be.disabled");
+
+      // Upload the lease document
+      cy.get('[data-testid="lease-document-upload"]').selectFile(
+        "cypress/fixtures/documents/sample-lease-agreement.pdf",
+        { force: true }
+      );
+
+      // Wait for upload to complete - green success indicator appears
+      cy.contains("uploaded", { timeout: 30000 }).should("be.visible");
+
+      // Confirm button should now be enabled
+      cy.contains("button", "Confirm Lease Signed").should("not.be.disabled");
+
+      // Click confirm
+      cy.contains("button", "Confirm Lease Signed").click();
+
+      // Modal should close
+      cy.get('[role="dialog"]', { timeout: 10000 }).should("not.exist");
+
+      // Wait for page refresh and verify tenant status changed to Active
+      cy.contains("Active", { timeout: 10000 }).should("be.visible");
+    });
+  });
+
+  // ─── Journey 5: Move-In Payment (via approval) ─────────────────
+
+  describe("Journey 5: Move-In Payment", () => {
     it("tenant completes move-in payment with test card", () => {
       loginAsTenant();
 

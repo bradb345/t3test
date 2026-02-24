@@ -81,6 +81,7 @@ export type ServerEventMap = {
     property_id: number;
     source: string;
     has_images: boolean;
+    message_body: string;
   };
   maintenance_status_updated: {
     request_id: number;
@@ -94,11 +95,13 @@ export type ServerEventMap = {
     unit_id: number;
     property_id: number;
     has_preferred_date: boolean;
+    message_body: string | null;
     source: string;
   };
   viewing_request_responded: {
     request_id: number;
     response_status: string;
+    message_body: string | null;
   };
   tenancy_application_submitted: {
     application_id: number | undefined;
@@ -114,6 +117,17 @@ export type ServerEventMap = {
     unit_id: number;
     property_id: number;
     applicant_id: number;
+    message_body: string | null;
+    source: string;
+  };
+
+  // Lease signing
+  lease_signing_confirmed: {
+    lease_id: number;
+    unit_id: number;
+    property_id: number;
+    tenant_id: number;
+    has_document: boolean;
     source: string;
   };
 
@@ -122,6 +136,7 @@ export type ServerEventMap = {
     lease_id: number;
     initiated_by: string;
     move_out_date: string;
+    message_body: string | null;
   };
   notice_cancelled: {
     lease_id: number;
@@ -150,10 +165,12 @@ export type ServerEventMap = {
     message_id: number | undefined;
     message_type: string;
     has_property_context: boolean;
+    message_body: string;
     source: string;
   };
   contact_form_submitted: {
     subject_category: string;
+    message_body: string;
     source: string;
   };
 };
@@ -189,6 +206,12 @@ export type ClientEventMap = {
   onboarding_submitted: {
     unit_id: number | undefined;
     total_steps_completed: number;
+  };
+
+  // Lease
+  signed_lease_viewed: {
+    lease_id: number;
+    unit_id: number;
   };
 
   // Search
