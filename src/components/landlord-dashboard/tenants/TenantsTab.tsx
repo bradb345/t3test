@@ -24,7 +24,7 @@ interface TenantsTabProps {
 export function TenantsTab({ tenants, currentUser }: TenantsTabProps) {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("active");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selectedTenant, setSelectedTenant] = useState<TenantWithLease | null>(null);
 
   const filteredTenants = tenants.filter((tenant) => {
@@ -69,6 +69,7 @@ export function TenantsTab({ tenants, currentUser }: TenantsTabProps) {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Status</SelectItem>
+            <SelectItem value="pending_signature">Pending Signature</SelectItem>
             <SelectItem value="active">Active</SelectItem>
             <SelectItem value="notice_given">Notice Given</SelectItem>
             <SelectItem value="terminated">Completed</SelectItem>

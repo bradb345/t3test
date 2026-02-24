@@ -148,6 +148,7 @@ export async function POST(request: NextRequest) {
         unit_id: lease.unitId,
         property_id: leaseData.property.id,
         has_images: !!body.imageUrls && body.imageUrls.length > 0,
+        message_body: body.description.trim(),
         source: "api",
       });
   }

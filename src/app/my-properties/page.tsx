@@ -116,14 +116,14 @@ export default async function MyPropertiesPage() {
         .where(
           and(
             inArray(leases.unitId, unitIds),
-            or(eq(leases.status, "active"), eq(leases.status, "notice_given"), eq(leases.status, "terminated"))
+            or(eq(leases.status, "active"), eq(leases.status, "notice_given"), eq(leases.status, "terminated"), eq(leases.status, "pending_signature"))
           )
         )
         .orderBy(desc(leases.createdAt))
     : [];
 
   // Calculate stats (exclude terminated leases from occupancy/revenue)
-  const currentLeases = activeLeases.filter((l) => l.lease.status !== "terminated");
+  const currentLeases = activeLeases.filter((l) => l.lease.status !== "terminated" && l.lease.status !== "pending_signature");
   const occupiedUnits = currentLeases.length;
   const totalUnits = allUnits.length;
   const occupancyRate = totalUnits > 0 ? (occupiedUnits / totalUnits) * 100 : 0;

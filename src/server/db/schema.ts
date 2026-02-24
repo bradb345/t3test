@@ -237,6 +237,7 @@ export const leases = createTable(
     terms: text("terms"),
     renewalOption: boolean("renewal_option").default(false),
     autoRenewal: boolean("auto_renewal").default(false),
+    leaseSignedAt: timestamp("lease_signed_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .default(sql`CURRENT_TIMESTAMP`)
       .notNull(),

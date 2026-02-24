@@ -18,6 +18,9 @@ export function TenantCard({ tenant, onViewDetails }: TenantCardProps) {
   const daysUntilExpiration = Math.ceil((leaseEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 
   const getStatusBadge = () => {
+    if (tenant.lease.status === "pending_signature") {
+      return <Badge className="bg-blue-100 text-blue-800">Pending Signature</Badge>;
+    }
     if (tenant.lease.status === "notice_given") {
       return <Badge className="bg-orange-100 text-orange-800">Notice Given</Badge>;
     }
