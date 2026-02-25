@@ -114,12 +114,16 @@ export async function handleCheckoutSessionCompleted(
   // Send email to tenant
   const tenantDetails = await getUserDetails(payment.tenantId);
   if (tenantDetails) {
-    void sendAppEmail(tenantDetails.email, "payment_completed", {
-      tenantName: tenantDetails.name,
-      amount: payment.amount,
-      currency: payment.currency,
-      paymentType: payment.type,
-    });
+    try {
+      await sendAppEmail(tenantDetails.email, "payment_completed", {
+        tenantName: tenantDetails.name,
+        amount: payment.amount,
+        currency: payment.currency,
+        paymentType: payment.type,
+      });
+    } catch (error) {
+      console.error("Failed to send payment completed email:", error);
+    }
   }
 
   // Track payment_completed
@@ -291,11 +295,15 @@ export async function handlePaymentIntentFailed(
   // Send email to tenant
   const failedTenantDetails = await getUserDetails(payment.tenantId);
   if (failedTenantDetails) {
-    void sendAppEmail(failedTenantDetails.email, "payment_failed", {
-      tenantName: failedTenantDetails.name,
-      amount: payment.amount,
-      currency: payment.currency,
-    });
+    try {
+      await sendAppEmail(failedTenantDetails.email, "payment_failed", {
+        tenantName: failedTenantDetails.name,
+        amount: payment.amount,
+        currency: payment.currency,
+      });
+    } catch (error) {
+      console.error("Failed to send payment failed email:", error);
+    }
   }
 
   // Track payment_failed

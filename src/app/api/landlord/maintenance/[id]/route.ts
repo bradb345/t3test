@@ -181,13 +181,17 @@ export async function PATCH(request: NextRequest, props: { params: Promise<{ id:
 
         if (tenant?.email) {
           const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-          void sendAppEmail(tenant.email, "maintenance_update", {
-            tenantName: `${tenant.firstName} ${tenant.lastName}`,
-            title: existingRequest.request.title,
-            newStatus: body.status,
-            notes: body.notes ?? undefined,
-            dashboardUrl: `${baseUrl}/dashboard?tab=maintenance`,
-          });
+          try {
+            await sendAppEmail(tenant.email, "maintenance_update", {
+              tenantName: `${tenant.firstName} ${tenant.lastName}`,
+              title: existingRequest.request.title,
+              newStatus: body.status,
+              notes: body.notes ?? undefined,
+              dashboardUrl: `${baseUrl}/dashboard?tab=maintenance`,
+            });
+          } catch (error) {
+            console.error("Failed to send maintenance update email:", error);
+          }
         }
       }
     }

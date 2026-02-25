@@ -1,9 +1,17 @@
 import type { EmailMap } from "~/lib/emails";
+import { escapeHtml } from "~/lib/html";
 
 export function maintenanceRequestEmail(
   params: EmailMap["maintenance_request"]
 ): { subject: string; html: string } {
-  const { landlordName, tenantName, title, category, priority, unitNumber, propertyName, dashboardUrl } = params;
+  const { priority, dashboardUrl } = params;
+
+  const landlordName = escapeHtml(params.landlordName);
+  const tenantName = escapeHtml(params.tenantName);
+  const title = escapeHtml(params.title);
+  const category = escapeHtml(params.category);
+  const unitNumber = escapeHtml(params.unitNumber);
+  const propertyName = escapeHtml(params.propertyName);
 
   const priorityColors: Record<string, string> = {
     low: "#10b981",

@@ -1,9 +1,13 @@
 import type { EmailMap } from "~/lib/emails";
+import { escapeHtml } from "~/lib/html";
 
 export function applicationRejectedEmail(
   params: EmailMap["application_rejected"]
 ): { subject: string; html: string } {
-  const { applicantName, unitNumber, propertyName, decisionNotes } = params;
+  const applicantName = escapeHtml(params.applicantName);
+  const unitNumber = escapeHtml(params.unitNumber);
+  const propertyName = escapeHtml(params.propertyName);
+  const decisionNotes = params.decisionNotes ? escapeHtml(params.decisionNotes) : undefined;
 
   return {
     subject: `Application Update - Unit ${unitNumber} at ${propertyName}`,

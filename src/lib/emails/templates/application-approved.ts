@@ -1,9 +1,14 @@
 import type { EmailMap } from "~/lib/emails";
+import { escapeHtml } from "~/lib/html";
 
 export function applicationApprovedEmail(
   params: EmailMap["application_approved"]
 ): { subject: string; html: string } {
-  const { applicantName, unitNumber, propertyName, monthlyRent, currency, dashboardUrl } = params;
+  const { monthlyRent, currency, dashboardUrl } = params;
+
+  const applicantName = escapeHtml(params.applicantName);
+  const unitNumber = escapeHtml(params.unitNumber);
+  const propertyName = escapeHtml(params.propertyName);
 
   const formattedRent = new Intl.NumberFormat("en-US", {
     style: "currency",

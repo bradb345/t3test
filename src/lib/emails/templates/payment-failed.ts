@@ -1,9 +1,11 @@
 import type { EmailMap } from "~/lib/emails";
+import { escapeHtml } from "~/lib/html";
 
 export function paymentFailedEmail(
   params: EmailMap["payment_failed"]
 ): { subject: string; html: string } {
-  const { tenantName, amount, currency } = params;
+  const { amount, currency } = params;
+  const tenantName = escapeHtml(params.tenantName);
 
   const formattedAmount = new Intl.NumberFormat("en-US", {
     style: "currency",

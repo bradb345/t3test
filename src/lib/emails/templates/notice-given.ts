@@ -1,20 +1,17 @@
 import type { EmailMap } from "~/lib/emails";
+import { escapeHtml } from "~/lib/html";
 import { formatMoveOutDate } from "~/lib/offboarding";
 
 export function noticeGivenEmail(
   params: EmailMap["notice_given"]
 ): { subject: string; html: string } {
-  const {
-    recipientName,
-    initiatorName,
-    initiatedBy,
-    unitNumber,
-    propertyAddress,
-    noticeDate,
-    moveOutDate,
-    reason,
-    dashboardUrl,
-  } = params;
+  const { initiatedBy, noticeDate, moveOutDate, dashboardUrl } = params;
+
+  const recipientName = escapeHtml(params.recipientName);
+  const initiatorName = escapeHtml(params.initiatorName);
+  const unitNumber = escapeHtml(params.unitNumber);
+  const propertyAddress = escapeHtml(params.propertyAddress);
+  const reason = params.reason ? escapeHtml(params.reason) : undefined;
 
   const formattedNoticeDate = formatMoveOutDate(noticeDate);
   const formattedMoveOutDate = formatMoveOutDate(moveOutDate);

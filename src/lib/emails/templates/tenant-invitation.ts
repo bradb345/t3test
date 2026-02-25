@@ -1,9 +1,15 @@
 import type { EmailMap } from "~/lib/emails";
+import { escapeHtml } from "~/lib/html";
 
 export function tenantInvitationEmail(
   params: EmailMap["tenant_invitation"]
 ): { subject: string; html: string } {
-  const { tenantName, landlordName, unitAddress, unitNumber, onboardingUrl, expiresAt } = params;
+  const { onboardingUrl, expiresAt } = params;
+
+  const tenantName = escapeHtml(params.tenantName);
+  const landlordName = escapeHtml(params.landlordName);
+  const unitAddress = escapeHtml(params.unitAddress);
+  const unitNumber = escapeHtml(params.unitNumber);
 
   const expiryDate = expiresAt.toLocaleDateString("en-US", {
     month: "long",

@@ -1,18 +1,16 @@
 import type { EmailMap } from "~/lib/emails";
+import { escapeHtml } from "~/lib/html";
 
 export function onboardingCompleteEmail(
   params: EmailMap["onboarding_complete"]
 ): { subject: string; html: string } {
-  const {
-    landlordName,
-    tenantName,
-    tenantEmail,
-    unitAddress,
-    unitNumber,
-    isExistingTenant,
-    tenantAttached,
-    dashboardUrl,
-  } = params;
+  const { isExistingTenant, tenantAttached, dashboardUrl } = params;
+
+  const landlordName = escapeHtml(params.landlordName);
+  const tenantName = escapeHtml(params.tenantName);
+  const tenantEmail = escapeHtml(params.tenantEmail);
+  const unitAddress = escapeHtml(params.unitAddress);
+  const unitNumber = escapeHtml(params.unitNumber);
 
   return {
     subject: `${tenantName} has completed their tenant onboarding`,

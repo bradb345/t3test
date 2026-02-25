@@ -143,16 +143,20 @@ export async function POST(request: NextRequest) {
   // Send email to landlord
   if (landlord?.email && newRequest) {
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-    void sendAppEmail(landlord.email, "maintenance_request", {
-      landlordName: `${landlord.first_name} ${landlord.last_name}`,
-      tenantName: `${dbUser.first_name} ${dbUser.last_name}`,
-      title: body.title.trim(),
-      category: body.category,
-      priority: body.priority,
-      unitNumber: leaseData.unit.unitNumber,
-      propertyName: leaseData.property.name,
-      dashboardUrl: `${baseUrl}/my-properties?tab=maintenance`,
-    });
+    try {
+      await sendAppEmail(landlord.email, "maintenance_request", {
+        landlordName: `${landlord.first_name} ${landlord.last_name}`,
+        tenantName: `${dbUser.first_name} ${dbUser.last_name}`,
+        title: body.title.trim(),
+        category: body.category,
+        priority: body.priority,
+        unitNumber: leaseData.unit.unitNumber,
+        propertyName: leaseData.property.name,
+        dashboardUrl: `${baseUrl}/my-properties?tab=maintenance`,
+      });
+    } catch (error) {
+      console.error("Failed to send maintenance request email:", error);
+    }
   }
 
   // Track maintenance request creation in PostHog

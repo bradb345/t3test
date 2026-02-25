@@ -1,9 +1,14 @@
 import type { EmailMap } from "~/lib/emails";
+import { escapeHtml } from "~/lib/html";
 
 export function maintenanceUpdateEmail(
   params: EmailMap["maintenance_update"]
 ): { subject: string; html: string } {
-  const { tenantName, title, newStatus, notes, dashboardUrl } = params;
+  const { newStatus, dashboardUrl } = params;
+
+  const tenantName = escapeHtml(params.tenantName);
+  const title = escapeHtml(params.title);
+  const notes = params.notes ? escapeHtml(params.notes) : undefined;
 
   const statusLabels: Record<string, string> = {
     in_progress: "In Progress",
