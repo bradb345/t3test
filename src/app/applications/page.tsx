@@ -7,7 +7,7 @@ import {
   properties,
   user,
 } from "~/server/db/schema";
-import { eq, desc, and, inArray } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 import Link from "next/link";
 import { formatCurrency } from "~/lib/currency";
 
@@ -29,22 +29,6 @@ export default async function ApplicationsPage() {
     redirect("/");
   }
 
-  // Check if user has any pending or under_review applications
-  const [pendingApp] = await db
-    .select({ id: tenancyApplications.id })
-    .from(tenancyApplications)
-    .where(
-      and(
-        eq(tenancyApplications.applicantUserId, dbUser.id),
-        inArray(tenancyApplications.status, ["pending", "under_review"])
-      )
-    )
-    .limit(1);
-
-  if (!pendingApp) {
-    redirect("/");
-  }
-
   // Fetch all applications for this user
   const applications = await db
     .select({
@@ -57,6 +41,11 @@ export default async function ApplicationsPage() {
     .innerJoin(properties, eq(properties.id, units.propertyId))
     .where(eq(tenancyApplications.applicantUserId, dbUser.id))
     .orderBy(desc(tenancyApplications.createdAt));
+
+  // Redirect if user has no applications at all
+  if (applications.length === 0) {
+    redirect("/");
+  }
 
   const statusColors: Record<string, string> = {
     pending: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400",
