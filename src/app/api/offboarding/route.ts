@@ -11,8 +11,7 @@ import {
 import { eq, and, or, inArray } from "drizzle-orm";
 import { calculateMoveOutDate } from "~/lib/offboarding";
 import { createAndEmitNotification } from "~/server/notification-emitter";
-import { sendEmail } from "~/lib/email";
-import { getNoticeGivenEmailHtml, getNoticeGivenEmailSubject } from "~/emails/notice-given";
+import { sendAppEmail } from "~/lib/emails/server";
 import { getAuthenticatedUser } from "~/server/auth";
 import type { CreateOffboardingRequest } from "~/types/offboarding";
 import { trackServerEvent } from "~/lib/posthog-events/server";
@@ -270,20 +269,16 @@ export async function POST(request: NextRequest) {
       ? `${baseUrl}/my-properties?tab=tenants`
       : `${baseUrl}/dashboard`;
 
-    await sendEmail({
-      to: notifyUserEmail,
-      subject: getNoticeGivenEmailSubject(unit.unitNumber),
-      html: getNoticeGivenEmailHtml({
-        recipientName,
-        initiatorName,
-        initiatedBy,
-        unitNumber: unit.unitNumber,
-        propertyAddress: property.address,
-        noticeDate,
-        moveOutDate,
-        reason: reason ?? undefined,
-        dashboardUrl,
-      }),
+    await sendAppEmail(notifyUserEmail, "notice_given", {
+      recipientName,
+      initiatorName,
+      initiatedBy,
+      unitNumber: unit.unitNumber,
+      propertyAddress: property.address,
+      noticeDate,
+      moveOutDate,
+      reason: reason ?? undefined,
+      dashboardUrl,
     });
 
     // Track notice_given

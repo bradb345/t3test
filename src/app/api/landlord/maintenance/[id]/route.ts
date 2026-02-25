@@ -5,10 +5,12 @@ import {
   units,
   properties,
   notifications,
+  user,
 } from "~/server/db/schema";
 import { eq, and, like } from "drizzle-orm";
 import { hasRole } from "~/lib/roles";
 import { createAndEmitNotification } from "~/server/notification-emitter";
+import { sendAppEmail } from "~/lib/emails/server";
 import {
   VALID_MAINTENANCE_STATUSES,
   MAINTENANCE_STATUS_TRANSITIONS,
@@ -169,6 +171,28 @@ export async function PATCH(request: NextRequest, props: { params: Promise<{ id:
           }),
           actionUrl: `/dashboard?tab=maintenance`,
         });
+
+        // Send email to tenant
+        const [tenant] = await db
+          .select({ firstName: user.first_name, lastName: user.last_name, email: user.email })
+          .from(user)
+          .where(eq(user.id, existingRequest.request.requestedBy))
+          .limit(1);
+
+        if (tenant?.email) {
+          const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+          try {
+            await sendAppEmail(tenant.email, "maintenance_update", {
+              tenantName: `${tenant.firstName} ${tenant.lastName}`,
+              title: existingRequest.request.title,
+              newStatus: body.status,
+              notes: body.notes ?? undefined,
+              dashboardUrl: `${baseUrl}/dashboard?tab=maintenance`,
+            });
+          } catch (error) {
+            console.error("Failed to send maintenance update email:", error);
+          }
+        }
       }
     }
 
