@@ -7,7 +7,7 @@ import {
   properties,
   user,
 } from "~/server/db/schema";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and, inArray } from "drizzle-orm";
 import Link from "next/link";
 import { formatCurrency } from "~/lib/currency";
 
@@ -26,6 +26,22 @@ export default async function ApplicationsPage() {
     .limit(1);
 
   if (!dbUser) {
+    redirect("/");
+  }
+
+  // Check if user has any pending or under_review applications
+  const [pendingApp] = await db
+    .select({ id: tenancyApplications.id })
+    .from(tenancyApplications)
+    .where(
+      and(
+        eq(tenancyApplications.applicantUserId, dbUser.id),
+        inArray(tenancyApplications.status, ["pending", "under_review"])
+      )
+    )
+    .limit(1);
+
+  if (!pendingApp) {
     redirect("/");
   }
 
