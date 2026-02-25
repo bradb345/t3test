@@ -4,6 +4,7 @@ import { db } from "~/server/db";
 import { leases, payments, units, properties, user } from "~/server/db/schema";
 import { eq, and } from "drizzle-orm";
 import { createAndEmitNotification } from "~/server/notification-emitter";
+import { sendAppEmail } from "~/lib/emails/server";
 import { trackServerEvent } from "~/lib/posthog-events/server";
 
 // PATCH: Confirm lease has been signed externally
@@ -152,6 +153,19 @@ export async function PATCH(
       }),
       actionUrl: "/dashboard?tab=payments",
     });
+
+    // Send email notification to tenant
+    if (leaseData.tenant.email) {
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+      await sendAppEmail(leaseData.tenant.email, "lease_activated", {
+        tenantName: `${leaseData.tenant.first_name} ${leaseData.tenant.last_name}`,
+        unitNumber: leaseData.unit.unitNumber,
+        propertyName: leaseData.property.name,
+        monthlyRent: leaseData.unit.monthlyRent ?? "0",
+        currency: leaseData.lease.currency,
+        dashboardUrl: `${baseUrl}/dashboard?tab=payments`,
+      });
+    }
 
     void trackServerEvent(clerkUserId, "lease_signing_confirmed", {
       lease_id: leaseId,

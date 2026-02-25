@@ -9,6 +9,7 @@ import {
 } from "~/server/db/schema";
 import { eq, and, desc } from "drizzle-orm";
 import { createAndEmitNotification } from "~/server/notification-emitter";
+import { sendAppEmail } from "~/lib/emails/server";
 import {
   VALID_MAINTENANCE_CATEGORIES,
   VALID_MAINTENANCE_PRIORITIES,
@@ -136,6 +137,21 @@ export async function POST(request: NextRequest) {
         priority: body.priority,
       }),
       actionUrl: `/my-properties?tab=maintenance`,
+    });
+  }
+
+  // Send email to landlord
+  if (landlord?.email && newRequest) {
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+    void sendAppEmail(landlord.email, "maintenance_request", {
+      landlordName: `${landlord.first_name} ${landlord.last_name}`,
+      tenantName: `${dbUser.first_name} ${dbUser.last_name}`,
+      title: body.title.trim(),
+      category: body.category,
+      priority: body.priority,
+      unitNumber: leaseData.unit.unitNumber,
+      propertyName: leaseData.property.name,
+      dashboardUrl: `${baseUrl}/my-properties?tab=maintenance`,
     });
   }
 

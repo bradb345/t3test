@@ -3,8 +3,7 @@ import { db } from "~/server/db";
 import { units, tenantInvitations, tenantOnboardingProgress, properties, user } from "~/server/db/schema";
 import { createAndEmitNotification } from "~/server/notification-emitter";
 import { eq } from "drizzle-orm";
-import { sendEmail } from "~/lib/email";
-import { getTenantInvitationEmailHtml } from "~/emails/tenant-invitation";
+import { sendAppEmail } from "~/lib/emails/server";
 import { getAuthenticatedUser } from "~/server/auth";
 import crypto from "crypto";
 import { trackServerEvent } from "~/lib/posthog-events/server";
@@ -153,20 +152,14 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
     const unitAddress = unit.propertyAddress ?? "Unknown Address";
     const unitNumber = unit.unitNumber;
 
-    const emailHtml = getTenantInvitationEmailHtml({
+    // Send invitation email
+    await sendAppEmail(tenantEmail, "tenant_invitation", {
       tenantName,
       landlordName,
       unitAddress,
       unitNumber,
       onboardingUrl,
       expiresAt,
-    });
-
-    // Send invitation email
-    await sendEmail({
-      to: tenantEmail,
-      subject: `Welcome to Your New Home at ${unitNumber}!`,
-      html: emailHtml,
     });
 
     // If tenant has an existing account, create an in-app notification

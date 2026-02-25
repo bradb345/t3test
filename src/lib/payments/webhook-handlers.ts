@@ -2,6 +2,7 @@ import { db } from "~/server/db";
 import { payments, leases, user, notifications } from "~/server/db/schema";
 import { eq } from "drizzle-orm";
 import { trackServerEvent } from "~/lib/posthog-events/server";
+import { sendAppEmail } from "~/lib/emails/server";
 
 function formatAmount(amount: string, currency: string): string {
   const num = parseFloat(amount);
@@ -20,6 +21,17 @@ async function getAuthIdForUser(userId: number): Promise<string | null> {
     .where(eq(user.id, userId))
     .limit(1);
   return result?.authId ?? null;
+}
+
+/** Look up user name and email by their DB id. */
+async function getUserDetails(userId: number): Promise<{ name: string; email: string } | null> {
+  const [result] = await db
+    .select({ firstName: user.first_name, lastName: user.last_name, email: user.email })
+    .from(user)
+    .where(eq(user.id, userId))
+    .limit(1);
+  if (!result?.email) return null;
+  return { name: `${result.firstName} ${result.lastName}`, email: result.email };
 }
 
 /** Derive landlordId from the payment's lease (DB lookup, not metadata). */
@@ -96,6 +108,17 @@ export async function handleCheckoutSessionCompleted(
         landlordPayout: payment.landlordPayout,
         currency: payment.currency,
       }),
+    });
+  }
+
+  // Send email to tenant
+  const tenantDetails = await getUserDetails(payment.tenantId);
+  if (tenantDetails) {
+    void sendAppEmail(tenantDetails.email, "payment_completed", {
+      tenantName: tenantDetails.name,
+      amount: payment.amount,
+      currency: payment.currency,
+      paymentType: payment.type,
     });
   }
 
@@ -264,6 +287,16 @@ export async function handlePaymentIntentFailed(
       currency: payment.currency,
     }),
   });
+
+  // Send email to tenant
+  const failedTenantDetails = await getUserDetails(payment.tenantId);
+  if (failedTenantDetails) {
+    void sendAppEmail(failedTenantDetails.email, "payment_failed", {
+      tenantName: failedTenantDetails.name,
+      amount: payment.amount,
+      currency: payment.currency,
+    });
+  }
 
   // Track payment_failed
   const failedTenantAuthId = await getAuthIdForUser(payment.tenantId);

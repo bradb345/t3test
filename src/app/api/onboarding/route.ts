@@ -3,8 +3,7 @@ import { db } from "~/server/db";
 import { tenantInvitations, tenantOnboardingProgress, units, properties, user, notifications, leases, payments } from "~/server/db/schema";
 import { createAndEmitNotification } from "~/server/notification-emitter";
 import { eq, and, gt } from "drizzle-orm";
-import { sendEmail } from "~/lib/email";
-import { getOnboardingCompleteEmailHtml, getOnboardingCompleteEmailSubject } from "~/emails/onboarding-complete";
+import { sendAppEmail } from "~/lib/emails/server";
 import { encryptSSN } from "~/lib/encryption";
 import { addRoleToUserById } from "~/lib/roles";
 import { persistTenantProfile, loadExistingTenantProfile, type OnboardingData } from "~/lib/tenant-profile";
@@ -654,7 +653,7 @@ export async function POST(request: NextRequest) {
     const landlordName = invitation.landlord.first_name ?? "Landlord";
     
     if (landlordEmail) {
-      const emailHtml = getOnboardingCompleteEmailHtml({
+      await sendAppEmail(landlordEmail, "onboarding_complete", {
         landlordName,
         tenantName: invitation.invitation.tenantName,
         tenantEmail: invitation.invitation.tenantEmail,
@@ -663,12 +662,6 @@ export async function POST(request: NextRequest) {
         isExistingTenant: invitation.invitation.isExistingTenant,
         tenantAttached: invitation.invitation.isExistingTenant && !!tenantUser,
         dashboardUrl: `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/my-properties/${invitation.property.id}`,
-      });
-
-      await sendEmail({
-        to: landlordEmail,
-        subject: getOnboardingCompleteEmailSubject(invitation.invitation.tenantName),
-        html: emailHtml,
       });
     }
 

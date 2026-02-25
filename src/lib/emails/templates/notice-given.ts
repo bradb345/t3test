@@ -1,35 +1,29 @@
+import type { EmailMap } from "~/lib/emails";
 import { formatMoveOutDate } from "~/lib/offboarding";
 
-interface NoticeGivenEmailProps {
-  recipientName: string;
-  initiatorName: string;
-  initiatedBy: "tenant" | "landlord";
-  unitNumber: string;
-  propertyAddress: string;
-  noticeDate: Date;
-  moveOutDate: Date;
-  reason?: string;
-  dashboardUrl: string;
-}
+export function noticeGivenEmail(
+  params: EmailMap["notice_given"]
+): { subject: string; html: string } {
+  const {
+    recipientName,
+    initiatorName,
+    initiatedBy,
+    unitNumber,
+    propertyAddress,
+    noticeDate,
+    moveOutDate,
+    reason,
+    dashboardUrl,
+  } = params;
 
-export function getNoticeGivenEmailHtml({
-  recipientName,
-  initiatorName,
-  initiatedBy,
-  unitNumber,
-  propertyAddress,
-  noticeDate,
-  moveOutDate,
-  reason,
-  dashboardUrl,
-}: NoticeGivenEmailProps): string {
   const formattedNoticeDate = formatMoveOutDate(noticeDate);
   const formattedMoveOutDate = formatMoveOutDate(moveOutDate);
-
   const initiatorLabel = initiatedBy === "tenant" ? "Your tenant" : "Your landlord";
-  const headerColor = initiatedBy === "tenant" ? "#f59e0b" : "#6366f1"; // Orange for tenant, indigo for landlord
+  const headerColor = initiatedBy === "tenant" ? "#f59e0b" : "#6366f1";
 
-  return `
+  return {
+    subject: `Move-Out Notice Received for Unit ${unitNumber}`,
+    html: `
 <!DOCTYPE html>
 <html>
   <head>
@@ -59,30 +53,11 @@ export function getNoticeGivenEmailHtml({
         text-align: center;
         color: #ffffff;
       }
-      .header h1 {
-        margin: 0;
-        font-size: 28px;
-        font-weight: 600;
-      }
-      .header p {
-        margin: 10px 0 0;
-        font-size: 16px;
-        opacity: 0.95;
-      }
-      .content {
-        padding: 40px 30px;
-      }
-      .greeting {
-        font-size: 18px;
-        font-weight: 600;
-        color: #1a1a1a;
-        margin-bottom: 20px;
-      }
-      .message {
-        color: #555;
-        font-size: 15px;
-        margin-bottom: 24px;
-      }
+      .header h1 { margin: 0; font-size: 28px; font-weight: 600; }
+      .header p { margin: 10px 0 0; font-size: 16px; opacity: 0.95; }
+      .content { padding: 40px 30px; }
+      .greeting { font-size: 18px; font-weight: 600; color: #1a1a1a; margin-bottom: 20px; }
+      .message { color: #555; font-size: 15px; margin-bottom: 24px; }
       .notice-details {
         background-color: #fef3c7;
         border-left: 4px solid #f59e0b;
@@ -90,24 +65,10 @@ export function getNoticeGivenEmailHtml({
         margin: 24px 0;
         border-radius: 4px;
       }
-      .notice-details h3 {
-        margin: 0 0 15px;
-        color: #92400e;
-        font-size: 16px;
-      }
-      .detail-row {
-        display: flex;
-        margin: 8px 0;
-        font-size: 14px;
-      }
-      .detail-label {
-        color: #78350f;
-        font-weight: 600;
-        min-width: 120px;
-      }
-      .detail-value {
-        color: #555;
-      }
+      .notice-details h3 { margin: 0 0 15px; color: #92400e; font-size: 16px; }
+      .detail-row { display: flex; margin: 8px 0; font-size: 14px; }
+      .detail-label { color: #78350f; font-weight: 600; min-width: 120px; }
+      .detail-value { color: #555; }
       .moveout-highlight {
         background-color: #fee2e2;
         border: 2px solid #ef4444;
@@ -116,58 +77,15 @@ export function getNoticeGivenEmailHtml({
         margin: 24px 0;
         text-align: center;
       }
-      .moveout-highlight h3 {
-        margin: 0 0 5px;
-        color: #dc2626;
-        font-size: 14px;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-      }
-      .moveout-highlight .date {
-        font-size: 24px;
-        font-weight: 700;
-        color: #b91c1c;
-        margin: 0;
-      }
-      .reason-box {
-        background-color: #f3f4f6;
-        border-radius: 6px;
-        padding: 15px;
-        margin: 20px 0;
-      }
-      .reason-box h4 {
-        margin: 0 0 8px;
-        color: #374151;
-        font-size: 13px;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-      }
-      .reason-box p {
-        margin: 0;
-        color: #555;
-        font-size: 14px;
-        font-style: italic;
-      }
-      .next-steps {
-        background-color: #eff6ff;
-        border-radius: 6px;
-        padding: 20px;
-        margin: 24px 0;
-      }
-      .next-steps h3 {
-        margin: 0 0 12px;
-        color: #1e40af;
-        font-size: 16px;
-      }
-      .next-steps ul {
-        margin: 0;
-        padding-left: 20px;
-        color: #555;
-        font-size: 14px;
-      }
-      .next-steps li {
-        margin: 8px 0;
-      }
+      .moveout-highlight h3 { margin: 0 0 5px; color: #dc2626; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; }
+      .moveout-highlight .date { font-size: 24px; font-weight: 700; color: #b91c1c; margin: 0; }
+      .reason-box { background-color: #f3f4f6; border-radius: 6px; padding: 15px; margin: 20px 0; }
+      .reason-box h4 { margin: 0 0 8px; color: #374151; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; }
+      .reason-box p { margin: 0; color: #555; font-size: 14px; font-style: italic; }
+      .next-steps { background-color: #eff6ff; border-radius: 6px; padding: 20px; margin: 24px 0; }
+      .next-steps h3 { margin: 0 0 12px; color: #1e40af; font-size: 16px; }
+      .next-steps ul { margin: 0; padding-left: 20px; color: #555; font-size: 14px; }
+      .next-steps li { margin: 8px 0; }
       .cta-button {
         display: inline-block;
         padding: 16px 32px;
@@ -180,17 +98,8 @@ export function getNoticeGivenEmailHtml({
         margin-top: 16px;
         text-align: center;
       }
-      .footer {
-        padding: 30px;
-        background-color: #f8f9fa;
-        text-align: center;
-        font-size: 13px;
-        color: #666;
-      }
-      .footer a {
-        color: #667eea;
-        text-decoration: none;
-      }
+      .footer { padding: 30px; background-color: #f8f9fa; text-align: center; font-size: 13px; color: #666; }
+      .footer a { color: #667eea; text-decoration: none; }
     </style>
   </head>
   <body>
@@ -273,9 +182,6 @@ export function getNoticeGivenEmailHtml({
     </div>
   </body>
 </html>
-`;
-}
-
-export function getNoticeGivenEmailSubject(unitNumber: string): string {
-  return `Move-Out Notice Received for Unit ${unitNumber}`;
+`,
+  };
 }

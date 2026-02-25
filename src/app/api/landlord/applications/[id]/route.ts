@@ -10,6 +10,7 @@ import {
 } from "~/server/db/schema";
 import { eq, and } from "drizzle-orm";
 import { createAndEmitNotification } from "~/server/notification-emitter";
+import { sendAppEmail } from "~/lib/emails/server";
 import { persistTenantProfile } from "~/lib/tenant-profile";
 import type { OnboardingData } from "~/lib/tenant-profile";
 import { addRoleToUserById } from "~/lib/roles";
@@ -288,6 +289,28 @@ export async function PATCH(request: NextRequest, props: { params: Promise<{ id:
           ? "/dashboard"
           : undefined,
     });
+
+    // Send email notification to applicant
+    if (applicationData.applicant.email) {
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+      if (body.decision === "approved") {
+        await sendAppEmail(applicationData.applicant.email, "application_approved", {
+          applicantName: `${applicationData.applicant.first_name} ${applicationData.applicant.last_name}`,
+          unitNumber: applicationData.unit.unitNumber,
+          propertyName: applicationData.property.name,
+          monthlyRent: applicationData.unit.monthlyRent ?? "0",
+          currency: applicationData.unit.currency,
+          dashboardUrl: `${baseUrl}/dashboard`,
+        });
+      } else {
+        await sendAppEmail(applicationData.applicant.email, "application_rejected", {
+          applicantName: `${applicationData.applicant.first_name} ${applicationData.applicant.last_name}`,
+          unitNumber: applicationData.unit.unitNumber,
+          propertyName: applicationData.property.name,
+          decisionNotes: body.decisionNotes?.trim(),
+        });
+      }
+    }
 
     // Track application review event in PostHog
     await trackServerEvent(clerkUserId, "application_reviewed", {
