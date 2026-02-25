@@ -42,6 +42,11 @@ export default async function ApplicationsPage() {
     .where(eq(tenancyApplications.applicantUserId, dbUser.id))
     .orderBy(desc(tenancyApplications.createdAt));
 
+  // Redirect if user has no applications at all
+  if (applications.length === 0) {
+    redirect("/");
+  }
+
   const statusColors: Record<string, string> = {
     pending: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400",
     approved: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
