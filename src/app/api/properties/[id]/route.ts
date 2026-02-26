@@ -69,7 +69,7 @@ export async function DELETE(req: Request, props: { params: Promise<{ id: string
       if (occupiedUnits.length > 0) {
         return new NextResponse(
           JSON.stringify({
-            error: "Cannot delete property with occupied units or active offboarding. Please complete all lease terminations before deleting the property.",
+            error: "Cannot delete property with occupied units or leases pending termination. Please complete all lease terminations before deleting the property.",
             occupiedUnitCount: occupiedUnits.length
           }),
           { 

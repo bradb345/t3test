@@ -142,39 +142,47 @@ export function DashboardClient({
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="overview">
-            <OverviewTab
-              lease={lease}
-              payments={payments}
-              maintenanceRequests={maintenanceRequests}
-              offboardingNotice={offboardingNotice}
-              onOffboardingChange={handleOffboardingChange}
-            />
-          </TabsContent>
-          <TabsContent value="maintenance">
-            <MaintenanceTab
-              requests={maintenanceRequests}
-              unitId={lease.unit.id}
-            />
-          </TabsContent>
+          {!isDelinquent && (
+            <TabsContent value="overview">
+              <OverviewTab
+                lease={lease}
+                payments={payments}
+                maintenanceRequests={maintenanceRequests}
+                offboardingNotice={offboardingNotice}
+                onOffboardingChange={handleOffboardingChange}
+              />
+            </TabsContent>
+          )}
+          {!isDelinquent && (
+            <TabsContent value="maintenance">
+              <MaintenanceTab
+                requests={maintenanceRequests}
+                unitId={lease.unit.id}
+              />
+            </TabsContent>
+          )}
           <TabsContent value="payments">
             <PaymentsTab payments={payments} lease={lease} />
           </TabsContent>
-          <TabsContent value="documents">
-            <DocumentsTab
-              lease={lease}
-              tenantDocuments={tenantDocuments}
-              profileId={profile?.id ?? null}
-            />
-          </TabsContent>
-          <TabsContent value="profile">
-            <ProfileTab
-              user={user}
-              profile={profile}
-              employment={employment}
-              emergencyContacts={emergencyContacts}
-            />
-          </TabsContent>
+          {!isDelinquent && (
+            <TabsContent value="documents">
+              <DocumentsTab
+                lease={lease}
+                tenantDocuments={tenantDocuments}
+                profileId={profile?.id ?? null}
+              />
+            </TabsContent>
+          )}
+          {!isDelinquent && (
+            <TabsContent value="profile">
+              <ProfileTab
+                user={user}
+                profile={profile}
+                employment={employment}
+                emergencyContacts={emergencyContacts}
+              />
+            </TabsContent>
+          )}
         </Tabs>
       </div>
     </main>

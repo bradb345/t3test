@@ -29,7 +29,7 @@ export async function checkOverduePayments(): Promise<{
       and(
         eq(payments.leaseId, leases.id),
         inArray(payments.status, ["pending", "failed"]),
-        sql`${payments.dueDate} + interval '${sql.raw(String(GRACE_PERIOD_DAYS))} days' < now()`
+        sql`${payments.dueDate} + (${GRACE_PERIOD_DAYS} * interval '1 day') < now()`
       )
     )
     .where(

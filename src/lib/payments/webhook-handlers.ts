@@ -67,7 +67,7 @@ async function clearDelinquencyIfResolved(leaseId: number): Promise<void> {
       and(
         eq(payments.leaseId, leaseId),
         inArray(payments.status, ["pending", "failed"]),
-        sql`${payments.dueDate} + interval '${sql.raw(String(GRACE_PERIOD_DAYS))} days' < now()`
+        sql`${payments.dueDate} + (${GRACE_PERIOD_DAYS} * interval '1 day') < now()`
       )
     );
 
@@ -75,7 +75,7 @@ async function clearDelinquencyIfResolved(leaseId: number): Promise<void> {
     await db
       .update(leases)
       .set({ delinquent: false })
-      .where(eq(leases.id, leaseId));
+      .where(and(eq(leases.id, leaseId), eq(leases.delinquent, true)));
   }
 }
 

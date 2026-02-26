@@ -186,22 +186,9 @@ export async function PATCH(request: NextRequest, props: { params: Promise<{ id:
       );
     }
 
-    // Update the application
-    await db
-      .update(tenancyApplications)
-      .set({
-        status: body.decision,
-        decision: body.decision,
-        decisionNotes: body.decisionNotes?.trim() ?? null,
-        reviewedAt: new Date(),
-        reviewedByUserId: currentUser.id,
-      })
-      .where(eq(tenancyApplications.id, applicationId));
-
-    // If approved, create lease + payment directly (no invitation needed)
+    // If approving, check for existing lease BEFORE updating application status
+    // to avoid an inconsistent state where the app is marked approved but no lease is created.
     if (body.decision === "approved") {
-      // Block approval if the unit has an active or notice_given lease.
-      // Existing leases must be fully offboarded before a new tenant can be approved.
       const [existingLease] = await db
         .select({ id: leases.id, status: leases.status })
         .from(leases)
@@ -222,6 +209,22 @@ export async function PATCH(request: NextRequest, props: { params: Promise<{ id:
           { status: 400 }
         );
       }
+    }
+
+    // Update the application
+    await db
+      .update(tenancyApplications)
+      .set({
+        status: body.decision,
+        decision: body.decision,
+        decisionNotes: body.decisionNotes?.trim() ?? null,
+        reviewedAt: new Date(),
+        reviewedByUserId: currentUser.id,
+      })
+      .where(eq(tenancyApplications.id, applicationId));
+
+    // If approved, create lease + payment directly (no invitation needed)
+    if (body.decision === "approved") {
 
       // 1. Persist tenant profile from application data
       const rawAppData = applicationData.application.applicationData;
