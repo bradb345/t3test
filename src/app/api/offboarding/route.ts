@@ -163,6 +163,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Prevent landlords from initiating offboarding on delinquent leases.
+    // Tenants must resolve overdue payments before a landlord can give notice.
+    // Tenants can still give notice on their own delinquent lease.
+    if (isLandlord && lease.delinquent) {
+      return NextResponse.json(
+        {
+          error:
+            "Cannot give notice while the tenant has overdue payments. Overdue payments must be resolved first.",
+        },
+        { status: 400 }
+      );
+    }
+
     // Check if there's already an active notice for this lease
     const [existingNotice] = await db
       .select()

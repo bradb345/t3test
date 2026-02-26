@@ -61,15 +61,15 @@ export async function DELETE(req: Request, props: { params: Promise<{ id: string
         .from(leases)
         .where(
           and(
-            eq(leases.status, 'active'),
+            inArray(leases.status, ['active', 'notice_given']),
             inArray(leases.unitId, unitIds)
           )
         );
 
       if (occupiedUnits.length > 0) {
         return new NextResponse(
-          JSON.stringify({ 
-            error: "Cannot delete property with occupied units. Please remove all tenants from units before deleting the property.",
+          JSON.stringify({
+            error: "Cannot delete property with occupied units or leases pending termination. Please complete all lease terminations before deleting the property.",
             occupiedUnitCount: occupiedUnits.length
           }),
           { 
