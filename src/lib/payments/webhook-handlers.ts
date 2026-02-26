@@ -1,8 +1,10 @@
 import { db } from "~/server/db";
 import { payments, leases, user, notifications } from "~/server/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, and, inArray, sql } from "drizzle-orm";
 import { trackServerEvent } from "~/lib/posthog-events/server";
 import { sendAppEmail } from "~/lib/emails/server";
+
+const GRACE_PERIOD_DAYS = 10;
 
 function formatAmount(amount: string, currency: string): string {
   const num = parseFloat(amount);
@@ -45,6 +47,39 @@ async function getLandlordIdForPayment(leaseId: number): Promise<number | null> 
 }
 
 /**
+ * After a payment is completed, check if the lease is delinquent and whether
+ * all overdue payments have been resolved. If so, clear the delinquent flag.
+ */
+async function clearDelinquencyIfResolved(leaseId: number): Promise<void> {
+  const [lease] = await db
+    .select({ delinquent: leases.delinquent })
+    .from(leases)
+    .where(eq(leases.id, leaseId))
+    .limit(1);
+
+  if (!lease?.delinquent) return;
+
+  // Check for any remaining overdue payments on this lease
+  const [remaining] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(payments)
+    .where(
+      and(
+        eq(payments.leaseId, leaseId),
+        inArray(payments.status, ["pending", "failed"]),
+        sql`${payments.dueDate} + interval '${sql.raw(String(GRACE_PERIOD_DAYS))} days' < now()`
+      )
+    );
+
+  if (remaining && remaining.count === 0) {
+    await db
+      .update(leases)
+      .set({ delinquent: false })
+      .where(eq(leases.id, leaseId));
+  }
+}
+
+/**
  * Handle checkout.session.completed — mark payment as completed and notify.
  */
 export async function handleCheckoutSessionCompleted(
@@ -77,6 +112,9 @@ export async function handleCheckoutSessionCompleted(
       stripePaymentIntentId: paymentIntentId,
     })
     .where(eq(payments.id, payment.id));
+
+  // Clear delinquency if this payment resolves all overdue balances
+  await clearDelinquencyIfResolved(payment.leaseId);
 
   // Derive contextual label
   const paymentLabel = payment.type === "move_in" ? "move-in payment" : "rent payment";
@@ -217,6 +255,9 @@ export async function handlePaymentIntentSucceeded(
       stripeTransferId: transferId,
     })
     .where(eq(payments.id, payment.id));
+
+  // Clear delinquency if this payment resolves all overdue balances
+  await clearDelinquencyIfResolved(payment.leaseId);
 
   // Derive contextual label
   const intentPaymentLabel = payment.type === "move_in" ? "move-in payment" : "rent payment";

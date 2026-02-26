@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
-import { Home, Wrench, CreditCard, FileText, User } from "lucide-react";
+import { Home, Wrench, CreditCard, FileText, User, AlertTriangle } from "lucide-react";
 import { OverviewTab } from "./overview/OverviewTab";
 import { MaintenanceTab } from "./maintenance/MaintenanceTab";
 import { PaymentsTab } from "./payments/PaymentsTab";
@@ -50,6 +50,7 @@ interface DashboardClientProps {
   emergencyContacts: EmergencyContact[];
   tenantDocuments: TenantDocument[];
   offboardingNotice: OffboardingNotice | null;
+  isDelinquent: boolean;
 }
 
 export function DashboardClient({
@@ -62,6 +63,7 @@ export function DashboardClient({
   emergencyContacts,
   tenantDocuments,
   offboardingNotice,
+  isDelinquent,
 }: DashboardClientProps) {
   const router = useRouter();
 
@@ -82,14 +84,39 @@ export function DashboardClient({
           </p>
         </div>
 
+        {/* Delinquency Banner */}
+        {isDelinquent && (
+          <div className="mb-6 flex items-start gap-3 rounded-lg border border-red-300 bg-red-50 p-4 dark:border-red-800 dark:bg-red-950/50">
+            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-red-600 dark:text-red-400" />
+            <div>
+              <h3 className="font-semibold text-red-800 dark:text-red-300">
+                Dashboard Access Restricted
+              </h3>
+              <p className="mt-1 text-sm text-red-700 dark:text-red-400">
+                You have one or more overdue rent payments. Your dashboard has
+                been restricted to payments only. Please complete your
+                outstanding payments to restore full access.
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Tabs Navigation */}
-        <Tabs defaultValue="overview" className="w-full">
+        <Tabs defaultValue={isDelinquent ? "payments" : "overview"} className="w-full">
           <TabsList className="mb-8 grid w-full grid-cols-5">
-            <TabsTrigger value="overview" className="flex items-center gap-2">
+            <TabsTrigger
+              value="overview"
+              className="flex items-center gap-2"
+              disabled={isDelinquent}
+            >
               <Home className="h-4 w-4" />
               <span className="hidden sm:inline">Overview</span>
             </TabsTrigger>
-            <TabsTrigger value="maintenance" className="flex items-center gap-2">
+            <TabsTrigger
+              value="maintenance"
+              className="flex items-center gap-2"
+              disabled={isDelinquent}
+            >
               <Wrench className="h-4 w-4" />
               <span className="hidden sm:inline">Maintenance</span>
             </TabsTrigger>
@@ -97,11 +124,19 @@ export function DashboardClient({
               <CreditCard className="h-4 w-4" />
               <span className="hidden sm:inline">Payments</span>
             </TabsTrigger>
-            <TabsTrigger value="documents" className="flex items-center gap-2">
+            <TabsTrigger
+              value="documents"
+              className="flex items-center gap-2"
+              disabled={isDelinquent}
+            >
               <FileText className="h-4 w-4" />
               <span className="hidden sm:inline">Documents</span>
             </TabsTrigger>
-            <TabsTrigger value="profile" className="flex items-center gap-2">
+            <TabsTrigger
+              value="profile"
+              className="flex items-center gap-2"
+              disabled={isDelinquent}
+            >
               <User className="h-4 w-4" />
               <span className="hidden sm:inline">Profile</span>
             </TabsTrigger>

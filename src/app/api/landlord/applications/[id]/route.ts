@@ -8,7 +8,7 @@ import {
   user,
   leases,
 } from "~/server/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import { createAndEmitNotification } from "~/server/notification-emitter";
 import { sendAppEmail } from "~/lib/emails/server";
 import { persistTenantProfile } from "~/lib/tenant-profile";
@@ -200,23 +200,35 @@ export async function PATCH(request: NextRequest, props: { params: Promise<{ id:
 
     // If approved, create lease + payment directly (no invitation needed)
     if (body.decision === "approved") {
+      // Block approval if the unit has an active or notice_given lease.
+      // Existing leases must be fully offboarded before a new tenant can be approved.
+      const [existingLease] = await db
+        .select({ id: leases.id, status: leases.status })
+        .from(leases)
+        .where(
+          and(
+            eq(leases.unitId, applicationData.unit.id),
+            inArray(leases.status, ["active", "notice_given"])
+          )
+        )
+        .limit(1);
+
+      if (existingLease) {
+        return NextResponse.json(
+          {
+            error:
+              "Cannot approve application — this unit has an active lease. The existing lease must be fully terminated through the offboarding process before a new tenant can be approved.",
+          },
+          { status: 400 }
+        );
+      }
+
       // 1. Persist tenant profile from application data
       const rawAppData = applicationData.application.applicationData;
       if (rawAppData) {
         const appDataParsed = JSON.parse(rawAppData) as OnboardingData;
         await persistTenantProfile(applicationData.applicant.id, appDataParsed);
       }
-
-      // 2. End any existing active lease on this unit before creating a new one
-      await db
-        .update(leases)
-        .set({ status: "ended", leaseEnd: new Date() })
-        .where(
-          and(
-            eq(leases.unitId, applicationData.unit.id),
-            eq(leases.status, "active")
-          )
-        );
 
       // 3. Create lease
       const rentDueDay = body.rentDueDay && body.rentDueDay >= 1 && body.rentDueDay <= 28

@@ -147,6 +147,7 @@ export default async function TenantDashboard() {
       emergencyContacts={emergencyContactsList}
       tenantDocuments={documents}
       offboardingNotice={activeOffboardingNotice}
+      isDelinquent={activeLease.lease.delinquent}
     />
   );
 }

@@ -11,10 +11,13 @@ import { noticeGivenEmail } from "./templates/notice-given";
 import { applicationApprovedEmail } from "./templates/application-approved";
 import { applicationRejectedEmail } from "./templates/application-rejected";
 import { leaseActivatedEmail } from "./templates/lease-activated";
+import { paymentReminderEmail } from "./templates/payment-reminder";
 import { paymentCompletedEmail } from "./templates/payment-completed";
 import { paymentFailedEmail } from "./templates/payment-failed";
 import { maintenanceRequestEmail } from "./templates/maintenance-request";
 import { maintenanceUpdateEmail } from "./templates/maintenance-update";
+import { paymentOverdueEmail } from "./templates/payment-overdue";
+import { paymentOverdueLandlordEmail } from "./templates/payment-overdue-landlord";
 
 // ---------------------------------------------------------------------------
 // Template registry — maps email name to its builder function.
@@ -33,10 +36,13 @@ const templateBuilders: {
   application_approved: applicationApprovedEmail,
   application_rejected: applicationRejectedEmail,
   lease_activated: leaseActivatedEmail,
+  payment_reminder: paymentReminderEmail,
   payment_completed: paymentCompletedEmail,
   payment_failed: paymentFailedEmail,
   maintenance_request: maintenanceRequestEmail,
   maintenance_update: maintenanceUpdateEmail,
+  payment_overdue: paymentOverdueEmail,
+  payment_overdue_landlord: paymentOverdueLandlordEmail,
 };
 
 /**

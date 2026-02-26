@@ -99,6 +99,12 @@ export type EmailMap = {
   };
 
   // Payments
+  payment_reminder: {
+    tenantName: string;
+    amount: string;
+    currency: string;
+    dueDate: string; // pre-formatted date string
+  };
   payment_completed: {
     tenantName: string;
     amount: string;
@@ -109,6 +115,22 @@ export type EmailMap = {
     tenantName: string;
     amount: string;
     currency: string;
+  };
+  payment_overdue: {
+    tenantName: string;
+    amount: string;
+    currency: string;
+    dueDate: string;
+    gracePeriodDays: number;
+  };
+  payment_overdue_landlord: {
+    landlordName: string;
+    tenantName: string;
+    amount: string;
+    currency: string;
+    dueDate: string;
+    unitNumber: string;
+    propertyName: string;
   };
 
   // Maintenance
