@@ -143,9 +143,7 @@ export async function POST(request: NextRequest) {
         const disposition =
           totalDeductions === 0
             ? "returned"
-            : amount === 0
-              ? "withheld"
-              : "partial";
+            : "partial";
 
         await sendAppEmail(leaseData.tenant.email, "deposit_disposition", {
           tenantName: `${leaseData.tenant.first_name} ${leaseData.tenant.last_name}`,

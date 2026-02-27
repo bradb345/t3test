@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { db } from "~/server/db";
 import { refunds, user } from "~/server/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { getAuthenticatedTenant } from "~/server/auth";
 import { createAndEmitNotification } from "~/server/notification-emitter";
 import { sendAppEmail } from "~/lib/emails/server";
@@ -64,8 +64,21 @@ export async function POST(
         tenantConfirmedAt: now,
         completedAt: now,
       })
-      .where(eq(refunds.id, refundId))
+      .where(
+        and(
+          eq(refunds.id, refundId),
+          eq(refunds.tenantId, tenant.id),
+          eq(refunds.status, "pending_tenant_action")
+        )
+      )
       .returning();
+
+    if (!updated) {
+      return NextResponse.json(
+        { error: "Refund is no longer available for confirmation" },
+        { status: 409 }
+      );
+    }
 
     const formattedAmount = new Intl.NumberFormat("en-US", {
       style: "currency",

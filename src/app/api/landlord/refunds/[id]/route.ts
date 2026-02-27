@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { db } from "~/server/db";
 import { refunds, leases, units, properties } from "~/server/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { getAuthenticatedLandlord } from "~/server/auth";
 import { createAndEmitNotification } from "~/server/notification-emitter";
 
@@ -56,8 +56,20 @@ export async function PATCH(
     const [updated] = await db
       .update(refunds)
       .set({ status: "cancelled" })
-      .where(eq(refunds.id, refundId))
+      .where(
+        and(
+          eq(refunds.id, refundId),
+          eq(refunds.status, "pending_tenant_action")
+        )
+      )
       .returning();
+
+    if (!updated) {
+      return NextResponse.json(
+        { error: "Refund is no longer pending and cannot be cancelled" },
+        { status: 409 }
+      );
+    }
 
     // Notify tenant
     const formattedAmount = new Intl.NumberFormat("en-US", {

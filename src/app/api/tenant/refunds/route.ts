@@ -17,7 +17,12 @@ export async function GET() {
         lease: leases,
         unit: units,
         property: properties,
-        landlord: user,
+        landlord: {
+          id: user.id,
+          firstName: user.first_name,
+          lastName: user.last_name,
+          email: user.email,
+        },
       })
       .from(refunds)
       .innerJoin(leases, eq(leases.id, refunds.leaseId))

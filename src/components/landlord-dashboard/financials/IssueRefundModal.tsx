@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Plus, Trash2 } from "lucide-react";
 import {
@@ -62,6 +62,17 @@ export function IssueRefundModal({
     description: "",
     variant: "info" as "success" | "error" | "info",
   });
+
+  // Sync form state from props when modal opens or preselected values change
+  useEffect(() => {
+    if (open) {
+      setSelectedTenantId(preselectedTenantId ? String(preselectedTenantId) : "");
+      setType(preselectedType ?? "refund");
+      setAmount("");
+      setReason("");
+      setDeductions([]);
+    }
+  }, [open, preselectedTenantId, preselectedType]);
 
   // Get eligible tenants (active or notice_given leases)
   const eligibleTenants = tenants.filter(
