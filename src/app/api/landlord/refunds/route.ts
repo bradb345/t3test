@@ -69,8 +69,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    // For deposit returns, validate amount against security deposit
-    if (type === "deposit_return" && leaseData.lease.securityDeposit) {
+    // For deposit returns, validate a security deposit exists and amount doesn't exceed it
+    if (type === "deposit_return") {
+      if (!leaseData.lease.securityDeposit || parseFloat(leaseData.lease.securityDeposit) <= 0) {
+        return NextResponse.json(
+          { error: "Cannot issue deposit return — no security deposit on this lease" },
+          { status: 400 }
+        );
+      }
       const depositAmount = parseFloat(leaseData.lease.securityDeposit);
       if (amount > depositAmount) {
         return NextResponse.json(
@@ -82,6 +88,20 @@ export async function POST(request: NextRequest) {
 
     // Validate deductions if provided
     if (deductions && deductions.length > 0) {
+      for (const d of deductions) {
+        if (!d.description || typeof d.description !== "string" || d.description.trim().length === 0) {
+          return NextResponse.json(
+            { error: "Each deduction must have a non-empty description" },
+            { status: 400 }
+          );
+        }
+        if (typeof d.amount !== "number" || !Number.isFinite(d.amount) || d.amount <= 0) {
+          return NextResponse.json(
+            { error: "Each deduction amount must be a positive number" },
+            { status: 400 }
+          );
+        }
+      }
       const totalDeductions = deductions.reduce((sum, d) => sum + d.amount, 0);
       if (type === "deposit_return" && leaseData.lease.securityDeposit) {
         const depositAmount = parseFloat(leaseData.lease.securityDeposit);

@@ -103,13 +103,21 @@ export function IssueRefundModal({
     setDeductions(deductions.filter((_, i) => i !== index));
   };
 
+  const sanitizeAmountInput = (value: string) => {
+    // Strip anything that isn't a digit or decimal point
+    return value.replace(/[^0-9.]/g, "").replace(/(\..*)\./g, "$1");
+  };
+
   const handleDeductionChange = (
     index: number,
     field: "description" | "amount",
     value: string
   ) => {
     const updated = [...deductions];
-    updated[index] = { ...updated[index]!, [field]: value };
+    updated[index] = {
+      ...updated[index]!,
+      [field]: field === "amount" ? sanitizeAmountInput(value) : value,
+    };
     setDeductions(updated);
   };
 
@@ -260,12 +268,11 @@ export function IssueRefundModal({
               <div className="space-y-2">
                 <Label>Amount</Label>
                 <Input
-                  type="number"
-                  step="0.01"
-                  min="0.01"
+                  type="text"
+                  inputMode="decimal"
                   placeholder="0.00"
                   value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
+                  onChange={(e) => setAmount(sanitizeAmountInput(e.target.value))}
                 />
               </div>
             )}
@@ -341,9 +348,8 @@ export function IssueRefundModal({
                         className="flex-1"
                       />
                       <Input
-                        type="number"
-                        step="0.01"
-                        min="0"
+                        type="text"
+                        inputMode="decimal"
                         placeholder="Amount"
                         value={deduction.amount}
                         onChange={(e) =>

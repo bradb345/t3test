@@ -3,8 +3,7 @@ import { leases, payments, user, units, properties } from "~/server/db/schema";
 import { eq, and, inArray, sql } from "drizzle-orm";
 import { sendAppEmail } from "~/lib/emails/server";
 import { createAndEmitNotification } from "~/server/notification-emitter";
-
-const GRACE_PERIOD_DAYS = 10;
+import { GRACE_PERIOD_DAYS } from "~/lib/payments/constants";
 
 export async function checkOverduePayments(): Promise<{
   updated: number;

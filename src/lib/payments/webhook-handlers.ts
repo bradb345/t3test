@@ -3,8 +3,7 @@ import { payments, leases, user, notifications } from "~/server/db/schema";
 import { eq, and, inArray, sql } from "drizzle-orm";
 import { trackServerEvent } from "~/lib/posthog-events/server";
 import { sendAppEmail } from "~/lib/emails/server";
-
-const GRACE_PERIOD_DAYS = 10;
+import { GRACE_PERIOD_DAYS } from "./constants";
 
 function formatAmount(amount: string, currency: string): string {
   const num = parseFloat(amount);
@@ -61,7 +60,7 @@ async function clearDelinquencyIfResolved(leaseId: number): Promise<void> {
 
   // Check for any remaining overdue payments on this lease
   const [remaining] = await db
-    .select({ count: sql<number>`count(*)` })
+    .select({ count: sql<number>`count(*)::int` })
     .from(payments)
     .where(
       and(
