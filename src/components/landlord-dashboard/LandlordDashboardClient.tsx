@@ -31,6 +31,7 @@ import type {
   DocumentWithDetails,
   PaymentWithDetails,
   ViewingRequestWithDetails,
+  RefundWithDetails,
   LandlordDashboardTab,
 } from "~/types/landlord";
 
@@ -44,6 +45,7 @@ interface LandlordDashboardClientProps {
   documents: DocumentWithDetails[];
   payments: PaymentWithDetails[];
   viewingRequests: ViewingRequestWithDetails[];
+  refunds: RefundWithDetails[];
 }
 
 const VALID_TABS: LandlordDashboardTab[] = [
@@ -67,6 +69,7 @@ export function LandlordDashboardClient({
   documents,
   payments,
   viewingRequests,
+  refunds,
 }: LandlordDashboardClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -207,6 +210,8 @@ export function LandlordDashboardClient({
               properties={properties}
               currency={stats.currency}
               stripeConnectedAccountStatus={user.stripeConnectedAccountStatus ?? null}
+              refunds={refunds}
+              tenants={tenants}
             />
           </TabsContent>
 

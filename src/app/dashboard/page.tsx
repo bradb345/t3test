@@ -13,6 +13,7 @@ import {
   employmentInfo,
   emergencyContacts,
   tenantOffboardingNotices,
+  refunds,
 } from "~/server/db/schema";
 import { eq, and, asc, desc, or, inArray } from "drizzle-orm";
 import { hasRole } from "~/lib/roles";
@@ -84,7 +85,7 @@ export default async function TenantDashboard() {
   }
 
   // Fetch remaining data in parallel
-  const [recentPayments, maintenanceReqs, profile] = await Promise.all([
+  const [recentPayments, maintenanceReqs, profile, tenantRefunds] = await Promise.all([
     // Get payments for this tenant
     db
       .select()
@@ -107,6 +108,13 @@ export default async function TenantDashboard() {
       .from(tenantProfiles)
       .where(eq(tenantProfiles.userId, dbUser.id))
       .limit(1),
+
+    // Get refunds for this tenant
+    db
+      .select()
+      .from(refunds)
+      .where(eq(refunds.tenantId, dbUser.id))
+      .orderBy(desc(refunds.createdAt)),
   ]);
 
   // Get profile-related data if profile exists
@@ -147,6 +155,8 @@ export default async function TenantDashboard() {
       emergencyContacts={emergencyContactsList}
       tenantDocuments={documents}
       offboardingNotice={activeOffboardingNotice}
+      isDelinquent={activeLease.lease.delinquent}
+      refunds={tenantRefunds}
     />
   );
 }

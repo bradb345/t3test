@@ -237,6 +237,7 @@ export const leases = createTable(
     terms: text("terms"),
     renewalOption: boolean("renewal_option").default(false),
     autoRenewal: boolean("auto_renewal").default(false),
+    delinquent: boolean("delinquent").notNull().default(false),
     leaseSignedAt: timestamp("lease_signed_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .default(sql`CURRENT_TIMESTAMP`)
@@ -840,6 +841,65 @@ export const viewingRequests = createTable(
     unitIndex: index("viewing_unit_idx").on(request.unitId),
     statusIndex: index("viewing_status_idx").on(request.status),
     emailIndex: index("viewing_email_idx").on(request.email),
+  })
+);
+
+// Example refund data:
+/*
+{
+  id: 1,
+  leaseId: 1,
+  tenantId: 42,
+  landlordId: 56,
+  type: "deposit_return",
+  amount: 4500.00,
+  currency: "USD",
+  reason: "End of lease - partial deposit return",
+  status: "pending_tenant_action",
+  deductions: [{ "description": "Carpet cleaning", "amount": 300 }, { "description": "Wall repair", "amount": 200 }],
+  stripePaymentIntentId: null,
+  stripeTransferId: null,
+  tenantActionDeadline: "2024-05-15T00:00:00Z",
+  tenantConfirmedAt: null,
+  completedAt: null
+}
+*/
+export const refunds = createTable(
+  "refund",
+  {
+    id: serial("id").primaryKey(),
+    leaseId: integer("lease_id")
+      .notNull()
+      .references(() => leases.id),
+    tenantId: integer("tenant_id")
+      .notNull()
+      .references(() => user.id),
+    landlordId: integer("landlord_id")
+      .notNull()
+      .references(() => user.id),
+    type: varchar("type", { length: 20 }).notNull(), // "refund" | "deposit_return"
+    amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+    currency: varchar("currency", { length: 3 }).notNull().default("USD"),
+    reason: text("reason"),
+    status: varchar("status", { length: 30 }).notNull().default("pending_tenant_action"),
+    // status: pending_tenant_action | processing | completed | failed | cancelled
+    deductions: text("deductions"), // JSON array: [{ description: string, amount: number }]
+    stripePaymentIntentId: varchar("stripe_payment_intent_id", { length: 256 }),
+    stripeTransferId: varchar("stripe_transfer_id", { length: 256 }),
+    tenantActionDeadline: timestamp("tenant_action_deadline", { withTimezone: true }),
+    tenantConfirmedAt: timestamp("tenant_confirmed_at", { withTimezone: true }),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).$onUpdate(
+      () => new Date()
+    ),
+  },
+  (refund) => ({
+    leaseIndex: index("refund_lease_idx").on(refund.leaseId),
+    tenantIndex: index("refund_tenant_idx").on(refund.tenantId),
+    statusIndex: index("refund_status_idx").on(refund.status),
   })
 );
 

@@ -13,16 +13,19 @@ import { Button } from "~/components/ui/button";
 import { PaymentStatusSummary } from "./PaymentStatusSummary";
 import { RentCollectionTable } from "./RentCollectionTable";
 import { StripeConnectCard } from "./StripeConnectCard";
-import type { PaymentWithDetails, PropertyWithUnits } from "~/types/landlord";
+import { RefundsSection } from "./RefundsSection";
+import type { PaymentWithDetails, PropertyWithUnits, RefundWithDetails, TenantWithLease } from "~/types/landlord";
 
 interface FinancialsTabProps {
   payments: PaymentWithDetails[];
   properties: PropertyWithUnits[];
   currency: string;
   stripeConnectedAccountStatus: string | null;
+  refunds: RefundWithDetails[];
+  tenants: TenantWithLease[];
 }
 
-export function FinancialsTab({ payments, properties, currency, stripeConnectedAccountStatus }: FinancialsTabProps) {
+export function FinancialsTab({ payments, properties, currency, stripeConnectedAccountStatus, refunds, tenants }: FinancialsTabProps) {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [propertyFilter, setPropertyFilter] = useState<string>("all");
   const [monthFilter, setMonthFilter] = useState<string>("all");
@@ -146,6 +149,9 @@ export function FinancialsTab({ payments, properties, currency, stripeConnectedA
 
       {/* Payments Table */}
       <RentCollectionTable payments={filteredPayments} currency={currency} />
+
+      {/* Refunds Section */}
+      <RefundsSection refunds={refunds} tenants={tenants} />
     </div>
   );
 }

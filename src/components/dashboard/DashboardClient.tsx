@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
-import { Home, Wrench, CreditCard, FileText, User } from "lucide-react";
+import { Home, Wrench, CreditCard, FileText, User, AlertTriangle } from "lucide-react";
 import { OverviewTab } from "./overview/OverviewTab";
 import { MaintenanceTab } from "./maintenance/MaintenanceTab";
 import { PaymentsTab } from "./payments/PaymentsTab";
@@ -20,6 +20,7 @@ import type {
   employmentInfo,
   emergencyContacts,
   tenantOffboardingNotices,
+  refunds,
 } from "~/server/db/schema";
 
 type User = typeof user.$inferSelect;
@@ -32,6 +33,7 @@ type TenantProfile = typeof tenantProfiles.$inferSelect;
 type TenantDocument = typeof tenantDocuments.$inferSelect;
 type EmploymentInfo = typeof employmentInfo.$inferSelect;
 type EmergencyContact = typeof emergencyContacts.$inferSelect;
+type Refund = typeof refunds.$inferSelect;
 type OffboardingNotice = typeof tenantOffboardingNotices.$inferSelect;
 
 interface LeaseWithDetails {
@@ -50,6 +52,8 @@ interface DashboardClientProps {
   emergencyContacts: EmergencyContact[];
   tenantDocuments: TenantDocument[];
   offboardingNotice: OffboardingNotice | null;
+  isDelinquent: boolean;
+  refunds: Refund[];
 }
 
 export function DashboardClient({
@@ -62,6 +66,8 @@ export function DashboardClient({
   emergencyContacts,
   tenantDocuments,
   offboardingNotice,
+  isDelinquent,
+  refunds,
 }: DashboardClientProps) {
   const router = useRouter();
 
@@ -82,14 +88,39 @@ export function DashboardClient({
           </p>
         </div>
 
+        {/* Delinquency Banner */}
+        {isDelinquent && (
+          <div className="mb-6 flex items-start gap-3 rounded-lg border border-red-300 bg-red-50 p-4 dark:border-red-800 dark:bg-red-950/50">
+            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-red-600 dark:text-red-400" />
+            <div>
+              <h3 className="font-semibold text-red-800 dark:text-red-300">
+                Dashboard Access Restricted
+              </h3>
+              <p className="mt-1 text-sm text-red-700 dark:text-red-400">
+                You have one or more overdue rent payments. Your dashboard has
+                been restricted to payments only. Please complete your
+                outstanding payments to restore full access.
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Tabs Navigation */}
-        <Tabs defaultValue="overview" className="w-full">
+        <Tabs defaultValue={isDelinquent ? "payments" : "overview"} className="w-full">
           <TabsList className="mb-8 grid w-full grid-cols-5">
-            <TabsTrigger value="overview" className="flex items-center gap-2">
+            <TabsTrigger
+              value="overview"
+              className="flex items-center gap-2"
+              disabled={isDelinquent}
+            >
               <Home className="h-4 w-4" />
               <span className="hidden sm:inline">Overview</span>
             </TabsTrigger>
-            <TabsTrigger value="maintenance" className="flex items-center gap-2">
+            <TabsTrigger
+              value="maintenance"
+              className="flex items-center gap-2"
+              disabled={isDelinquent}
+            >
               <Wrench className="h-4 w-4" />
               <span className="hidden sm:inline">Maintenance</span>
             </TabsTrigger>
@@ -97,49 +128,65 @@ export function DashboardClient({
               <CreditCard className="h-4 w-4" />
               <span className="hidden sm:inline">Payments</span>
             </TabsTrigger>
-            <TabsTrigger value="documents" className="flex items-center gap-2">
+            <TabsTrigger
+              value="documents"
+              className="flex items-center gap-2"
+              disabled={isDelinquent}
+            >
               <FileText className="h-4 w-4" />
               <span className="hidden sm:inline">Documents</span>
             </TabsTrigger>
-            <TabsTrigger value="profile" className="flex items-center gap-2">
+            <TabsTrigger
+              value="profile"
+              className="flex items-center gap-2"
+              disabled={isDelinquent}
+            >
               <User className="h-4 w-4" />
               <span className="hidden sm:inline">Profile</span>
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="overview">
-            <OverviewTab
-              lease={lease}
-              payments={payments}
-              maintenanceRequests={maintenanceRequests}
-              offboardingNotice={offboardingNotice}
-              onOffboardingChange={handleOffboardingChange}
-            />
-          </TabsContent>
-          <TabsContent value="maintenance">
-            <MaintenanceTab
-              requests={maintenanceRequests}
-              unitId={lease.unit.id}
-            />
-          </TabsContent>
+          {!isDelinquent && (
+            <TabsContent value="overview">
+              <OverviewTab
+                lease={lease}
+                payments={payments}
+                maintenanceRequests={maintenanceRequests}
+                offboardingNotice={offboardingNotice}
+                onOffboardingChange={handleOffboardingChange}
+              />
+            </TabsContent>
+          )}
+          {!isDelinquent && (
+            <TabsContent value="maintenance">
+              <MaintenanceTab
+                requests={maintenanceRequests}
+                unitId={lease.unit.id}
+              />
+            </TabsContent>
+          )}
           <TabsContent value="payments">
-            <PaymentsTab payments={payments} lease={lease} />
+            <PaymentsTab payments={payments} lease={lease} refunds={refunds} />
           </TabsContent>
-          <TabsContent value="documents">
-            <DocumentsTab
-              lease={lease}
-              tenantDocuments={tenantDocuments}
-              profileId={profile?.id ?? null}
-            />
-          </TabsContent>
-          <TabsContent value="profile">
-            <ProfileTab
-              user={user}
-              profile={profile}
-              employment={employment}
-              emergencyContacts={emergencyContacts}
-            />
-          </TabsContent>
+          {!isDelinquent && (
+            <TabsContent value="documents">
+              <DocumentsTab
+                lease={lease}
+                tenantDocuments={tenantDocuments}
+                profileId={profile?.id ?? null}
+              />
+            </TabsContent>
+          )}
+          {!isDelinquent && (
+            <TabsContent value="profile">
+              <ProfileTab
+                user={user}
+                profile={profile}
+                employment={employment}
+                emergencyContacts={emergencyContacts}
+              />
+            </TabsContent>
+          )}
         </Tabs>
       </div>
     </main>

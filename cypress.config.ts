@@ -172,6 +172,12 @@ export default defineConfig({
                     WHERE lease_id IN ${sql(leaseIds)}
                   `;
 
+                  // Delete refunds for these leases
+                  await sql`
+                    DELETE FROM t3test_refund
+                    WHERE lease_id IN ${sql(leaseIds)}
+                  `;
+
                   // Delete payments for these leases
                   await sql`
                     DELETE FROM t3test_payment
@@ -271,6 +277,11 @@ export default defineConfig({
                 WHERE lease_id IN (
                   SELECT id FROM t3test_lease WHERE tenant_id = ${tenantId}
                 )
+              `;
+
+              // Delete refunds for the tenant (FK constraint)
+              await sql`
+                DELETE FROM t3test_refund WHERE tenant_id = ${tenantId}
               `;
 
               // Delete payments for the tenant's leases (FK constraint)
