@@ -18,6 +18,9 @@ import { maintenanceRequestEmail } from "./templates/maintenance-request";
 import { maintenanceUpdateEmail } from "./templates/maintenance-update";
 import { paymentOverdueEmail } from "./templates/payment-overdue";
 import { paymentOverdueLandlordEmail } from "./templates/payment-overdue-landlord";
+import { refundInitiatedEmail } from "./templates/refund-initiated";
+import { refundCompletedEmail } from "./templates/refund-completed";
+import { depositDispositionEmail } from "./templates/deposit-disposition";
 
 // ---------------------------------------------------------------------------
 // Template registry — maps email name to its builder function.
@@ -43,6 +46,9 @@ const templateBuilders: {
   maintenance_update: maintenanceUpdateEmail,
   payment_overdue: paymentOverdueEmail,
   payment_overdue_landlord: paymentOverdueLandlordEmail,
+  refund_initiated: refundInitiatedEmail,
+  refund_completed: refundCompletedEmail,
+  deposit_disposition: depositDispositionEmail,
 };
 
 /**

@@ -10,10 +10,11 @@ import type {
   Payment,
   MaintenanceRequest,
   TenantDocument,
+  Refund,
 } from "~/types/schema";
 
 // Re-export base types
-export type { User, Lease, Unit, Property, Payment, MaintenanceRequest, TenantDocument };
+export type { User, Lease, Unit, Property, Payment, MaintenanceRequest, TenantDocument, Refund };
 
 // Extended types with relations
 export interface PropertyWithUnits extends Property {
@@ -51,6 +52,13 @@ export interface DocumentWithDetails extends TenantDocument {
   tenant: User;
   unit: Unit | null;
   property: Property | null;
+}
+
+export interface RefundWithDetails extends Refund {
+  tenant: User;
+  lease: Lease;
+  unit: Unit;
+  property: Property;
 }
 
 // Stats for overview

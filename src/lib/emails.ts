@@ -133,6 +133,30 @@ export type EmailMap = {
     propertyName: string;
   };
 
+  // Refunds
+  refund_initiated: {
+    tenantName: string;
+    amount: string;
+    currency: string;
+    reason?: string;
+    deadline: Date;
+    dashboardUrl: string;
+  };
+  refund_completed: {
+    recipientName: string;
+    amount: string;
+    currency: string;
+  };
+  deposit_disposition: {
+    tenantName: string;
+    depositAmount: string;
+    returnAmount: string;
+    currency: string;
+    disposition: "returned" | "partial" | "withheld";
+    deductions?: string; // JSON string
+    dashboardUrl: string;
+  };
+
   // Maintenance
   maintenance_request: {
     landlordName: string;

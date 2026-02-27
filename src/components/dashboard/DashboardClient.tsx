@@ -20,6 +20,7 @@ import type {
   employmentInfo,
   emergencyContacts,
   tenantOffboardingNotices,
+  refunds,
 } from "~/server/db/schema";
 
 type User = typeof user.$inferSelect;
@@ -32,6 +33,7 @@ type TenantProfile = typeof tenantProfiles.$inferSelect;
 type TenantDocument = typeof tenantDocuments.$inferSelect;
 type EmploymentInfo = typeof employmentInfo.$inferSelect;
 type EmergencyContact = typeof emergencyContacts.$inferSelect;
+type Refund = typeof refunds.$inferSelect;
 type OffboardingNotice = typeof tenantOffboardingNotices.$inferSelect;
 
 interface LeaseWithDetails {
@@ -51,6 +53,7 @@ interface DashboardClientProps {
   tenantDocuments: TenantDocument[];
   offboardingNotice: OffboardingNotice | null;
   isDelinquent: boolean;
+  refunds: Refund[];
 }
 
 export function DashboardClient({
@@ -64,6 +67,7 @@ export function DashboardClient({
   tenantDocuments,
   offboardingNotice,
   isDelinquent,
+  refunds,
 }: DashboardClientProps) {
   const router = useRouter();
 
@@ -162,7 +166,7 @@ export function DashboardClient({
             </TabsContent>
           )}
           <TabsContent value="payments">
-            <PaymentsTab payments={payments} lease={lease} />
+            <PaymentsTab payments={payments} lease={lease} refunds={refunds} />
           </TabsContent>
           {!isDelinquent && (
             <TabsContent value="documents">

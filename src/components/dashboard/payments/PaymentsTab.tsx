@@ -26,11 +26,15 @@ import { formatPaymentType } from "~/lib/payments/format";
 import { parseMoveInNotes } from "~/lib/payments/types";
 import { useRouter } from "next/navigation";
 import { PaymentModal } from "./PaymentModal";
+import { ConfirmRefundModal } from "./ConfirmRefundModal";
+import { RefreshCw } from "lucide-react";
+import type { refunds } from "~/server/db/schema";
 
 type Lease = typeof leases.$inferSelect;
 type Unit = typeof units.$inferSelect;
 type Property = typeof properties.$inferSelect;
 type Payment = typeof payments.$inferSelect;
+type Refund = typeof refunds.$inferSelect;
 
 interface LeaseWithDetails {
   lease: Lease;
@@ -41,6 +45,7 @@ interface LeaseWithDetails {
 interface PaymentsTabProps {
   payments: Payment[];
   lease: LeaseWithDetails;
+  refunds: Refund[];
 }
 
 const statusConfig = {
@@ -71,13 +76,18 @@ const statusConfig = {
   },
 };
 
-export function PaymentsTab({ payments, lease }: PaymentsTabProps) {
+export function PaymentsTab({ payments, lease, refunds: refundsList }: PaymentsTabProps) {
   const currency = lease.lease.currency;
   const onlineSupported = isOnlinePaymentSupported(currency);
   const router = useRouter();
 
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
+  const [refundModalOpen, setRefundModalOpen] = useState(false);
+  const [selectedRefund, setSelectedRefund] = useState<Refund | null>(null);
+
+  const pendingRefunds = refundsList.filter((r) => r.status === "pending_tenant_action");
+  const completedRefunds = refundsList.filter((r) => r.status === "completed");
 
   // Find next pending payment
   const nextPending = payments.find((p) => p.status === "pending");
@@ -245,6 +255,98 @@ export function PaymentsTab({ payments, lease }: PaymentsTabProps) {
         </CardContent>
       </Card>
 
+      {/* Pending Refunds */}
+      {pendingRefunds.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <RefreshCw className="h-5 w-5" />
+              Pending Refunds
+            </CardTitle>
+            <CardDescription>
+              You have refunds waiting for your confirmation
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {pendingRefunds.map((refund) => (
+              <div
+                key={refund.id}
+                className="flex items-center justify-between rounded-lg border p-4"
+              >
+                <div>
+                  <p className="font-medium">
+                    {formatCurrency(refund.amount, refund.currency)}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {refund.type === "deposit_return"
+                      ? "Security Deposit Return"
+                      : "Refund"}
+                    {refund.reason ? ` - ${refund.reason}` : ""}
+                  </p>
+                </div>
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    setSelectedRefund(refund);
+                    setRefundModalOpen(true);
+                  }}
+                >
+                  Confirm
+                </Button>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Completed Refunds */}
+      {completedRefunds.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <RefreshCw className="h-5 w-5" />
+              Refund History
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="rounded-md border">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b bg-muted/50">
+                    <th className="p-3 text-left text-sm font-medium">Date</th>
+                    <th className="p-3 text-left text-sm font-medium">Type</th>
+                    <th className="p-3 text-left text-sm font-medium">Amount</th>
+                    <th className="p-3 text-left text-sm font-medium">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {completedRefunds.map((refund) => (
+                    <tr key={refund.id} className="border-b last:border-0">
+                      <td className="p-3 text-sm">
+                        {refund.completedAt
+                          ? formatDate(refund.completedAt)
+                          : formatDate(refund.createdAt)}
+                      </td>
+                      <td className="p-3 text-sm">
+                        {refund.type === "deposit_return"
+                          ? "Deposit Return"
+                          : "Refund"}
+                      </td>
+                      <td className="p-3 text-sm font-medium">
+                        {formatCurrency(refund.amount, refund.currency)}
+                      </td>
+                      <td className="p-3">
+                        <Badge variant="default">Completed</Badge>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Payment Modal */}
       {selectedPayment && (
         <PaymentModal
@@ -254,6 +356,13 @@ export function PaymentsTab({ payments, lease }: PaymentsTabProps) {
           onPaymentComplete={handlePaymentComplete}
         />
       )}
+
+      {/* Confirm Refund Modal */}
+      <ConfirmRefundModal
+        open={refundModalOpen}
+        onOpenChange={setRefundModalOpen}
+        refund={selectedRefund}
+      />
     </div>
   );
 }
