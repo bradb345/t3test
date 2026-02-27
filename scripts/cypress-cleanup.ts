@@ -324,6 +324,17 @@ async function cleanupTestProperties() {
         console.log(`      🗑️  Deleted ${deletedNotices.count} offboarding notices for unit ${unit.id}`);
       }
 
+      // Delete refunds for leases on this unit
+      const deletedRefunds = await sql`
+        DELETE FROM t3test_refund
+        WHERE lease_id IN (
+          SELECT id FROM t3test_lease WHERE unit_id = ${unit.id}
+        )
+      `;
+      if (deletedRefunds.count > 0) {
+        console.log(`      🗑️  Deleted ${deletedRefunds.count} refunds for unit ${unit.id}`);
+      }
+
       // Delete payments for leases on this unit
       const deletedPayments = await sql`
         DELETE FROM t3test_payment
@@ -452,6 +463,12 @@ async function cleanupOffboardingTestData() {
         )
       `;
       console.log(`   🗑️  Deleted ${deletedNotices.count} offboarding notices`);
+
+      // Delete refunds for the tenant (FK constraint)
+      const deletedRefunds = await sql`
+        DELETE FROM t3test_refund WHERE tenant_id = ${tenantId}
+      `;
+      console.log(`   🗑️  Deleted ${deletedRefunds.count} refunds`);
 
       // Delete payments for the tenant's leases (FK constraint)
       const deletedPayments = await sql`

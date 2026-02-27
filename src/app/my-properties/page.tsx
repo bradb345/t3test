@@ -11,6 +11,7 @@ import {
   tenantDocuments,
   tenantProfiles,
   viewingRequests,
+  refunds,
 } from "~/server/db/schema";
 import { eq, and, desc, inArray, or } from "drizzle-orm";
 import { hasRole } from "~/lib/roles";
@@ -24,6 +25,7 @@ import type {
   DocumentWithDetails,
   PaymentWithDetails,
   ViewingRequestWithDetails,
+  RefundWithDetails,
 } from "~/types/landlord";
 
 export default async function MyPropertiesPage() {
@@ -81,6 +83,7 @@ export default async function MyPropertiesPage() {
         documents={[]}
         payments={[]}
         viewingRequests={[]}
+        refunds={[]}
       />
     );
   }
@@ -293,6 +296,33 @@ export default async function MyPropertiesPage() {
     })
   );
 
+  // Fetch refunds with details
+  const refundsData = tenantIds.length > 0
+    ? await db
+        .select({
+          refund: refunds,
+          tenant: user,
+          lease: leases,
+          unit: units,
+          property: properties,
+        })
+        .from(refunds)
+        .innerJoin(leases, eq(leases.id, refunds.leaseId))
+        .innerJoin(user, eq(user.id, refunds.tenantId))
+        .innerJoin(units, eq(units.id, leases.unitId))
+        .innerJoin(properties, eq(properties.id, units.propertyId))
+        .where(inArray(refunds.leaseId, activeLeases.map((l) => l.lease.id)))
+        .orderBy(desc(refunds.createdAt))
+    : [];
+
+  const refundsWithDetails: RefundWithDetails[] = refundsData.map((r) => ({
+    ...r.refund,
+    tenant: r.tenant,
+    lease: r.lease,
+    unit: r.unit,
+    property: r.property,
+  }));
+
   // Determine currency (use first property's currency or default to USD)
   const currency = userProperties[0]?.currency ?? "USD";
 
@@ -318,6 +348,7 @@ export default async function MyPropertiesPage() {
       documents={documentsWithDetails}
       payments={paymentsWithDetails}
       viewingRequests={viewingRequestsWithDetails}
+      refunds={refundsWithDetails}
     />
   );
 }

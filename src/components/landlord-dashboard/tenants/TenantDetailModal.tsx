@@ -37,6 +37,7 @@ import { CancelNoticeModal } from "./CancelNoticeModal";
 import { CompleteOffboardingModal } from "./CompleteOffboardingModal";
 import { AlertModal } from "~/components/AlertModal";
 import { getDaysUntilMoveOut, formatMoveOutDate } from "~/lib/offboarding";
+import { IssueRefundModal } from "~/components/landlord-dashboard/financials/IssueRefundModal";
 
 interface AlertModalState {
   open: boolean;
@@ -68,6 +69,8 @@ export function TenantDetailModal({
   const [showGiveNotice, setShowGiveNotice] = useState(false);
   const [showCancelNotice, setShowCancelNotice] = useState(false);
   const [showCompleteOffboarding, setShowCompleteOffboarding] = useState(false);
+  const [showRefundModal, setShowRefundModal] = useState(false);
+  const [refundType, setRefundType] = useState<"refund" | "deposit_return">("refund");
   const [isConfirmingSigning, setIsConfirmingSigning] = useState(false);
   const [activeNotice, setActiveNotice] = useState<OffboardingNotice | null>(null);
   const [isLoadingNotice, setIsLoadingNotice] = useState(false);
@@ -511,6 +514,44 @@ export function TenantDetailModal({
               </>
             )}
 
+            {/* Refund & Deposit Actions */}
+            {tenant.lease.status !== "pending_signature" && (
+              <>
+                <Separator />
+                <div className="space-y-2">
+                  <h4 className="text-sm font-medium">Refund & Deposit</h4>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setRefundType("refund");
+                        setShowRefundModal(true);
+                      }}
+                      className="text-indigo-600 border-indigo-200 hover:bg-indigo-50"
+                    >
+                      <DollarSign className="h-4 w-4 mr-1" />
+                      Issue Refund
+                    </Button>
+                    {tenant.lease.securityDeposit && parseFloat(tenant.lease.securityDeposit) > 0 && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setRefundType("deposit_return");
+                          setShowRefundModal(true);
+                        }}
+                        className="text-emerald-600 border-emerald-200 hover:bg-emerald-50"
+                      >
+                        <DollarSign className="h-4 w-4 mr-1" />
+                        Return Deposit
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
+
             {/* Standard Actions */}
             <div className="flex gap-2 pt-2">
               <Button variant="outline" className="flex-1" asChild>
@@ -642,6 +683,14 @@ export function TenantDetailModal({
           />
         </>
       )}
+
+      <IssueRefundModal
+        open={showRefundModal}
+        onOpenChange={setShowRefundModal}
+        tenants={tenant ? [{ user: tenant.user, lease: tenant.lease, unit: tenant.unit, property: tenant.property }] : []}
+        preselectedTenantId={tenant?.user.id}
+        preselectedType={refundType}
+      />
 
       <AlertModal
         open={alertModal.open}

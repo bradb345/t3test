@@ -64,6 +64,13 @@
       "when": 1769612569226,
       "tag": "0008_happy_chamber",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1772188127479,
+      "tag": "0009_chilly_mimic",
+      "breakpoints": true
     }
   ]
 }
