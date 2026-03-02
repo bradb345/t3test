@@ -87,11 +87,13 @@ export function NotificationBell() {
 
   const markAsRead = async (notificationId: number) => {
     try {
-      await fetch("/api/notifications", {
+      const response = await fetch("/api/notifications", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ notificationIds: [notificationId] }),
       });
+
+      if (!response.ok) return;
 
       setNotifications((prev) => prev.filter((n) => n.id !== notificationId));
       setUnreadCount((prev) => Math.max(0, prev - 1));
@@ -103,11 +105,13 @@ export function NotificationBell() {
   const markAllAsRead = async () => {
     setIsLoading(true);
     try {
-      await fetch("/api/notifications", {
+      const response = await fetch("/api/notifications", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ markAllRead: true }),
       });
+
+      if (!response.ok) return;
 
       setNotifications([]);
       setUnreadCount(0);
