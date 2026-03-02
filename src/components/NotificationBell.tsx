@@ -4,7 +4,6 @@ import { useState, useEffect, useRef } from "react";
 import { Bell, Check, CheckCheck, User, Wrench, Inbox } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import Link from "next/link";
-import { cn } from "~/lib/utils";
 
 interface NotificationData {
   tenantName?: string;
@@ -94,9 +93,7 @@ export function NotificationBell() {
         body: JSON.stringify({ notificationIds: [notificationId] }),
       });
 
-      setNotifications((prev) =>
-        prev.map((n) => (n.id === notificationId ? { ...n, read: true } : n))
-      );
+      setNotifications((prev) => prev.filter((n) => n.id !== notificationId));
       setUnreadCount((prev) => Math.max(0, prev - 1));
     } catch (error) {
       console.error("Error marking notification as read:", error);
@@ -112,7 +109,7 @@ export function NotificationBell() {
         body: JSON.stringify({ markAllRead: true }),
       });
 
-      setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+      setNotifications([]);
       setUnreadCount(0);
     } catch (error) {
       console.error("Error marking all as read:", error);
@@ -171,6 +168,23 @@ export function NotificationBell() {
     }
   };
 
+  const renderNotificationContent = (notification: Notification) => (
+    <>
+      {getNotificationIcon(notification.type)}
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-gray-900">
+          {notification.title}
+        </p>
+        <p className="mt-0.5 text-sm text-gray-600 line-clamp-2">
+          {notification.message}
+        </p>
+        <p className="mt-1 text-xs text-gray-400">
+          {formatTime(notification.createdAt)}
+        </p>
+      </div>
+    </>
+  );
+
   return (
     <div className="relative" ref={dropdownRef}>
       <Button
@@ -200,7 +214,7 @@ export function NotificationBell() {
                 className="text-xs text-purple-600 hover:text-purple-700"
               >
                 <CheckCheck className="mr-1 h-3 w-3" />
-                Mark all read
+                Clear all
               </Button>
             )}
           </div>
@@ -209,68 +223,31 @@ export function NotificationBell() {
             {notifications.length === 0 ? (
               <div className="px-4 py-8 text-center text-gray-500">
                 <Bell className="mx-auto mb-2 h-8 w-8 text-gray-300" />
-                <p className="text-sm">No notifications yet</p>
+                <p className="text-sm">You&apos;re all caught up!</p>
               </div>
             ) : (
               notifications.map((notification) => (
                 <div
                   key={notification.id}
-                  className={cn(
-                    "border-b px-4 py-3 transition-colors hover:bg-gray-50",
-                    !notification.read && "bg-purple-50"
-                  )}
+                  className="border-b px-4 py-3 transition-colors hover:bg-gray-50"
                 >
                   {notification.actionUrl ? (
                     <Link
                       href={notification.actionUrl}
                       onClick={() => {
-                        if (!notification.read) {
-                          void markAsRead(notification.id);
-                        }
+                        void markAsRead(notification.id);
                         setIsOpen(false);
                       }}
                       className="flex gap-3"
                     >
-                      {getNotificationIcon(notification.type)}
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900">
-                          {notification.title}
-                        </p>
-                        <p className="mt-0.5 text-sm text-gray-600 line-clamp-2">
-                          {notification.message}
-                        </p>
-                        <p className="mt-1 text-xs text-gray-400">
-                          {formatTime(notification.createdAt)}
-                        </p>
-                      </div>
-                      {!notification.read && (
-                        <div className="h-2 w-2 rounded-full bg-purple-600" />
-                      )}
+                      {renderNotificationContent(notification)}
                     </Link>
                   ) : (
                     <div
                       className="flex cursor-pointer gap-3"
-                      onClick={() => {
-                        if (!notification.read) {
-                          void markAsRead(notification.id);
-                        }
-                      }}
+                      onClick={() => void markAsRead(notification.id)}
                     >
-                      {getNotificationIcon(notification.type)}
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900">
-                          {notification.title}
-                        </p>
-                        <p className="mt-0.5 text-sm text-gray-600 line-clamp-2">
-                          {notification.message}
-                        </p>
-                        <p className="mt-1 text-xs text-gray-400">
-                          {formatTime(notification.createdAt)}
-                        </p>
-                      </div>
-                      {!notification.read && (
-                        <div className="h-2 w-2 rounded-full bg-purple-600" />
-                      )}
+                      {renderNotificationContent(notification)}
                     </div>
                   )}
                 </div>
