@@ -246,7 +246,7 @@ function DocumentRow({
         </div>
       </div>
       {showRejectForm && (
-        <div className="mt-3 ml-13 space-y-2">
+        <div className="mt-3 ml-[52px] space-y-2">
           <Textarea
             placeholder="Optional rejection notes (e.g., 'Image is too blurry')"
             value={rejectNotes}

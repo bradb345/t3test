@@ -20,6 +20,10 @@ const documentTypeLabels: Record<string, string> = {
   proof_of_address: "Proof of Address",
   pay_stub: "Pay Stub",
   bank_statement: "Bank Statement",
+  proof_of_income: "Proof of Income",
+  employment_verification: "Employment Verification",
+  rental_history: "Rental History",
+  reference_letter: "Reference Letter",
   other: "Other Document",
 };
 
@@ -140,7 +144,7 @@ export async function PATCH(
         status: body.status,
         verifiedAt: new Date(),
         verifiedBy: currentUser.id,
-        notes: body.notes?.trim() ?? null,
+        notes: body.notes?.trim() ? body.notes.trim() : null,
       })
       .where(eq(tenantDocuments.id, documentId))
       .returning();
@@ -209,7 +213,7 @@ export async function PATCH(
       property_id: propertyId,
       tenant_user_id: documentData.tenantProfile.userId,
       decision: body.status,
-      notes: body.notes?.trim() ?? null,
+      notes: body.notes?.trim() ? body.notes.trim() : null,
       source: "api",
     });
 

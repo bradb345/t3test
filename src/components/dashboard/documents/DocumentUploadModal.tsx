@@ -46,8 +46,8 @@ export function DocumentUploadModal({
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   useEffect(() => {
-    if (open && defaultDocumentType) {
-      setDocumentType(defaultDocumentType);
+    if (open) {
+      setDocumentType(defaultDocumentType ?? "");
     }
   }, [open, defaultDocumentType]);
 

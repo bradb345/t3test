@@ -165,12 +165,6 @@ export type ServerEventMap = {
     notes: string | null;
     source: string;
   };
-  document_reuploaded: {
-    document_id: number;
-    document_type: string;
-    previous_status: string;
-    source: string;
-  };
   profile_updated: {
     fields_updated: string[];
   };
