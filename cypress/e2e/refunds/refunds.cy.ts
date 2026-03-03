@@ -254,7 +254,7 @@ describe("Refunds & Security Deposit Returns", () => {
       // Type defaults to "Refund", verify it
       cy.get('[role="dialog"]').within(() => {
         // Enter amount
-        cy.get('input[type="number"]').clear().type("100");
+        cy.get('input[inputmode="decimal"]').clear().type("100");
 
         // Enter reason
         cy.get("textarea").type("Overpayment adjustment");
@@ -407,7 +407,7 @@ describe("Refunds & Security Deposit Returns", () => {
 
       cy.get('[role="dialog"]').within(() => {
         // Enter amount
-        cy.get('input[type="number"]').clear().type("50");
+        cy.get('input[inputmode="decimal"]').clear().type("50");
 
         // Enter reason
         cy.get("textarea").type("Refund to be cancelled");

@@ -29,7 +29,8 @@ const documentTypes = [
   { value: "other", label: "Other" },
 ];
 
-export function DocumentsTab({ documents, properties }: DocumentsTabProps) {
+export function DocumentsTab({ documents: initialDocuments, properties }: DocumentsTabProps) {
+  const [documents, setDocuments] = useState(initialDocuments);
   const [searchQuery, setSearchQuery] = useState("");
   const [propertyFilter, setPropertyFilter] = useState<string>("all");
   const [unitFilter, setUnitFilter] = useState<string>("all");
@@ -42,6 +43,12 @@ export function DocumentsTab({ documents, properties }: DocumentsTabProps) {
   const handlePropertyFilterChange = (value: string) => {
     setPropertyFilter(value);
     setUnitFilter("all");
+  };
+
+  const handleDocumentUpdated = (updatedDoc: DocumentWithDetails) => {
+    setDocuments((prev) =>
+      prev.map((doc) => (doc.id === updatedDoc.id ? updatedDoc : doc))
+    );
   };
 
   const filteredDocuments = documents.filter((doc) => {
@@ -146,7 +153,10 @@ export function DocumentsTab({ documents, properties }: DocumentsTabProps) {
       </div>
 
       {/* Document List */}
-      <PropertyDocumentsSection documents={filteredDocuments} />
+      <PropertyDocumentsSection
+        documents={filteredDocuments}
+        onDocumentUpdated={handleDocumentUpdated}
+      />
     </div>
   );
 }
