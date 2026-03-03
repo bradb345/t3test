@@ -71,6 +71,11 @@ export function LeaseExpirationsCard({ expirations, onViewTenants }: LeaseExpira
                     <Badge className={getUrgencyColor(expiration.daysUntilExpiration)}>
                       {expiration.daysUntilExpiration} days
                     </Badge>
+                    {expiration.pendingRenewalLeaseId && (
+                      <Badge className="bg-teal-100 text-teal-800">
+                        Renewal Sent
+                      </Badge>
+                    )}
                     <span className="text-xs text-muted-foreground">
                       Expires {formatDate(expiration.expirationDate)}
                     </span>

@@ -172,6 +172,32 @@ export type EmailMap = {
     dashboardUrl: string;
   };
 
+  // Lease renewal
+  lease_renewal_offered: {
+    tenantName: string;
+    landlordName: string;
+    unitNumber: string;
+    propertyName: string;
+    currentRent: string;
+    newRent: string;
+    currency: string;
+    newLeaseStart: Date;
+    newLeaseEnd: Date;
+    notes?: string;
+    dashboardUrl: string;
+  };
+  lease_renewal_accepted: {
+    landlordName: string;
+    tenantName: string;
+    unitNumber: string;
+    propertyName: string;
+    newRent: string;
+    currency: string;
+    newLeaseStart: Date;
+    newLeaseEnd: Date;
+    dashboardUrl: string;
+  };
+
   // Maintenance
   maintenance_request: {
     landlordName: string;

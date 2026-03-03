@@ -18,6 +18,7 @@ import {
   FileCheck,
   Loader2,
   Info,
+  RefreshCw,
 } from "lucide-react";
 import {
   Dialog,
@@ -38,6 +39,7 @@ import { CompleteOffboardingModal } from "./CompleteOffboardingModal";
 import { AlertModal } from "~/components/AlertModal";
 import { getDaysUntilMoveOut, formatMoveOutDate } from "~/lib/offboarding";
 import { IssueRefundModal } from "~/components/landlord-dashboard/financials/IssueRefundModal";
+import { InitiateRenewalModal } from "./InitiateRenewalModal";
 
 interface AlertModalState {
   open: boolean;
@@ -71,6 +73,9 @@ export function TenantDetailModal({
   const [showCompleteOffboarding, setShowCompleteOffboarding] = useState(false);
   const [showRefundModal, setShowRefundModal] = useState(false);
   const [refundType, setRefundType] = useState<"refund" | "deposit_return">("refund");
+  const [showRenewalModal, setShowRenewalModal] = useState(false);
+  const [pendingRenewal, setPendingRenewal] = useState<{ id: number; leaseStart: Date; leaseEnd: Date; monthlyRent: string } | null>(null);
+  const [isCancellingRenewal, setIsCancellingRenewal] = useState(false);
   const [isConfirmingSigning, setIsConfirmingSigning] = useState(false);
   const [activeNotice, setActiveNotice] = useState<OffboardingNotice | null>(null);
   const [isLoadingNotice, setIsLoadingNotice] = useState(false);
@@ -115,11 +120,28 @@ export function TenantDetailModal({
     }
   }, [tenant]);
 
+  const fetchPendingRenewal = useCallback(async () => {
+    if (!tenant) return;
+
+    try {
+      const response = await fetch(`/api/landlord/leases?unitId=${tenant.unit.id}&tenantId=${tenant.user.id}&status=pending_renewal`);
+      if (response.ok) {
+        const data = await response.json() as { leases: Array<{ id: number; leaseStart: string; leaseEnd: string; monthlyRent: string }> };
+        const renewal = data.leases?.[0];
+        setPendingRenewal(renewal ? { id: renewal.id, leaseStart: new Date(renewal.leaseStart), leaseEnd: new Date(renewal.leaseEnd), monthlyRent: renewal.monthlyRent } : null);
+      }
+    } catch {
+      // Fallback: try to find via search endpoint — or just silently fail
+      setPendingRenewal(null);
+    }
+  }, [tenant]);
+
   useEffect(() => {
     if (open && tenant) {
       void fetchActiveNotice();
+      void fetchPendingRenewal();
     }
-  }, [open, tenant, fetchActiveNotice]);
+  }, [open, tenant, fetchActiveNotice, fetchPendingRenewal]);
 
   if (!tenant) return null;
 
@@ -133,10 +155,41 @@ export function TenantDetailModal({
   const canGiveNotice = tenant.lease.status === "active" && !activeNotice;
   const canCancelNotice = activeNotice?.status === "active";
   const canComplete = activeNotice && activeNotice.status !== "completed" && activeNotice.status !== "cancelled";
+  const canInitiateRenewal = tenant.lease.status === "active" && !activeNotice && !pendingRenewal;
+
+  const handleCancelRenewal = async () => {
+    if (!pendingRenewal) return;
+    setIsCancellingRenewal(true);
+    try {
+      const response = await fetch(`/api/landlord/leases/${pendingRenewal.id}/cancel-renewal`, {
+        method: "DELETE",
+      });
+      if (!response.ok) {
+        const data = (await response.json()) as { error?: string };
+        throw new Error(data.error ?? "Failed to cancel renewal");
+      }
+      setPendingRenewal(null);
+      onOffboardingChange?.();
+    } catch (error) {
+      showAlert({
+        title: "Cancel Failed",
+        description: error instanceof Error ? error.message : "An error occurred",
+        variant: "error",
+      });
+    } finally {
+      setIsCancellingRenewal(false);
+    }
+  };
 
   const getStatusBadge = () => {
     if (tenant.lease.status === "pending_signature") {
       return <Badge className="bg-blue-100 text-blue-800">Pending Signature</Badge>;
+    }
+    if (tenant.lease.status === "pending_renewal") {
+      return <Badge className="bg-teal-100 text-teal-800">Pending Renewal</Badge>;
+    }
+    if (tenant.lease.status === "renewed") {
+      return <Badge className="bg-emerald-100 text-emerald-800">Renewed</Badge>;
     }
     if (tenant.lease.status === "notice_given" && activeNotice) {
       const daysLeft = getDaysUntilMoveOut(new Date(activeNotice.moveOutDate));
@@ -179,6 +232,11 @@ export function TenantDetailModal({
 
   const handleNoticeSuccess = () => {
     void fetchActiveNotice();
+    onOffboardingChange?.();
+  };
+
+  const handleRenewalSuccess = () => {
+    void fetchPendingRenewal();
     onOffboardingChange?.();
   };
 
@@ -476,6 +534,53 @@ export function TenantDetailModal({
               </>
             )}
 
+            {/* Renewal Actions */}
+            {tenant.lease.status === "active" && !activeNotice && (
+              <>
+                <Separator />
+                <div className="space-y-2">
+                  <h4 className="text-sm font-medium">Renewal Actions</h4>
+                  {pendingRenewal ? (
+                    <div className="rounded-lg border border-teal-200 bg-teal-50 p-4">
+                      <div className="flex items-start gap-3">
+                        <RefreshCw className="h-5 w-5 flex-shrink-0 text-teal-600 mt-0.5" />
+                        <div className="flex-1">
+                          <p className="font-medium text-teal-800">Renewal Pending</p>
+                          <p className="mt-1 text-sm text-teal-700">
+                            {formatDate(pendingRenewal.leaseStart)} - {formatDate(pendingRenewal.leaseEnd)}
+                          </p>
+                          <p className="text-sm text-teal-700">
+                            New rent: {formatCurrency(pendingRenewal.monthlyRent)}
+                          </p>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="mt-2 text-red-600 border-red-200 hover:bg-red-50"
+                            onClick={handleCancelRenewal}
+                            disabled={isCancellingRenewal}
+                          >
+                            <XCircle className="h-4 w-4 mr-1" />
+                            {isCancellingRenewal ? "Cancelling..." : "Cancel Renewal"}
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowRenewalModal(true)}
+                      className="text-teal-600 border-teal-200 hover:bg-teal-50"
+                      disabled={!canInitiateRenewal}
+                    >
+                      <RefreshCw className="h-4 w-4 mr-1" />
+                      Initiate Renewal
+                    </Button>
+                  )}
+                </div>
+              </>
+            )}
+
             {/* Active Notice Display */}
             {activeNotice && activeNotice.status !== "cancelled" && activeNotice.status !== "completed" && (
               <>
@@ -683,6 +788,19 @@ export function TenantDetailModal({
           />
         </>
       )}
+
+      <InitiateRenewalModal
+        open={showRenewalModal}
+        onOpenChange={setShowRenewalModal}
+        leaseId={tenant.lease.id}
+        unitNumber={tenant.unit.unitNumber}
+        propertyName={tenant.property.name}
+        tenantName={`${tenant.user.first_name} ${tenant.user.last_name}`}
+        currentLeaseEnd={tenant.lease.leaseEnd}
+        currentRent={tenant.lease.monthlyRent}
+        currency={tenant.lease.currency}
+        onSuccess={handleRenewalSuccess}
+      />
 
       <IssueRefundModal
         open={showRefundModal}
