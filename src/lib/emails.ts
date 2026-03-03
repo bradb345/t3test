@@ -157,6 +157,21 @@ export type EmailMap = {
     dashboardUrl: string;
   };
 
+  // Documents
+  document_approved: {
+    tenantName: string;
+    documentType: string;
+    propertyName: string;
+    dashboardUrl: string;
+  };
+  document_rejected: {
+    tenantName: string;
+    documentType: string;
+    propertyName: string;
+    rejectionNotes?: string;
+    dashboardUrl: string;
+  };
+
   // Maintenance
   maintenance_request: {
     landlordName: string;

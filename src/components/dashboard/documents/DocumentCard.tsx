@@ -13,7 +13,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "~/components/ui/alert-dialog";
-import { File, ExternalLink, Trash2, Loader2 } from "lucide-react";
+import { File, ExternalLink, Trash2, Loader2, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import type { tenantDocuments } from "~/server/db/schema";
 import { formatDate } from "~/lib/date";
@@ -23,6 +23,7 @@ type TenantDocument = typeof tenantDocuments.$inferSelect;
 interface DocumentCardProps {
   document: TenantDocument;
   onDeleted: (documentId: number) => void;
+  onReupload?: (documentType: string) => void;
 }
 
 const documentTypeLabels: Record<string, string> = {
@@ -48,7 +49,7 @@ const statusConfig = {
   },
 };
 
-export function DocumentCard({ document, onDeleted }: DocumentCardProps) {
+export function DocumentCard({ document, onDeleted, onReupload }: DocumentCardProps) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
@@ -117,6 +118,17 @@ export function DocumentCard({ document, onDeleted }: DocumentCardProps) {
               View
             </a>
           </Button>
+          {document.status === "rejected" && onReupload && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex-1"
+              onClick={() => onReupload(document.documentType)}
+            >
+              <RefreshCw className="mr-2 h-3 w-3" />
+              Re-upload
+            </Button>
+          )}
           <Button
             variant="ghost"
             size="sm"

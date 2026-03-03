@@ -534,6 +534,26 @@ async function getProtectedTestUserIds(): Promise<number[]> {
 }
 
 /**
+ * Clean up tenant documents for protected test users.
+ */
+async function cleanupTestUserDocuments(testUserIds: number[]) {
+  console.log('Cleaning up tenant documents for test users...\n');
+
+  if (testUserIds.length > 0) {
+    const deleted = await sql`
+      DELETE FROM t3test_tenant_document
+      WHERE tenant_profile_id IN (
+        SELECT id FROM t3test_tenant_profile
+        WHERE user_id IN ${sql(testUserIds)}
+      )
+    `;
+    console.log(`🗑️  Deleted ${deleted.count} tenant documents for test users.\n`);
+  } else {
+    console.log('⚠️  Could not find test users, skipping document cleanup.\n');
+  }
+}
+
+/**
  * Clean up messages between protected test users (tenant journey test data).
  */
 async function cleanupTenantJourneyMessages(testUserIds: number[]) {
@@ -577,6 +597,7 @@ async function cleanupCypressTestData() {
   try {
     await cleanupTestProperties();
     const testUserIds = await getProtectedTestUserIds();
+    await cleanupTestUserDocuments(testUserIds);
     await cleanupTenantJourneyMessages(testUserIds);
     await cleanupTestUserNotifications(testUserIds);
     await cleanupTestUsers();
