@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { db } from "~/server/db";
 import { notifications } from "~/server/db/schema";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, count } from "drizzle-orm";
 import { getAuthenticatedUser } from "~/server/auth";
 
 // GET /api/notifications - Get user's notifications
@@ -17,15 +17,31 @@ export async function GET() {
     }
     const dbUser = authResult.user;
 
-    // Get notifications for the user
-    const userNotifications = await db
-      .select()
-      .from(notifications)
-      .where(eq(notifications.userId, dbUser.id))
-      .orderBy(desc(notifications.createdAt))
-      .limit(20);
+    // Get only unread notifications for the user
+    const [userNotifications, unreadCountResult] = await Promise.all([
+      db
+        .select()
+        .from(notifications)
+        .where(
+          and(
+            eq(notifications.userId, dbUser.id),
+            eq(notifications.read, false)
+          )
+        )
+        .orderBy(desc(notifications.createdAt))
+        .limit(20),
+      db
+        .select({ count: count() })
+        .from(notifications)
+        .where(
+          and(
+            eq(notifications.userId, dbUser.id),
+            eq(notifications.read, false)
+          )
+        ),
+    ]);
 
-    const unreadCount = userNotifications.filter(n => !n.read).length;
+    const unreadCount = unreadCountResult[0]?.count ?? 0;
 
     return NextResponse.json({
       notifications: userNotifications.map(n => ({
