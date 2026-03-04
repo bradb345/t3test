@@ -11,7 +11,7 @@ interface EditTermsBody {
   leaseStart?: string;
   leaseEnd?: string;
   monthlyRent?: number;
-  securityDeposit?: number;
+  securityDeposit?: number | null;
   rentDueDay?: number;
 }
 
@@ -129,7 +129,7 @@ export async function PATCH(
     }
 
     if (body.monthlyRent !== undefined) {
-      if (typeof body.monthlyRent !== "number" || body.monthlyRent <= 0) {
+      if (typeof body.monthlyRent !== "number" || !Number.isFinite(body.monthlyRent) || body.monthlyRent <= 0) {
         return NextResponse.json(
           { error: "Monthly rent must be greater than 0" },
           { status: 400 }
@@ -139,13 +139,16 @@ export async function PATCH(
     }
 
     if (body.securityDeposit !== undefined) {
-      if (typeof body.securityDeposit !== "number" || body.securityDeposit < 0) {
+      if (body.securityDeposit === null) {
+        updates.securityDeposit = null;
+      } else if (typeof body.securityDeposit !== "number" || !Number.isFinite(body.securityDeposit) || body.securityDeposit < 0) {
         return NextResponse.json(
           { error: "Security deposit must be 0 or greater" },
           { status: 400 }
         );
+      } else {
+        updates.securityDeposit = body.securityDeposit.toFixed(2);
       }
-      updates.securityDeposit = body.securityDeposit.toFixed(2);
     }
 
     if (body.rentDueDay !== undefined) {
@@ -171,7 +174,7 @@ export async function PATCH(
       return String(value) !== String(current);
     });
 
-    if (Object.keys(updates).length === 0) {
+    if (Object.keys(updates).length === 0 || !hasChanges) {
       return NextResponse.json({ success: true, lease: leaseData.lease });
     }
 

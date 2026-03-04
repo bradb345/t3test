@@ -64,7 +64,7 @@ export function EditLeaseTermsModal({
   const [leaseEnd, setLeaseEnd] = useState(toDateString(currentLeaseEnd));
   const [monthlyRent, setMonthlyRent] = useState(currentRent);
   const [securityDeposit, setSecurityDeposit] = useState(
-    currentSecurityDeposit ?? "0"
+    currentSecurityDeposit ?? ""
   );
   const [rentDueDay, setRentDueDay] = useState(String(currentRentDueDay));
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -95,8 +95,8 @@ export function EditLeaseTermsModal({
       return;
     }
 
-    const deposit = parseFloat(securityDeposit);
-    if (isNaN(deposit) || deposit < 0) {
+    const deposit = securityDeposit === "" ? null : parseFloat(securityDeposit);
+    if (deposit !== null && (isNaN(deposit) || deposit < 0)) {
       setError("Security deposit must be 0 or greater");
       setIsSubmitting(false);
       return;
@@ -139,6 +139,7 @@ export function EditLeaseTermsModal({
       }
 
       onSuccess();
+      resetForm();
       onOpenChange(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
@@ -151,7 +152,7 @@ export function EditLeaseTermsModal({
     setLeaseStart(toDateString(currentLeaseStart));
     setLeaseEnd(toDateString(currentLeaseEnd));
     setMonthlyRent(currentRent);
-    setSecurityDeposit(currentSecurityDeposit ?? "0");
+    setSecurityDeposit(currentSecurityDeposit ?? "");
     setRentDueDay(String(currentRentDueDay));
     setError(null);
   };
@@ -207,7 +208,7 @@ export function EditLeaseTermsModal({
               id="edit-rent"
               type="number"
               step="0.01"
-              min="0"
+              min="0.01"
               value={monthlyRent}
               onChange={(e) => setMonthlyRent(e.target.value)}
             />
