@@ -18,6 +18,7 @@ import {
   FileCheck,
   Loader2,
   Info,
+  Pencil,
   RefreshCw,
 } from "lucide-react";
 import {
@@ -40,6 +41,7 @@ import { AlertModal } from "~/components/AlertModal";
 import { getDaysUntilMoveOut, formatMoveOutDate } from "~/lib/offboarding";
 import { IssueRefundModal } from "~/components/landlord-dashboard/financials/IssueRefundModal";
 import { InitiateRenewalModal } from "./InitiateRenewalModal";
+import { EditLeaseTermsModal } from "./EditLeaseTermsModal";
 
 interface AlertModalState {
   open: boolean;
@@ -74,6 +76,7 @@ export function TenantDetailModal({
   const [showRefundModal, setShowRefundModal] = useState(false);
   const [refundType, setRefundType] = useState<"refund" | "deposit_return">("refund");
   const [showRenewalModal, setShowRenewalModal] = useState(false);
+  const [showEditTermsModal, setShowEditTermsModal] = useState(false);
   const [pendingRenewal, setPendingRenewal] = useState<{ id: number; leaseStart: Date; leaseEnd: Date; monthlyRent: string } | null>(null);
   const [isCancellingRenewal, setIsCancellingRenewal] = useState(false);
   const [isConfirmingSigning, setIsConfirmingSigning] = useState(false);
@@ -433,6 +436,16 @@ export function TenantDetailModal({
                     </p>
                   </div>
 
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowEditTermsModal(true)}
+                    className="w-full text-blue-600 border-blue-300 hover:bg-blue-100"
+                  >
+                    <Pencil className="h-4 w-4 mr-1" />
+                    Edit Lease Terms
+                  </Button>
+
                   {/* File upload area */}
                   {!uploadedLeaseUrl ? (
                     <div>
@@ -788,6 +801,24 @@ export function TenantDetailModal({
           />
         </>
       )}
+
+      <EditLeaseTermsModal
+        open={showEditTermsModal}
+        onOpenChange={setShowEditTermsModal}
+        leaseId={tenant.lease.id}
+        unitNumber={tenant.unit.unitNumber}
+        propertyName={tenant.property.name}
+        tenantName={`${tenant.user.first_name} ${tenant.user.last_name}`}
+        currentLeaseStart={tenant.lease.leaseStart}
+        currentLeaseEnd={tenant.lease.leaseEnd}
+        currentRent={tenant.lease.monthlyRent}
+        currentSecurityDeposit={tenant.lease.securityDeposit}
+        currentRentDueDay={tenant.lease.rentDueDay}
+        currency={tenant.lease.currency}
+        onSuccess={() => {
+          router.refresh();
+        }}
+      />
 
       <InitiateRenewalModal
         open={showRenewalModal}
