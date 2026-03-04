@@ -8,7 +8,10 @@ import {
   CardTitle,
 } from "~/components/ui/card";
 import { Badge } from "~/components/ui/badge";
-import { Calendar, Home, DollarSign, Info, FileText } from "lucide-react";
+import { Calendar, Home, DollarSign, Info, FileText, RefreshCw, Loader2 } from "lucide-react";
+import { Button } from "~/components/ui/button";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { usePostHog } from "posthog-js/react";
 import type { leases, units, properties } from "~/server/db/schema";
 import { formatDate } from "~/lib/date";
@@ -27,10 +30,16 @@ interface LeaseWithDetails {
 
 interface LeaseInfoCardProps {
   lease: LeaseWithDetails;
+  pendingRenewalLease?: Lease | null;
+  onRenewalAction?: () => void;
 }
 
-export function LeaseInfoCard({ lease }: LeaseInfoCardProps) {
+export function LeaseInfoCard({ lease, pendingRenewalLease, onRenewalAction }: LeaseInfoCardProps) {
   const posthog = usePostHog();
+  const router = useRouter();
+  const [isAccepting, setIsAccepting] = useState(false);
+  const [isDeclining, setIsDeclining] = useState(false);
+  const [renewalError, setRenewalError] = useState<string | null>(null);
 
   const getStatusBadge = () => {
     if (lease.lease.status === "pending_signature") {
@@ -149,6 +158,102 @@ export function LeaseInfoCard({ lease }: LeaseInfoCardProps) {
             <p className="text-sm text-yellow-800">
               Your landlord is handling the lease signing. You&apos;ll be notified once the lease is signed and your move-in payment is ready.
             </p>
+          </div>
+        )}
+
+        {pendingRenewalLease && (
+          <div className="rounded-lg border border-teal-200 bg-teal-50 p-4 space-y-3">
+            <div className="flex items-start gap-2">
+              <RefreshCw className="h-5 w-5 flex-shrink-0 text-teal-600 mt-0.5" />
+              <div className="flex-1">
+                <p className="font-medium text-teal-800">Lease Renewal Offered</p>
+                <p className="mt-1 text-sm text-teal-700">
+                  Your landlord has offered to renew your lease with the following terms:
+                </p>
+                <div className="mt-2 space-y-1 text-sm text-teal-700">
+                  <p>
+                    <span className="font-medium">New dates:</span>{" "}
+                    {formatDate(pendingRenewalLease.leaseStart)} - {formatDate(pendingRenewalLease.leaseEnd)}
+                  </p>
+                  <p>
+                    <span className="font-medium">New rent:</span>{" "}
+                    {formatCurrency(pendingRenewalLease.monthlyRent, pendingRenewalLease.currency)}
+                    {pendingRenewalLease.monthlyRent !== lease.lease.monthlyRent && (
+                      <span className="ml-1 text-xs">
+                        (currently {formatCurrency(lease.lease.monthlyRent, lease.lease.currency)})
+                      </span>
+                    )}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {renewalError && (
+              <div className="rounded-lg bg-red-50 p-2 text-sm text-red-600">
+                {renewalError}
+              </div>
+            )}
+
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                className="flex-1 bg-teal-600 hover:bg-teal-700"
+                onClick={async () => {
+                  setIsAccepting(true);
+                  setRenewalError(null);
+                  try {
+                    const response = await fetch(
+                      `/api/tenant/leases/${pendingRenewalLease.id}/acknowledge-renewal`,
+                      { method: "PATCH" }
+                    );
+                    if (!response.ok) {
+                      const data = (await response.json()) as { error?: string };
+                      throw new Error(data.error ?? "Failed to accept renewal");
+                    }
+                    onRenewalAction?.();
+                    router.refresh();
+                  } catch (err) {
+                    setRenewalError(err instanceof Error ? err.message : "An error occurred");
+                  } finally {
+                    setIsAccepting(false);
+                  }
+                }}
+                disabled={isAccepting || isDeclining}
+              >
+                {isAccepting ? (
+                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                ) : null}
+                {isAccepting ? "Accepting..." : "Accept Renewal"}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="text-red-600 border-red-200 hover:bg-red-50"
+                onClick={async () => {
+                  setIsDeclining(true);
+                  setRenewalError(null);
+                  try {
+                    const response = await fetch(
+                      `/api/tenant/leases/${pendingRenewalLease.id}/decline-renewal`,
+                      { method: "PATCH" }
+                    );
+                    if (!response.ok) {
+                      const data = (await response.json()) as { error?: string };
+                      throw new Error(data.error ?? "Failed to decline renewal");
+                    }
+                    onRenewalAction?.();
+                    router.refresh();
+                  } catch (err) {
+                    setRenewalError(err instanceof Error ? err.message : "An error occurred");
+                  } finally {
+                    setIsDeclining(false);
+                  }
+                }}
+                disabled={isAccepting || isDeclining}
+              >
+                {isDeclining ? "Declining..." : "Decline"}
+              </Button>
+            </div>
           </div>
         )}
       </CardContent>

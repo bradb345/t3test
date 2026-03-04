@@ -119,7 +119,7 @@ export default async function MyPropertiesPage() {
         .where(
           and(
             inArray(leases.unitId, unitIds),
-            or(eq(leases.status, "active"), eq(leases.status, "notice_given"), eq(leases.status, "terminated"), eq(leases.status, "pending_signature"))
+            or(eq(leases.status, "active"), eq(leases.status, "notice_given"), eq(leases.status, "terminated"), eq(leases.status, "pending_signature"), eq(leases.status, "pending_renewal"))
           )
         )
         .orderBy(desc(leases.createdAt))
@@ -138,8 +138,18 @@ export default async function MyPropertiesPage() {
   // Get lease expirations (next 90 days)
   const now = new Date();
   const ninetyDaysFromNow = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000);
+
+  // Build a map of pending renewal lease IDs by their previousLeaseId
+  const pendingRenewalsByPrevious = new Map<number, number>();
+  for (const l of activeLeases) {
+    if (l.lease.status === "pending_renewal" && l.lease.previousLeaseId) {
+      pendingRenewalsByPrevious.set(l.lease.previousLeaseId, l.lease.id);
+    }
+  }
+
   const leaseExpirations: LeaseExpiration[] = activeLeases
     .filter((l) => {
+      if (l.lease.status === "pending_renewal") return false;
       const endDate = new Date(l.lease.leaseEnd);
       return endDate >= now && endDate <= ninetyDaysFromNow;
     })
@@ -152,11 +162,12 @@ export default async function MyPropertiesPage() {
       daysUntilExpiration: Math.ceil(
         (new Date(l.lease.leaseEnd).getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
       ),
+      pendingRenewalLeaseId: pendingRenewalsByPrevious.get(l.lease.id),
     }))
     .sort((a, b) => a.daysUntilExpiration - b.daysUntilExpiration);
 
-  // Build tenants with lease info
-  const tenants: TenantWithLease[] = activeLeases.map((l) => ({
+  // Build tenants with lease info (exclude pending_renewal — they duplicate active tenants)
+  const tenants: TenantWithLease[] = activeLeases.filter((l) => l.lease.status !== "pending_renewal").map((l) => ({
     user: l.tenant,
     lease: l.lease,
     unit: l.unit,

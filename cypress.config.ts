@@ -219,6 +219,23 @@ export default defineConfig({
               `;
             }
 
+            // Delete tenant documents for the journey tenant
+            const journeyTenantProfiles = await sql`
+              SELECT tp.id FROM t3test_tenant_profile tp
+              JOIN t3test_user u ON u.id = tp.user_id
+              WHERE u.email = 'jones+clerk_test@example.com'
+            `;
+            const journeyProfileIds = (journeyTenantProfiles as unknown as { id: number }[]).map(
+              (p) => p.id
+            );
+
+            if (journeyProfileIds.length > 0) {
+              await sql`
+                DELETE FROM t3test_tenant_document
+                WHERE tenant_profile_id IN ${sql(journeyProfileIds)}
+              `;
+            }
+
             // Delete messages between the landlord and journey tenant only
             // (the cleanup script in scripts/cypress-cleanup.ts handles all
             // three test users; this task is scoped to journey test data)

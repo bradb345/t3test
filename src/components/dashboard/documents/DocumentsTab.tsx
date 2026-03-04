@@ -48,6 +48,7 @@ export function DocumentsTab({
 }: DocumentsTabProps) {
   const [documents, setDocuments] = useState(initialDocuments);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [defaultDocumentType, setDefaultDocumentType] = useState<string | undefined>();
 
   // Parse lease documents
   let leaseDocuments: LeaseDocument[] = [];
@@ -71,6 +72,12 @@ export function DocumentsTab({
   const handleDocumentUploaded = (newDocument: TenantDocument) => {
     setDocuments((prev) => [newDocument, ...prev]);
     setIsUploadModalOpen(false);
+    setDefaultDocumentType(undefined);
+  };
+
+  const handleReupload = (documentType: string) => {
+    setDefaultDocumentType(documentType);
+    setIsUploadModalOpen(true);
   };
 
   const handleDocumentDeleted = (documentId: number) => {
@@ -87,7 +94,10 @@ export function DocumentsTab({
           </p>
         </div>
         {profileId && (
-          <Button onClick={() => setIsUploadModalOpen(true)}>
+          <Button onClick={() => {
+            setDefaultDocumentType(undefined);
+            setIsUploadModalOpen(true);
+          }}>
             <Upload className="mr-2 h-4 w-4" />
             Upload Document
           </Button>
@@ -168,7 +178,10 @@ export function DocumentsTab({
                 <Button
                   variant="outline"
                   className="mt-4"
-                  onClick={() => setIsUploadModalOpen(true)}
+                  onClick={() => {
+                    setDefaultDocumentType(undefined);
+                    setIsUploadModalOpen(true);
+                  }}
                 >
                   <Upload className="mr-2 h-4 w-4" />
                   Upload your first document
@@ -182,6 +195,7 @@ export function DocumentsTab({
                   key={doc.id}
                   document={doc}
                   onDeleted={handleDocumentDeleted}
+                  onReupload={handleReupload}
                 />
               ))}
             </div>
@@ -192,9 +206,13 @@ export function DocumentsTab({
       {profileId && (
         <DocumentUploadModal
           open={isUploadModalOpen}
-          onOpenChange={setIsUploadModalOpen}
+          onOpenChange={(open) => {
+            setIsUploadModalOpen(open);
+            if (!open) setDefaultDocumentType(undefined);
+          }}
           profileId={profileId}
           onDocumentUploaded={handleDocumentUploaded}
+          defaultDocumentType={defaultDocumentType}
         />
       )}
     </div>

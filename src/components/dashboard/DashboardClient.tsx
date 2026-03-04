@@ -52,6 +52,7 @@ interface DashboardClientProps {
   emergencyContacts: EmergencyContact[];
   tenantDocuments: TenantDocument[];
   offboardingNotice: OffboardingNotice | null;
+  pendingRenewalLease: Lease | null;
   isDelinquent: boolean;
   refunds: Refund[];
 }
@@ -66,6 +67,7 @@ export function DashboardClient({
   emergencyContacts,
   tenantDocuments,
   offboardingNotice,
+  pendingRenewalLease,
   isDelinquent,
   refunds,
 }: DashboardClientProps) {
@@ -153,6 +155,7 @@ export function DashboardClient({
                 payments={payments}
                 maintenanceRequests={maintenanceRequests}
                 offboardingNotice={offboardingNotice}
+                pendingRenewalLease={pendingRenewalLease}
                 onOffboardingChange={handleOffboardingChange}
               />
             </TabsContent>

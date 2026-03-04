@@ -81,6 +81,7 @@ export interface LeaseExpiration {
   propertyName: string;
   expirationDate: Date;
   daysUntilExpiration: number;
+  pendingRenewalLeaseId?: number;
 }
 
 // Dashboard data passed from server to client

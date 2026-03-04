@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -31,6 +31,7 @@ interface DocumentUploadModalProps {
   onOpenChange: (open: boolean) => void;
   profileId: number;
   onDocumentUploaded: (document: TenantDocument) => void;
+  defaultDocumentType?: string;
 }
 
 export function DocumentUploadModal({
@@ -38,10 +39,17 @@ export function DocumentUploadModal({
   onOpenChange,
   profileId: _profileId,
   onDocumentUploaded,
+  defaultDocumentType,
 }: DocumentUploadModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [documentType, setDocumentType] = useState("");
+  const [documentType, setDocumentType] = useState(defaultDocumentType ?? "");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+
+  useEffect(() => {
+    if (open) {
+      setDocumentType(defaultDocumentType ?? "");
+    }
+  }, [open, defaultDocumentType]);
 
   const { startUpload } = useUploadThing("documents");
 

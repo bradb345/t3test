@@ -32,6 +32,7 @@ interface OverviewTabProps {
   payments: Payment[];
   maintenanceRequests: MaintenanceRequest[];
   offboardingNotice: OffboardingNotice | null;
+  pendingRenewalLease: Lease | null;
   onOffboardingChange?: () => void;
 }
 
@@ -40,6 +41,7 @@ export function OverviewTab({
   payments,
   maintenanceRequests,
   offboardingNotice,
+  pendingRenewalLease,
   onOffboardingChange,
 }: OverviewTabProps) {
   // Find next upcoming payment (pending status, future due date)
@@ -72,7 +74,7 @@ export function OverviewTab({
         />
       )}
 
-      <LeaseInfoCard lease={lease} />
+      <LeaseInfoCard lease={lease} pendingRenewalLease={pendingRenewalLease} onRenewalAction={onOffboardingChange} />
       <NextPaymentCard payment={nextPayment} lease={lease} />
       <RecentMaintenanceCard requests={recentMaintenance} />
       <QuickActionsCard />

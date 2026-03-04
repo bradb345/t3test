@@ -238,6 +238,7 @@ export const leases = createTable(
     renewalOption: boolean("renewal_option").default(false),
     autoRenewal: boolean("auto_renewal").default(false),
     delinquent: boolean("delinquent").notNull().default(false),
+    previousLeaseId: integer("previous_lease_id"),
     leaseSignedAt: timestamp("lease_signed_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .default(sql`CURRENT_TIMESTAMP`)
@@ -249,6 +250,7 @@ export const leases = createTable(
     tenantLeaseIndex: index("tenant_lease_idx").on(lease.tenantId),
     landlordLeaseIndex: index("landlord_lease_idx").on(lease.landlordId),
     statusIndex: index("lease_status_idx").on(lease.status),
+    previousLeaseIndex: index("previous_lease_idx").on(lease.previousLeaseId),
   })
 );
 
