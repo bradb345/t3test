@@ -151,11 +151,21 @@ export async function POST(
       actionUrl: "/dashboard",
     });
 
+    // Get landlord info for email
+    const [landlord] = await db
+      .select()
+      .from(user)
+      .where(eq(user.id, leaseData.lease.landlordId))
+      .limit(1);
+    const landlordName = landlord
+      ? `${landlord.first_name ?? ""} ${landlord.last_name ?? ""}`.trim()
+      : "";
+
     // Send email to tenant
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
     await sendAppEmail(leaseData.tenant.email, "lease_renewal_offered", {
       tenantName: `${leaseData.tenant.first_name} ${leaseData.tenant.last_name}`,
-      landlordName: "", // Will be populated below
+      landlordName,
       unitNumber: leaseData.unit.unitNumber,
       propertyName: leaseData.property.name,
       currentRent: leaseData.lease.monthlyRent,

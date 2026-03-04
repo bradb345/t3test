@@ -24,12 +24,21 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    const parsedUnitId = parseInt(unitId);
+    const parsedTenantId = parseInt(tenantId);
+    if (!Number.isInteger(parsedUnitId) || !Number.isInteger(parsedTenantId)) {
+      return NextResponse.json(
+        { error: "unitId and tenantId must be valid integers" },
+        { status: 400 }
+      );
+    }
+
     // Verify landlord owns the unit's property
     const [unitData] = await db
       .select({ unit: units, property: properties })
       .from(units)
       .innerJoin(properties, eq(properties.id, units.propertyId))
-      .where(eq(units.id, parseInt(unitId)))
+      .where(eq(units.id, parsedUnitId))
       .limit(1);
 
     if (!unitData || unitData.property.userId !== clerkUserId) {
@@ -41,8 +50,8 @@ export async function GET(request: NextRequest) {
       .from(leases)
       .where(
         and(
-          eq(leases.unitId, parseInt(unitId)),
-          eq(leases.tenantId, parseInt(tenantId)),
+          eq(leases.unitId, parsedUnitId),
+          eq(leases.tenantId, parsedTenantId),
           eq(leases.status, status)
         )
       )

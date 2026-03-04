@@ -75,6 +75,31 @@ export async function PATCH(
       );
     }
 
+    // Verify the previous lease exists, belongs to the same tenant/unit, and is active
+    const [previousLease] = await db
+      .select()
+      .from(leases)
+      .where(eq(leases.id, leaseData.lease.previousLeaseId))
+      .limit(1);
+
+    if (!previousLease) {
+      return NextResponse.json(
+        { error: "Previous lease not found" },
+        { status: 400 }
+      );
+    }
+
+    if (
+      previousLease.tenantId !== leaseData.lease.tenantId ||
+      previousLease.unitId !== leaseData.lease.unitId ||
+      previousLease.status !== "active"
+    ) {
+      return NextResponse.json(
+        { error: "Previous lease is not valid for renewal" },
+        { status: 400 }
+      );
+    }
+
     // Activate the renewal
     await activateRenewalLease({
       newLeaseId: leaseData.lease.id,

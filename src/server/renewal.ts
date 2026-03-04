@@ -24,13 +24,15 @@ export async function activateRenewalLease({
   newLeaseId,
   oldLeaseId,
 }: ActivateRenewalLeaseParams): Promise<void> {
-  await db
-    .update(leases)
-    .set({ status: "renewed" })
-    .where(eq(leases.id, oldLeaseId));
+  await db.transaction(async (tx) => {
+    await tx
+      .update(leases)
+      .set({ status: "renewed" })
+      .where(eq(leases.id, oldLeaseId));
 
-  await db
-    .update(leases)
-    .set({ status: "active", leaseSignedAt: new Date() })
-    .where(eq(leases.id, newLeaseId));
+    await tx
+      .update(leases)
+      .set({ status: "active", leaseSignedAt: new Date() })
+      .where(eq(leases.id, newLeaseId));
+  });
 }

@@ -8,7 +8,6 @@ export function leaseRenewalAcceptedEmail(
   const tenantName = escapeHtml(params.tenantName);
   const unitNumber = escapeHtml(params.unitNumber);
   const propertyName = escapeHtml(params.propertyName);
-  const currency = escapeHtml(params.currency);
   const { dashboardUrl, newLeaseStart, newLeaseEnd } = params;
 
   const formatDate = (date: Date) =>
@@ -130,7 +129,7 @@ export function leaseRenewalAcceptedEmail(
           </div>
           <div class="detail-row">
             <span class="detail-label">Monthly Rent:</span>
-            <span class="detail-value">${newRentFormatted} ${currency}</span>
+            <span class="detail-value">${newRentFormatted}</span>
           </div>
         </div>
 

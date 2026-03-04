@@ -44,7 +44,12 @@ export function InitiateRenewalModal({
   const defaultEnd = new Date(defaultStart);
   defaultEnd.setFullYear(defaultEnd.getFullYear() + 1);
 
-  const toDateString = (d: Date) => d.toISOString().split("T")[0]!;
+  const toDateString = (d: Date) => {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
 
   const [leaseStart, setLeaseStart] = useState(toDateString(defaultStart));
   const [leaseEnd, setLeaseEnd] = useState(toDateString(defaultEnd));
