@@ -190,6 +190,10 @@ export async function POST(request: NextRequest) {
       idempotencyKey: `payment_intent_${payment.id}_${amountCents}`,
     });
 
+    // Track whether this is the first initiation (no prior intent) to avoid
+    // duplicate events from concurrent requests (e.g. React Strict Mode).
+    const isFirstInitiation = !payment.stripePaymentIntentId;
+
     // Update payment record with intent info (status already set to "processing" above)
     await db
       .update(payments)
@@ -201,14 +205,16 @@ export async function POST(request: NextRequest) {
       })
       .where(eq(payments.id, payment.id));
 
-    // Track payment_initiated
-    void trackServerEvent(dbUser.auth_id, "payment_initiated", {
-      payment_id: payment.id,
-      amount: payment.amount,
-      currency: payment.currency,
-      payment_type: payment.type,
-      lease_id: payment.leaseId,
-    });
+    // Only track on the first initiation to prevent duplicate events
+    if (isFirstInitiation) {
+      void trackServerEvent(dbUser.auth_id, "payment_initiated", {
+        payment_id: payment.id,
+        amount: payment.amount,
+        currency: payment.currency,
+        payment_type: payment.type,
+        lease_id: payment.leaseId,
+      });
+    }
 
     return NextResponse.json({
       clientSecret: intent.clientSecret,

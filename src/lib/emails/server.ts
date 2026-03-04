@@ -23,6 +23,8 @@ import { refundCompletedEmail } from "./templates/refund-completed";
 import { depositDispositionEmail } from "./templates/deposit-disposition";
 import { documentApprovedEmail } from "./templates/document-approved";
 import { documentRejectedEmail } from "./templates/document-rejected";
+import { leaseRenewalOfferedEmail } from "./templates/lease-renewal-offered";
+import { leaseRenewalAcceptedEmail } from "./templates/lease-renewal-accepted";
 
 // ---------------------------------------------------------------------------
 // Template registry — maps email name to its builder function.
@@ -53,6 +55,8 @@ const templateBuilders: {
   deposit_disposition: depositDispositionEmail,
   document_approved: documentApprovedEmail,
   document_rejected: documentRejectedEmail,
+  lease_renewal_offered: leaseRenewalOfferedEmail,
+  lease_renewal_accepted: leaseRenewalAcceptedEmail,
 };
 
 /**

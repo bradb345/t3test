@@ -84,6 +84,21 @@ export default async function TenantDashboard() {
     activeOffboardingNotice = notice ?? null;
   }
 
+  // Fetch pending renewal lease (if any)
+  let pendingRenewalLease: typeof leases.$inferSelect | null = null;
+  const [renewalResult] = await db
+    .select()
+    .from(leases)
+    .where(
+      and(
+        eq(leases.tenantId, dbUser.id),
+        eq(leases.status, "pending_renewal"),
+        eq(leases.previousLeaseId, activeLease.lease.id)
+      )
+    )
+    .limit(1);
+  pendingRenewalLease = renewalResult ?? null;
+
   // Fetch remaining data in parallel
   const [recentPayments, maintenanceReqs, profile, tenantRefunds] = await Promise.all([
     // Get payments for this tenant
@@ -155,6 +170,7 @@ export default async function TenantDashboard() {
       emergencyContacts={emergencyContactsList}
       tenantDocuments={documents}
       offboardingNotice={activeOffboardingNotice}
+      pendingRenewalLease={pendingRenewalLease}
       isDelinquent={activeLease.lease.delinquent}
       refunds={tenantRefunds}
     />
