@@ -172,6 +172,20 @@ export type EmailMap = {
     dashboardUrl: string;
   };
 
+  // Lease terms
+  lease_terms_updated: {
+    tenantName: string;
+    unitNumber: string;
+    propertyName: string;
+    currency: string;
+    leaseStart: Date;
+    leaseEnd: Date;
+    monthlyRent: string;
+    securityDeposit?: string;
+    rentDueDay: number;
+    dashboardUrl: string;
+  };
+
   // Lease renewal
   lease_renewal_offered: {
     tenantName: string;
