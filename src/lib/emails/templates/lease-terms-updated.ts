@@ -18,6 +18,7 @@ export function leaseTermsUpdatedEmail(
 
   const formatMoney = (amount: string) => {
     const num = parseFloat(amount);
+    if (isNaN(num)) return "—";
     return new Intl.NumberFormat("en-US", {
       style: "currency",
       currency: params.currency,

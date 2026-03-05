@@ -59,6 +59,7 @@ export function NotificationBell() {
 
     eventSource.addEventListener("notification", (event) => {
       const notification = JSON.parse(event.data as string) as Notification;
+      let isNew = false;
       setNotifications((prev) => {
         const existingIndex = prev.findIndex((n) => n.id === notification.id);
         if (existingIndex !== -1) {
@@ -67,10 +68,12 @@ export function NotificationBell() {
           updated.splice(existingIndex, 1);
           return [notification, ...updated];
         }
-        // New notification — increment unread count
-        setUnreadCount((c) => c + 1);
+        isNew = true;
         return [notification, ...prev];
       });
+      if (isNew) {
+        setUnreadCount((c) => c + 1);
+      }
     });
 
     eventSource.addEventListener("open", () => {

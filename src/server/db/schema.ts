@@ -3,6 +3,7 @@
 
 import { sql } from "drizzle-orm";
 import {
+  check,
   index,
   uniqueIndex,
   pgTableCreator,
@@ -394,6 +395,7 @@ export const conversations = createTable(
       conversation.participant1Id,
       conversation.participant2Id
     ),
+    participantOrderCheck: check("conversation_participant_order_check", sql`${conversation.participant1Id} < ${conversation.participant2Id}`),
     participant1Index: index("conversation_participant1_idx").on(conversation.participant1Id),
     participant2Index: index("conversation_participant2_idx").on(conversation.participant2Id),
     lastMessageAtIndex: index("conversation_last_message_at_idx").on(conversation.lastMessageAt),

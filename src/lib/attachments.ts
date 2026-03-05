@@ -37,12 +37,24 @@ export function validateAttachments(attachments: AttachmentInput[]): string | nu
   return null;
 }
 
+function isValidAttachment(item: unknown): item is AttachmentInput {
+  return (
+    typeof item === "object" &&
+    item !== null &&
+    typeof (item as Record<string, unknown>).name === "string" &&
+    typeof (item as Record<string, unknown>).url === "string" &&
+    typeof (item as Record<string, unknown>).type === "string" &&
+    typeof (item as Record<string, unknown>).size === "number"
+  );
+}
+
 export function safeParseAttachments(json: string | null): AttachmentInput[] | null {
   if (!json) return null;
   try {
     const parsed = JSON.parse(json) as unknown;
-    if (Array.isArray(parsed)) return parsed as AttachmentInput[];
-    return null;
+    if (!Array.isArray(parsed)) return null;
+    const valid = parsed.filter(isValidAttachment);
+    return valid.length > 0 ? valid : null;
   } catch {
     return null;
   }

@@ -58,13 +58,15 @@ interface Attachment {
   size: number;
 }
 
+const ALLOWED_URL_PATTERNS = [
+  /^https:\/\/[\w-]+\.ufs\.sh\//,
+  /^https:\/\/[\w-]+\.uploadthing\.com\//,
+  /^https:\/\/utfs\.io\//,
+];
+
 function isSafeUrl(url: string): boolean {
-  try {
-    const parsed = new URL(url);
-    return parsed.protocol === "https:" || parsed.protocol === "http:";
-  } catch {
-    return false;
-  }
+  if (typeof url !== "string") return false;
+  return ALLOWED_URL_PATTERNS.some((pattern) => pattern.test(url));
 }
 
 interface Message {
@@ -182,7 +184,7 @@ export function MessageThread({ messages, otherUser }: MessageThreadProps) {
                     )}
                     {message.attachments && message.attachments.length > 0 && (
                       <div className={cn("flex flex-col gap-1.5", message.content && "mt-1.5")}>
-                        {message.attachments.filter((a) => isSafeUrl(a.url)).map((attachment, i) =>
+                        {message.attachments.filter((a) => a.url && a.type && isSafeUrl(a.url)).map((attachment, i) =>
                           attachment.type.startsWith("image/") ? (
                             <a
                               key={i}

@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { db } from "~/server/db";
 import { conversations, messages, notifications, user } from "~/server/db/schema";
-import { eq, or, desc, sql, and } from "drizzle-orm";
+import { eq, sql, and } from "drizzle-orm";
 import { createAndEmitNotification, notificationEmitter } from "~/server/notification-emitter";
 import { trackServerEvent } from "~/lib/posthog-events/server";
 import { validateAttachments } from "~/lib/attachments";
@@ -25,75 +25,66 @@ export async function GET() {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    // Get all conversations where user is a participant
-    const userConversations = await db
-      .select({
-        conversation: conversations,
-      })
-      .from(conversations)
-      .where(
-        or(
-          eq(conversations.participant1Id, currentUser.id),
-          eq(conversations.participant2Id, currentUser.id)
-        )
-      )
-      .orderBy(desc(conversations.lastMessageAt));
+    // Get all conversations with other user info, last message, and unread counts in a single query
+    const otherUser = sql`CASE
+      WHEN ${conversations.participant1Id} = ${currentUser.id} THEN ${conversations.participant2Id}
+      ELSE ${conversations.participant1Id}
+    END`;
 
-    // Build response with other user info and unread counts
-    const conversationList = await Promise.all(
-      userConversations.map(async ({ conversation }) => {
-        const otherUserId =
-          conversation.participant1Id === currentUser.id
-            ? conversation.participant2Id
-            : conversation.participant1Id;
+    const conversationRows = await db.execute(sql`
+      SELECT
+        c.id AS conversation_id,
+        c.type,
+        c.property_id,
+        c.last_message_at,
+        u.id AS other_user_id,
+        u.first_name AS other_first_name,
+        u.last_name AS other_last_name,
+        u.image_url AS other_image_url,
+        lm.id AS last_message_id,
+        lm.content AS last_message_content,
+        lm.status AS last_message_status,
+        lm.created_at AS last_message_created_at,
+        lm.from_user_id AS last_message_from_user_id,
+        COALESCE(unread.cnt, 0) AS unread_count
+      FROM ${conversations} c
+      JOIN ${user} u ON u.id = ${otherUser}
+      LEFT JOIN LATERAL (
+        SELECT m.id, m.content, m.status, m.created_at, m.from_user_id
+        FROM ${messages} m
+        WHERE m.conversation_id = c.id
+        ORDER BY m.created_at DESC
+        LIMIT 1
+      ) lm ON true
+      LEFT JOIN LATERAL (
+        SELECT COUNT(*) AS cnt
+        FROM ${messages} m2
+        WHERE m2.conversation_id = c.id
+          AND m2.from_user_id != ${currentUser.id}
+          AND m2.status = 'unread'
+      ) unread ON true
+      WHERE c.participant1_id = ${currentUser.id} OR c.participant2_id = ${currentUser.id}
+      ORDER BY c.last_message_at DESC
+    `);
 
-        // Get other user info
-        const [otherUser] = await db
-          .select()
-          .from(user)
-          .where(eq(user.id, otherUserId))
-          .limit(1);
-
-        // Get last message
-        const [lastMessage] = await db
-          .select()
-          .from(messages)
-          .where(eq(messages.conversationId, conversation.id))
-          .orderBy(desc(messages.createdAt))
-          .limit(1);
-
-        // Get unread count (messages from other user that are unread)
-        const [unreadResult] = await db
-          .select({ count: sql<number>`count(*)` })
-          .from(messages)
-          .where(
-            and(
-              eq(messages.conversationId, conversation.id),
-              eq(messages.fromUserId, otherUserId),
-              eq(messages.status, "unread")
-            )
-          );
-
-        if (!otherUser || !lastMessage) return null;
-
-        return {
-          userId: otherUser.id,
-          userName: `${otherUser.first_name} ${otherUser.last_name}`,
-          userImage: otherUser.image_url,
-          lastMessage: {
-            id: lastMessage.id,
-            content: lastMessage.content,
-            status: lastMessage.status,
-            createdAt: lastMessage.createdAt,
-            isFromCurrentUser: lastMessage.fromUserId === currentUser.id,
-          },
-          unreadCount: Number(unreadResult?.count ?? 0),
-        };
-      })
-    );
+    const conversationList = conversationRows.rows
+      .filter((row) => row.last_message_id != null)
+      .map((row) => ({
+        userId: row.other_user_id as number,
+        userName: `${row.other_first_name as string} ${row.other_last_name as string}`,
+        userImage: row.other_image_url as string | null,
+        lastMessage: {
+          id: row.last_message_id as number,
+          content: row.last_message_content as string,
+          status: row.last_message_status as string,
+          createdAt: row.last_message_created_at as string,
+          isFromCurrentUser: (row.last_message_from_user_id as number) === currentUser.id,
+        },
+        unreadCount: Number(row.unread_count ?? 0),
+      }));
 
     return NextResponse.json({
-      conversations: conversationList.filter(Boolean),
+      conversations: conversationList,
     });
   } catch (error) {
     console.error("Error fetching conversations:", error);
