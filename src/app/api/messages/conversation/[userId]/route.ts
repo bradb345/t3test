@@ -5,6 +5,7 @@ import { conversations, messages, notifications, user } from "~/server/db/schema
 import { eq, and, desc, sql } from "drizzle-orm";
 import { createAndEmitNotification, notificationEmitter } from "~/server/notification-emitter";
 import { trackServerEvent } from "~/lib/posthog-events/server";
+import { validateAttachments, safeParseAttachments } from "~/lib/attachments";
 
 // Find conversation between two users
 async function findConversation(userId1: number, userId2: number) {
@@ -90,7 +91,7 @@ export async function GET(
       status: msg.status,
       createdAt: msg.createdAt,
       isFromCurrentUser: msg.fromUserId === currentUser.id,
-      attachments: msg.attachments ? (JSON.parse(msg.attachments) as { name: string; url: string; type: string; size: number }[]) : null,
+      attachments: safeParseAttachments(msg.attachments),
     }));
 
     return NextResponse.json({
@@ -170,6 +171,13 @@ export async function POST(
       );
     }
 
+    if (body.attachments?.length) {
+      const attachmentError = validateAttachments(body.attachments);
+      if (attachmentError) {
+        return NextResponse.json({ error: attachmentError }, { status: 400 });
+      }
+    }
+
     // Find or create conversation
     let conversation = await findConversation(currentUser.id, toUserId);
 
@@ -184,7 +192,13 @@ export async function POST(
           participant2Id,
           type: body.type ?? "general",
         })
+        .onConflictDoNothing()
         .returning();
+
+      // If another request created it concurrently, re-select
+      if (!conversation) {
+        conversation = await findConversation(currentUser.id, toUserId);
+      }
     }
 
     if (!conversation) {
@@ -279,7 +293,7 @@ export async function POST(
           status: newMessage?.status,
           createdAt: newMessage?.createdAt,
           isFromCurrentUser: true,
-          attachments: newMessage?.attachments ? (JSON.parse(newMessage.attachments) as { name: string; url: string; type: string; size: number }[]) : null,
+          attachments: safeParseAttachments(newMessage?.attachments ?? null),
         },
       },
       { status: 201 }

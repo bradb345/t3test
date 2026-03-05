@@ -58,6 +58,15 @@ interface Attachment {
   size: number;
 }
 
+function isSafeUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === "https:" || parsed.protocol === "http:";
+  } catch {
+    return false;
+  }
+}
+
 interface Message {
   id: number;
   content: string;
@@ -173,7 +182,7 @@ export function MessageThread({ messages, otherUser }: MessageThreadProps) {
                     )}
                     {message.attachments && message.attachments.length > 0 && (
                       <div className={cn("flex flex-col gap-1.5", message.content && "mt-1.5")}>
-                        {message.attachments.map((attachment, i) =>
+                        {message.attachments.filter((a) => isSafeUrl(a.url)).map((attachment, i) =>
                           attachment.type.startsWith("image/") ? (
                             <a
                               key={i}

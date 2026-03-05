@@ -560,12 +560,29 @@ async function cleanupTenantJourneyMessages(testUserIds: number[]) {
   console.log('Cleaning up messages between test users...\n');
 
   if (testUserIds.length >= 2) {
-    const deleted = await sql`
-      DELETE FROM t3test_message
-      WHERE from_user_id IN ${sql(testUserIds)}
-        AND to_user_id IN ${sql(testUserIds)}
-    `;
-    console.log(`🗑️  Deleted ${deleted.count} messages between test users.\n`);
+    // Find conversations where both participants are test users
+    const testConversations = await sql`
+      SELECT id FROM t3test_conversation
+      WHERE participant1_id IN ${sql(testUserIds)}
+        AND participant2_id IN ${sql(testUserIds)}
+    ` as unknown as { id: number }[];
+
+    if (testConversations.length > 0) {
+      const conversationIds = testConversations.map(c => c.id);
+      const deletedMessages = await sql`
+        DELETE FROM t3test_message
+        WHERE conversation_id IN ${sql(conversationIds)}
+      `;
+      console.log(`🗑️  Deleted ${deletedMessages.count} messages between test users.`);
+
+      const deletedConversations = await sql`
+        DELETE FROM t3test_conversation
+        WHERE id IN ${sql(conversationIds)}
+      `;
+      console.log(`🗑️  Deleted ${deletedConversations.count} conversations between test users.\n`);
+    } else {
+      console.log('✅ No test conversations found.\n');
+    }
   } else {
     console.log('⚠️  Could not find test users, skipping message cleanup.\n');
   }

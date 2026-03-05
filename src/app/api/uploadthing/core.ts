@@ -118,7 +118,7 @@ export const ourFileRouter = {
       console.log("file url", file.ufsUrl);
       return { uploadedBy: metadata.userId, url: file.ufsUrl };
     }),
-  // Message attachment uploads (images + PDFs, max 10MB each, up to 3 files)
+  // Message attachment uploads (images + PDFs, max 8MB each, up to 3 files)
   messageAttachment: f({
     image: {
       maxFileSize: "8MB",

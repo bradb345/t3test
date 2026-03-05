@@ -18,7 +18,7 @@ interface MessageInputProps {
 }
 
 const MAX_FILES = 3;
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const MAX_FILE_SIZE = 8 * 1024 * 1024; // 8MB (matches server limit)
 const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif", "application/pdf"];
 
 export function MessageInput({ onSend, disabled }: MessageInputProps) {
@@ -51,7 +51,7 @@ export function MessageInput({ onSend, disabled }: MessageInputProps) {
         return;
       }
       if (file.size > MAX_FILE_SIZE) {
-        setUploadError("Files must be under 10MB");
+        setUploadError("Files must be under 8MB");
         return;
       }
     }

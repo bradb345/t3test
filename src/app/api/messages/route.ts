@@ -5,6 +5,7 @@ import { conversations, messages, notifications, user } from "~/server/db/schema
 import { eq, or, desc, sql, and } from "drizzle-orm";
 import { createAndEmitNotification, notificationEmitter } from "~/server/notification-emitter";
 import { trackServerEvent } from "~/lib/posthog-events/server";
+import { validateAttachments } from "~/lib/attachments";
 
 // GET: Fetch user's conversations list
 export async function GET() {
@@ -142,6 +143,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (body.attachments?.length) {
+      const attachmentError = validateAttachments(body.attachments);
+      if (attachmentError) {
+        return NextResponse.json({ error: attachmentError }, { status: 400 });
+      }
+    }
+
     const [recipient] = await db
       .select()
       .from(user)
@@ -166,7 +174,7 @@ export async function POST(request: NextRequest) {
     const participant1Id = Math.min(currentUser.id, body.toUserId);
     const participant2Id = Math.max(currentUser.id, body.toUserId);
 
-    // Find or create conversation
+    // Find or create conversation (using onConflictDoNothing to handle races)
     let [conversation] = await db
       .select()
       .from(conversations)
@@ -187,7 +195,22 @@ export async function POST(request: NextRequest) {
           type: body.type ?? "general",
           propertyId: body.propertyId ?? null,
         })
+        .onConflictDoNothing()
         .returning();
+
+      // If another request created it concurrently, re-select
+      if (!conversation) {
+        [conversation] = await db
+          .select()
+          .from(conversations)
+          .where(
+            and(
+              eq(conversations.participant1Id, participant1Id),
+              eq(conversations.participant2Id, participant2Id)
+            )
+          )
+          .limit(1);
+      }
     }
 
     if (!conversation) {

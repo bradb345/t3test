@@ -248,11 +248,22 @@ export default defineConfig({
             );
 
             if (testUserIds.length === 2) {
-              await sql`
-                DELETE FROM t3test_message
-                WHERE from_user_id IN ${sql(testUserIds)}
-                  AND to_user_id IN ${sql(testUserIds)}
+              const testConversations = await sql`
+                SELECT id FROM t3test_conversation
+                WHERE participant1_id IN ${sql(testUserIds)}
+                  AND participant2_id IN ${sql(testUserIds)}
               `;
+              const conversationIds = (testConversations as unknown as { id: number }[]).map(c => c.id);
+              if (conversationIds.length > 0) {
+                await sql`
+                  DELETE FROM t3test_message
+                  WHERE conversation_id IN ${sql(conversationIds)}
+                `;
+                await sql`
+                  DELETE FROM t3test_conversation
+                  WHERE id IN ${sql(conversationIds)}
+                `;
+              }
             }
 
             return { success: true };
