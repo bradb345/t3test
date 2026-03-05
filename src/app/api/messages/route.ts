@@ -1,9 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { db } from "~/server/db";
-import { conversations, messages, user } from "~/server/db/schema";
+import { conversations, messages, notifications, user } from "~/server/db/schema";
 import { eq, or, desc, sql, and } from "drizzle-orm";
-import { createAndEmitNotification } from "~/server/notification-emitter";
+import { createAndEmitNotification, notificationEmitter } from "~/server/notification-emitter";
 import { trackServerEvent } from "~/lib/posthog-events/server";
 
 // GET: Fetch user's conversations list
@@ -81,7 +81,6 @@ export async function GET() {
           userImage: otherUser.image_url,
           lastMessage: {
             id: lastMessage.id,
-            subject: conversation.subject,
             content: lastMessage.content,
             status: lastMessage.status,
             createdAt: lastMessage.createdAt,
@@ -124,10 +123,10 @@ export async function POST(request: NextRequest) {
 
     const body = (await request.json()) as {
       toUserId: number;
-      subject: string;
       content: string;
       type?: string;
       propertyId?: number;
+      attachments?: { name: string; url: string; type: string; size: number }[];
     };
 
     if (!body.toUserId) {
@@ -136,15 +135,9 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-    if (!body.subject?.trim()) {
+    if (!body.content?.trim() && (!body.attachments || body.attachments.length === 0)) {
       return NextResponse.json(
-        { error: "Subject is required" },
-        { status: 400 }
-      );
-    }
-    if (!body.content?.trim()) {
-      return NextResponse.json(
-        { error: "Message is required" },
+        { error: "Message or attachment is required" },
         { status: 400 }
       );
     }
@@ -191,7 +184,6 @@ export async function POST(request: NextRequest) {
         .values({
           participant1Id,
           participant2Id,
-          subject: body.subject.trim(),
           type: body.type ?? "general",
           propertyId: body.propertyId ?? null,
         })
@@ -211,8 +203,9 @@ export async function POST(request: NextRequest) {
       .values({
         conversationId: conversation.id,
         fromUserId: currentUser.id,
-        content: body.content.trim(),
+        content: body.content?.trim() ?? "",
         status: "unread",
+        attachments: body.attachments?.length ? JSON.stringify(body.attachments) : null,
       })
       .returning();
 
@@ -222,19 +215,52 @@ export async function POST(request: NextRequest) {
       .set({ lastMessageAt: new Date() })
       .where(eq(conversations.id, conversation.id));
 
-    // Send notification to recipient
-    await createAndEmitNotification({
-      userId: body.toUserId,
-      type: "new_message",
-      title: "New Message",
-      message: `${currentUser.first_name} ${currentUser.last_name} sent you a message: "${body.subject}"`,
-      data: JSON.stringify({
-        messageId: newMessage?.id,
-        fromUserId: currentUser.id,
-        fromUserName: `${currentUser.first_name} ${currentUser.last_name}`,
-      }),
-      actionUrl: "/messages",
-    });
+    // Upsert notification: update existing unread new_message notification from this sender, or create one
+    const senderName = `${currentUser.first_name} ${currentUser.last_name}`;
+    const [existingNotification] = await db
+      .select()
+      .from(notifications)
+      .where(
+        and(
+          eq(notifications.userId, body.toUserId),
+          eq(notifications.type, "new_message"),
+          eq(notifications.read, false),
+          sql`${notifications.data}::jsonb->>'fromUserId' = ${String(currentUser.id)}`
+        )
+      )
+      .limit(1);
+
+    if (existingNotification) {
+      const [updated] = await db
+        .update(notifications)
+        .set({
+          message: `${senderName} sent you a new message`,
+          data: JSON.stringify({
+            messageId: newMessage?.id,
+            fromUserId: currentUser.id,
+            fromUserName: senderName,
+          }),
+          createdAt: new Date(),
+        })
+        .where(eq(notifications.id, existingNotification.id))
+        .returning();
+      if (updated) {
+        notificationEmitter.emitNotification(body.toUserId, updated);
+      }
+    } else {
+      await createAndEmitNotification({
+        userId: body.toUserId,
+        type: "new_message",
+        title: "New Message",
+        message: `${senderName} sent you a message`,
+        data: JSON.stringify({
+          messageId: newMessage?.id,
+          fromUserId: currentUser.id,
+          fromUserName: senderName,
+        }),
+        actionUrl: "/messages",
+      });
+    }
 
     // Track message sent event in PostHog
     await trackServerEvent(clerkUserId, "message_sent", {

@@ -37,8 +37,8 @@ const viewingStatusConfig: Record<string, { label: string; variant: "default" | 
   completed: { label: "Completed", variant: "outline" },
 };
 
-export function ActivityClient({ applications, viewingRequests }: ActivityClientProps) {
-  const defaultTab = applications.length > 0 ? "applications" : "viewings";
+export function ActivityClient({ applications, viewingRequests, initialTab }: ActivityClientProps & { initialTab?: string }) {
+  const defaultTab = initialTab === "viewings" ? "viewings" : (applications.length > 0 ? "applications" : "viewings");
 
   return (
     <>

@@ -379,7 +379,6 @@ export const conversations = createTable(
     participant2Id: integer("participant2_id")
       .notNull()
       .references(() => user.id),
-    subject: varchar("subject", { length: 256 }).notNull(),
     type: varchar("type", { length: 50 }).notNull().default("general"),
     propertyId: integer("property_id")
       .references(() => properties.id),

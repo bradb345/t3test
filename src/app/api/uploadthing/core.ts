@@ -118,6 +118,32 @@ export const ourFileRouter = {
       console.log("file url", file.ufsUrl);
       return { uploadedBy: metadata.userId, url: file.ufsUrl };
     }),
+  // Message attachment uploads (images + PDFs, max 10MB each, up to 3 files)
+  messageAttachment: f({
+    image: {
+      maxFileSize: "8MB",
+      maxFileCount: 3,
+    },
+    "application/pdf": {
+      maxFileSize: "8MB",
+      maxFileCount: 3,
+    },
+  })
+    .middleware(async ({ files }) => {
+      const user = await auth();
+      // eslint-disable-next-line @typescript-eslint/only-throw-error
+      if (!user.userId) throw new UploadThingError("Unauthorized");
+
+      const fileOverrides = files.map((file) => ({
+        ...file,
+        name: appendIdToFilename(file.name, user.userId),
+      }));
+
+      return { userId: user.userId, [UTFiles]: fileOverrides };
+    })
+    .onUploadComplete(async ({ metadata, file }) => {
+      return { uploadedBy: metadata.userId, url: file.ufsUrl, name: file.name, size: file.size, type: file.type };
+    }),
 } satisfies FileRouter;
 
 export type OurFileRouter = typeof ourFileRouter;

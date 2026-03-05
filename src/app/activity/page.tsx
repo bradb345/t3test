@@ -11,7 +11,11 @@ import {
 import { eq, desc } from "drizzle-orm";
 import { ActivityClient } from "~/components/activity/ActivityClient";
 
-export default async function ActivityPage() {
+export default async function ActivityPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string }>;
+}) {
   const { userId: clerkUserId } = await auth();
 
   if (!clerkUserId) {
@@ -57,11 +61,14 @@ export default async function ActivityPage() {
     redirect("/");
   }
 
+  const { tab } = await searchParams;
+
   return (
     <div className="container mx-auto max-w-4xl px-4 py-8">
       <ActivityClient
         applications={applicationResults}
         viewingRequests={viewingRequestResults}
+        initialTab={tab}
       />
     </div>
   );

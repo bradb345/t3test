@@ -1,9 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { db } from "~/server/db";
-import { conversations, messages, user } from "~/server/db/schema";
-import { eq, and, desc } from "drizzle-orm";
-import { createAndEmitNotification } from "~/server/notification-emitter";
+import { conversations, messages, notifications, user } from "~/server/db/schema";
+import { eq, and, desc, sql } from "drizzle-orm";
+import { createAndEmitNotification, notificationEmitter } from "~/server/notification-emitter";
 
 // Find conversation between two users
 async function findConversation(userId1: number, userId2: number) {
@@ -85,12 +85,11 @@ export async function GET(
 
     const formattedMessages = conversationMessages.map((msg) => ({
       id: msg.id,
-      subject: conversation.subject,
       content: msg.content,
-      type: conversation.type,
       status: msg.status,
       createdAt: msg.createdAt,
       isFromCurrentUser: msg.fromUserId === currentUser.id,
+      attachments: msg.attachments ? (JSON.parse(msg.attachments) as { name: string; url: string; type: string; size: number }[]) : null,
     }));
 
     return NextResponse.json({
@@ -158,14 +157,14 @@ export async function POST(
     }
 
     const body = (await request.json()) as {
-      subject: string;
       content: string;
       type?: string;
+      attachments?: { name: string; url: string; type: string; size: number }[];
     };
 
-    if (!body.content?.trim()) {
+    if (!body.content?.trim() && (!body.attachments || body.attachments.length === 0)) {
       return NextResponse.json(
-        { error: "Message is required" },
+        { error: "Message or attachment is required" },
         { status: 400 }
       );
     }
@@ -182,7 +181,6 @@ export async function POST(
         .values({
           participant1Id,
           participant2Id,
-          subject: body.subject?.trim() || "Conversation",
           type: body.type ?? "general",
         })
         .returning();
@@ -201,8 +199,9 @@ export async function POST(
       .values({
         conversationId: conversation.id,
         fromUserId: currentUser.id,
-        content: body.content.trim(),
+        content: body.content?.trim() ?? "",
         status: "unread",
+        attachments: body.attachments?.length ? JSON.stringify(body.attachments) : null,
       })
       .returning();
 
@@ -212,31 +211,63 @@ export async function POST(
       .set({ lastMessageAt: new Date() })
       .where(eq(conversations.id, conversation.id));
 
-    // Send notification to recipient
-    await createAndEmitNotification({
-      userId: toUserId,
-      type: "new_message",
-      title: "New Message",
-      message: `${currentUser.first_name} ${currentUser.last_name} replied to your conversation`,
-      data: JSON.stringify({
-        messageId: newMessage?.id,
-        fromUserId: currentUser.id,
-        fromUserName: `${currentUser.first_name} ${currentUser.last_name}`,
-      }),
-      actionUrl: "/messages",
-    });
+    // Upsert notification: update existing unread new_message notification from this sender, or create one
+    const senderName = `${currentUser.first_name} ${currentUser.last_name}`;
+    const [existingNotification] = await db
+      .select()
+      .from(notifications)
+      .where(
+        and(
+          eq(notifications.userId, toUserId),
+          eq(notifications.type, "new_message"),
+          eq(notifications.read, false),
+          sql`${notifications.data}::jsonb->>'fromUserId' = ${String(currentUser.id)}`
+        )
+      )
+      .limit(1);
+
+    if (existingNotification) {
+      const [updated] = await db
+        .update(notifications)
+        .set({
+          message: `${senderName} sent you a new message`,
+          data: JSON.stringify({
+            messageId: newMessage?.id,
+            fromUserId: currentUser.id,
+            fromUserName: senderName,
+          }),
+          createdAt: new Date(),
+        })
+        .where(eq(notifications.id, existingNotification.id))
+        .returning();
+      if (updated) {
+        notificationEmitter.emitNotification(toUserId, updated);
+      }
+    } else {
+      await createAndEmitNotification({
+        userId: toUserId,
+        type: "new_message",
+        title: "New Message",
+        message: `${senderName} sent you a message`,
+        data: JSON.stringify({
+          messageId: newMessage?.id,
+          fromUserId: currentUser.id,
+          fromUserName: senderName,
+        }),
+        actionUrl: "/messages",
+      });
+    }
 
     return NextResponse.json(
       {
         success: true,
         message: {
           id: newMessage?.id,
-          subject: conversation.subject,
           content: newMessage?.content,
-          type: conversation.type,
           status: newMessage?.status,
           createdAt: newMessage?.createdAt,
           isFromCurrentUser: true,
+          attachments: newMessage?.attachments ? (JSON.parse(newMessage.attachments) as { name: string; url: string; type: string; size: number }[]) : null,
         },
       },
       { status: 201 }
@@ -289,6 +320,19 @@ export async function PATCH(
             eq(messages.conversationId, conversation.id),
             eq(messages.fromUserId, otherUserId),
             eq(messages.status, "unread")
+          )
+        );
+
+      // Mark any unread new_message notifications from this sender as read
+      await db
+        .update(notifications)
+        .set({ read: true })
+        .where(
+          and(
+            eq(notifications.userId, currentUser.id),
+            eq(notifications.type, "new_message"),
+            eq(notifications.read, false),
+            sql`${notifications.data}::jsonb->>'fromUserId' = ${String(otherUserId)}`
           )
         );
     }
