@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { auth } from "@clerk/nextjs/server";
 import { db } from "~/server/db";
 import {
   viewingRequests,
@@ -8,6 +9,7 @@ import {
 } from "~/server/db/schema";
 import { eq } from "drizzle-orm";
 import { createAndEmitNotification } from "~/server/notification-emitter";
+import { sendAppEmail } from "~/lib/emails/server";
 import { trackServerEvent } from "~/lib/posthog-events/server";
 
 // POST: Submit a viewing request (public endpoint for prospective tenants)
@@ -91,11 +93,24 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
       }
     }
 
+    // Look up authenticated user's DB id (if signed in)
+    let requesterUserId: number | null = null;
+    const { userId: clerkUserId } = await auth();
+    if (clerkUserId) {
+      const [dbUser] = await db
+        .select({ id: user.id })
+        .from(user)
+        .where(eq(user.auth_id, clerkUserId))
+        .limit(1);
+      requesterUserId = dbUser?.id ?? null;
+    }
+
     // Create the viewing request
     const [newRequest] = await db
       .insert(viewingRequests)
       .values({
         unitId,
+        requesterUserId,
         name: body.name.trim(),
         email: body.email.trim().toLowerCase(),
         phone: body.phone?.trim() ?? null,
@@ -114,6 +129,8 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
       .limit(1);
 
     if (landlord) {
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+
       await createAndEmitNotification({
         userId: landlord.id,
         type: "viewing_request",
@@ -128,6 +145,23 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
         }),
         actionUrl: `/my-properties?tab=inquiries`,
       });
+
+      if (landlord.email) {
+        await sendAppEmail(landlord.email, "viewing_request", {
+          landlordName: `${landlord.first_name ?? ""} ${landlord.last_name ?? ""}`.trim() || "Landlord",
+          requesterName: body.name,
+          requesterEmail: body.email,
+          requesterPhone: body.phone?.trim(),
+          unitNumber: unitData.unit.unitNumber ?? "N/A",
+          propertyName: unitData.property.name,
+          preferredDate: preferredDate
+            ? preferredDate.toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })
+            : undefined,
+          preferredTime: body.preferredTime?.trim(),
+          message: body.message?.trim(),
+          dashboardUrl: `${baseUrl}/my-properties?tab=inquiries`,
+        });
+      }
     }
 
     // Track viewing request submission in PostHog (use email as distinct ID for anonymous users)

@@ -29,7 +29,6 @@ const documentTypeLabels: Record<string, string> = {
   government_id: "Government ID",
   proof_of_income: "Proof of Income",
   employment_verification: "Employment Verification",
-  rental_history: "Rental History",
   bank_statement: "Bank Statement",
   reference_letter: "Reference Letter",
   proof_of_address: "Proof of Address",

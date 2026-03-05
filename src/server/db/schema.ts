@@ -599,86 +599,6 @@ export const employmentInfo = createTable(
   })
 );
 
-// Example rental history data:
-/*
-{
-  id: 1,
-  tenantProfileId: 1,
-  address: "789 Oak Street, Los Angeles, CA 90001",
-  landlordName: "Property Management Inc.",
-  landlordPhone: "+1-555-777-6666",
-  landlordEmail: "contact@propertymanagement.com",
-  moveInDate: "2018-01-01",
-  moveOutDate: "2023-12-31",
-  monthlyRent: 1800.00,
-  reasonForLeaving: "Job relocation"
-}
-*/
-export const rentalHistory = createTable(
-  "rental_history",
-  {
-    id: serial("id").primaryKey(),
-    tenantProfileId: integer("tenant_profile_id")
-      .notNull()
-      .references(() => tenantProfiles.id),
-    address: text("address").notNull(),
-    landlordName: varchar("landlord_name", { length: 256 }).notNull(),
-    landlordPhone: varchar("landlord_phone", { length: 20 }),
-    landlordEmail: varchar("landlord_email", { length: 256 }),
-    moveInDate: timestamp("move_in_date", { withTimezone: true }).notNull(),
-    moveOutDate: timestamp("move_out_date", { withTimezone: true }),
-    monthlyRent: decimal("monthly_rent", { precision: 10, scale: 2 }).notNull(),
-    currency: varchar("currency", { length: 3 }).notNull().default("USD"),
-    reasonForLeaving: text("reason_for_leaving"),
-    isCurrent: boolean("is_current").default(false),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .default(sql`CURRENT_TIMESTAMP`)
-      .notNull(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).$onUpdate(() => new Date()),
-  },
-  (history) => ({
-    tenantRentalHistoryIndex: index("tenant_rental_history_idx").on(history.tenantProfileId),
-  })
-);
-
-// Example references data:
-/*
-{
-  id: 1,
-  tenantProfileId: 1,
-  referenceType: "personal",
-  fullName: "Alice Johnson",
-  relationship: "Friend",
-  phone: "+1-555-444-3333",
-  email: "alice.johnson@example.com",
-  yearsKnown: 5,
-  canContact: true
-}
-*/
-export const references = createTable(
-  "reference",
-  {
-    id: serial("id").primaryKey(),
-    tenantProfileId: integer("tenant_profile_id")
-      .notNull()
-      .references(() => tenantProfiles.id),
-    referenceType: varchar("reference_type", { length: 50 }).notNull(),
-    fullName: varchar("full_name", { length: 256 }).notNull(),
-    relationship: varchar("relationship", { length: 100 }),
-    phone: varchar("phone", { length: 20 }).notNull(),
-    email: varchar("email", { length: 256 }),
-    yearsKnown: integer("years_known"),
-    canContact: boolean("can_contact").default(true),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .default(sql`CURRENT_TIMESTAMP`)
-      .notNull(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).$onUpdate(() => new Date()),
-  },
-  (reference) => ({
-    tenantReferenceIndex: index("tenant_reference_idx").on(reference.tenantProfileId),
-  })
-);
-
 // Example emergency contacts data:
 /*
 {
@@ -822,6 +742,7 @@ export const viewingRequests = createTable(
     unitId: integer("unit_id")
       .notNull()
       .references(() => units.id),
+    requesterUserId: integer("requester_user_id").references(() => user.id),
     name: varchar("name", { length: 256 }).notNull(),
     email: varchar("email", { length: 256 }).notNull(),
     phone: varchar("phone", { length: 20 }),
@@ -843,6 +764,7 @@ export const viewingRequests = createTable(
     unitIndex: index("viewing_unit_idx").on(request.unitId),
     statusIndex: index("viewing_status_idx").on(request.status),
     emailIndex: index("viewing_email_idx").on(request.email),
+    requesterIndex: index("viewing_requester_idx").on(request.requesterUserId),
   })
 );
 

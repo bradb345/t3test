@@ -1,7 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { db } from "~/server/db";
-import { user, leases, tenancyApplications } from "~/server/db/schema";
+import { user, leases, tenancyApplications, viewingRequests } from "~/server/db/schema";
 import { eq, and, or, inArray } from "drizzle-orm";
 import { parseRoles, hasRole } from "~/lib/roles";
 
@@ -9,7 +9,7 @@ import { parseRoles, hasRole } from "~/lib/roles";
 export async function GET() {
   const { userId: clerkUserId } = await auth();
   if (!clerkUserId) {
-    return NextResponse.json({ roles: [], hasActiveLease: false, hasPendingApplication: false });
+    return NextResponse.json({ roles: [], hasActiveLease: false, hasPendingApplication: false, hasViewingRequest: false });
   }
 
   const [dbUser] = await db
@@ -19,7 +19,7 @@ export async function GET() {
     .limit(1);
 
   if (!dbUser) {
-    return NextResponse.json({ roles: [], hasActiveLease: false, hasPendingApplication: false });
+    return NextResponse.json({ roles: [], hasActiveLease: false, hasPendingApplication: false, hasViewingRequest: false });
   }
 
   const roles = parseRoles(dbUser.roles);
@@ -56,5 +56,14 @@ export async function GET() {
 
   const hasPendingApplication = !!pendingApp;
 
-  return NextResponse.json({ roles, hasActiveLease, hasPendingApplication });
+  // Check for viewing requests
+  const [viewingRequest] = await db
+    .select({ id: viewingRequests.id })
+    .from(viewingRequests)
+    .where(eq(viewingRequests.requesterUserId, dbUser.id))
+    .limit(1);
+
+  const hasViewingRequest = !!viewingRequest;
+
+  return NextResponse.json({ roles, hasActiveLease, hasPendingApplication, hasViewingRequest });
 }
