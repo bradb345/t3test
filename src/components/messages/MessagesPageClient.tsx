@@ -105,6 +105,7 @@ export function MessagesPageClient() {
   }, [selectedUserId, fetchConversation]);
 
   const handleSelectConversation = (userId: number) => {
+    if (userId === selectedUserId) return;
     setSelectedUserId(userId);
     setConversationData(null);
   };

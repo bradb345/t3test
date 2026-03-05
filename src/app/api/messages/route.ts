@@ -267,7 +267,9 @@ export async function POST(request: NextRequest) {
       message_id: newMessage?.id,
       message_type: body.type ?? "general",
       has_property_context: !!body.propertyId,
-      message_body: body.content.trim(),
+      has_attachments: !!body.attachments?.length,
+      attachment_count: body.attachments?.length ?? 0,
+      message_body: body.content?.trim() ?? "",
       source: "api",
     });
 

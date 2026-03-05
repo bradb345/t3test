@@ -174,6 +174,8 @@ export type ServerEventMap = {
     message_id: number | undefined;
     message_type: string;
     has_property_context: boolean;
+    has_attachments: boolean;
+    attachment_count: number;
     message_body: string;
     source: string;
   };

@@ -4,6 +4,7 @@ import { db } from "~/server/db";
 import { conversations, messages, notifications, user } from "~/server/db/schema";
 import { eq, and, desc, sql } from "drizzle-orm";
 import { createAndEmitNotification, notificationEmitter } from "~/server/notification-emitter";
+import { trackServerEvent } from "~/lib/posthog-events/server";
 
 // Find conversation between two users
 async function findConversation(userId1: number, userId2: number) {
@@ -257,6 +258,17 @@ export async function POST(
         actionUrl: "/messages",
       });
     }
+
+    // Track message sent event in PostHog
+    await trackServerEvent(clerkUserId, "message_sent", {
+      message_id: newMessage?.id,
+      message_type: body.type ?? "general",
+      has_property_context: false,
+      has_attachments: !!body.attachments?.length,
+      attachment_count: body.attachments?.length ?? 0,
+      message_body: body.content?.trim() ?? "",
+      source: "conversation_reply",
+    });
 
     return NextResponse.json(
       {
