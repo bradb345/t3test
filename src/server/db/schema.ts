@@ -4,6 +4,7 @@
 import { sql } from "drizzle-orm";
 import {
   index,
+  uniqueIndex,
   pgTableCreator,
   serial,
   timestamp,
@@ -366,47 +367,60 @@ export const payments = createTable(
   })
 );
 
-// Example message data:
-/*
-{
-  id: 1,
-  fromUserId: 42,
-  toUserId: 56,
-  propertyId: 1,
-  subject: "Maintenance Request Follow-up",
-  content: "Just checking on the status of the kitchen faucet repair...",
-  type: "maintenance",
-  status: "unread",
-  attachments: [
-    "https://example.com/messages/photo1.jpg"
-  ]
-}
-*/
+// Conversations table - one row per unique pair of users
+// participant1Id is always the lower user ID to enforce uniqueness
+export const conversations = createTable(
+  "conversation",
+  {
+    id: serial("id").primaryKey(),
+    participant1Id: integer("participant1_id")
+      .notNull()
+      .references(() => user.id),
+    participant2Id: integer("participant2_id")
+      .notNull()
+      .references(() => user.id),
+    type: varchar("type", { length: 50 }).notNull().default("general"),
+    propertyId: integer("property_id")
+      .references(() => properties.id),
+    lastMessageAt: timestamp("last_message_at", { withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+  },
+  (conversation) => ({
+    participantPairIndex: uniqueIndex("conversation_participant_pair_idx").on(
+      conversation.participant1Id,
+      conversation.participant2Id
+    ),
+    participant1Index: index("conversation_participant1_idx").on(conversation.participant1Id),
+    participant2Index: index("conversation_participant2_idx").on(conversation.participant2Id),
+    lastMessageAtIndex: index("conversation_last_message_at_idx").on(conversation.lastMessageAt),
+  })
+);
+
+// Messages table - one row per message, linked to a conversation
 export const messages = createTable(
   "message",
   {
     id: serial("id").primaryKey(),
+    conversationId: integer("conversation_id")
+      .notNull()
+      .references(() => conversations.id),
     fromUserId: integer("from_user_id")
       .notNull()
       .references(() => user.id),
-    toUserId: integer("to_user_id")
-      .notNull()
-      .references(() => user.id),
-    propertyId: integer("property_id")
-      .references(() => properties.id),
-    subject: varchar("subject", { length: 256 }).notNull(),
     content: text("content").notNull(),
-    type: varchar("type", { length: 50 }).notNull(),
-    status: varchar("status", { length: 20 }).notNull().default('unread'),
+    status: varchar("status", { length: 20 }).notNull().default("unread"),
     attachments: text("attachments"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .default(sql`CURRENT_TIMESTAMP`)
       .notNull(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).$onUpdate(() => new Date()),
   },
   (message) => ({
-    userMessageIndex: index("user_message_idx").on(message.toUserId, message.status),
-    propertyMessageIndex: index("property_message_idx").on(message.propertyId),
+    conversationIndex: index("message_conversation_idx").on(message.conversationId, message.createdAt),
+    unreadIndex: index("message_unread_idx").on(message.conversationId, message.status),
   })
 );
 

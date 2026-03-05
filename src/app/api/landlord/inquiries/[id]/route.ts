@@ -167,7 +167,7 @@ export async function PATCH(request: NextRequest, props: { params: Promise<{ id:
             propertyId: existingRequest.property.id,
             status: body.status,
           }),
-          actionUrl: listingUrl,
+          actionUrl: "/activity?tab=viewings",
         });
       }
 

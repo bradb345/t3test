@@ -187,9 +187,6 @@ describe("Tenant Journeys", () => {
       cy.contains("button", "Contact Landlord").click();
       cy.get('[role="dialog"]', { timeout: 10000 }).should("be.visible");
 
-      // Subject is pre-filled, update it
-      cy.get("#subject").clear().type("Question about Unit 101");
-
       // Type message
       cy.get("#message").type(
         "Hello, I am interested in this unit. Is it still available?"
@@ -210,10 +207,10 @@ describe("Tenant Journeys", () => {
       // Wait for messages page to load
       cy.contains("Messages", { timeout: 15000 }).should("be.visible");
 
-      // Verify the conversation appears
-      cy.contains("Question about Unit 101", { timeout: 10000 }).should(
-        "be.visible"
-      );
+      // Verify the conversation appears (conversation list shows message content)
+      cy.contains("Hello, I am interested in this unit.", {
+        timeout: 10000,
+      }).should("be.visible");
     });
 
     it("landlord receives and replies to message", () => {
@@ -223,10 +220,12 @@ describe("Tenant Journeys", () => {
       // Wait for messages page to load
       cy.contains("Messages", { timeout: 15000 }).should("be.visible");
 
-      // Click on the conversation with the tenant
-      cy.contains("Question about Unit 101", { timeout: 10000 }).click();
+      // Click on the conversation with the tenant (shown by message content)
+      cy.contains("Hello, I am interested in this unit.", {
+        timeout: 10000,
+      }).click();
 
-      // Verify the tenant's message is visible
+      // Verify the tenant's message is visible in the thread
       cy.contains("Hello, I am interested in this unit.", {
         timeout: 10000,
       }).should("be.visible");
@@ -250,8 +249,7 @@ describe("Tenant Journeys", () => {
       // Wait for messages page to load
       cy.contains("Messages", { timeout: 15000 }).should("be.visible");
 
-      // Click on the conversation (after landlord replied, the last message
-      // subject is "Re: Conversation", so find by the reply content instead)
+      // Click on the conversation (last message preview shows the reply)
       cy.contains("Yes, the unit is still available!", {
         timeout: 10000,
       }).click();

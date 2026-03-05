@@ -59,8 +59,18 @@ export function NotificationBell() {
 
     eventSource.addEventListener("notification", (event) => {
       const notification = JSON.parse(event.data as string) as Notification;
-      setNotifications((prev) => [notification, ...prev]);
-      setUnreadCount((prev) => prev + 1);
+      setNotifications((prev) => {
+        const existingIndex = prev.findIndex((n) => n.id === notification.id);
+        if (existingIndex !== -1) {
+          // Replace existing notification (e.g. updated message notification) — no count change
+          const updated = [...prev];
+          updated.splice(existingIndex, 1);
+          return [notification, ...updated];
+        }
+        // New notification — increment unread count
+        setUnreadCount((c) => c + 1);
+        return [notification, ...prev];
+      });
     });
 
     eventSource.addEventListener("open", () => {
