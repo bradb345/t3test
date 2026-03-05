@@ -85,10 +85,9 @@ export function tenantInvitationEmail(
           <h3>What to Expect</h3>
           <div class="step"><div class="step-number">1</div><div class="step-content"><div class="step-title">Personal & Contact Information</div><div class="step-description">Share your basic details and how we can reach you</div></div></div>
           <div class="step"><div class="step-number">2</div><div class="step-content"><div class="step-title">Employment & Income Verification</div><div class="step-description">Provide your employment details and income information</div></div></div>
-          <div class="step"><div class="step-number">3</div><div class="step-content"><div class="step-title">Rental History & References</div><div class="step-description">Tell us about your previous rentals and provide references</div></div></div>
-          <div class="step"><div class="step-number">4</div><div class="step-content"><div class="step-title">Emergency Contacts</div><div class="step-description">Add people we can contact in case of emergency</div></div></div>
-          <div class="step"><div class="step-number">5</div><div class="step-content"><div class="step-title">Document Uploads</div><div class="step-description">Upload required documents (ID, pay stubs, etc.)</div></div></div>
-          <div class="step"><div class="step-number">6</div><div class="step-content"><div class="step-title">Review & Sign Agreement</div><div class="step-description">Review your information and digitally sign your lease</div></div></div>
+          <div class="step"><div class="step-number">3</div><div class="step-content"><div class="step-title">Emergency Contacts</div><div class="step-description">Add people we can contact in case of emergency</div></div></div>
+          <div class="step"><div class="step-number">4</div><div class="step-content"><div class="step-title">Document Uploads</div><div class="step-description">Upload required documents (ID, pay stubs, etc.)</div></div></div>
+          <div class="step"><div class="step-number">5</div><div class="step-content"><div class="step-title">Review & Sign Agreement</div><div class="step-description">Review your information and digitally sign your lease</div></div></div>
         </div>
         <div class="divider"></div>
         <p class="message">

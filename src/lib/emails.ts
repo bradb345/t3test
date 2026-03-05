@@ -212,6 +212,28 @@ export type EmailMap = {
     dashboardUrl: string;
   };
 
+  // Viewing requests
+  viewing_request: {
+    landlordName: string;
+    requesterName: string;
+    requesterEmail: string;
+    requesterPhone?: string;
+    unitNumber: string;
+    propertyName: string;
+    preferredDate?: string;
+    preferredTime?: string;
+    message?: string;
+    dashboardUrl: string;
+  };
+  viewing_request_response: {
+    requesterName: string;
+    unitNumber: string;
+    propertyName: string;
+    status: "approved" | "declined";
+    landlordNotes?: string;
+    listingUrl: string;
+  };
+
   // Maintenance
   maintenance_request: {
     landlordName: string;

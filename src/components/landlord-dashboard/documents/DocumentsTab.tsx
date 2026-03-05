@@ -23,7 +23,6 @@ const documentTypes = [
   { value: "government_id", label: "Government ID" },
   { value: "proof_of_income", label: "Proof of Income" },
   { value: "employment_verification", label: "Employment Verification" },
-  { value: "rental_history", label: "Rental History" },
   { value: "bank_statement", label: "Bank Statement" },
   { value: "reference_letter", label: "Reference Letter" },
   { value: "other", label: "Other" },

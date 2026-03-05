@@ -19,7 +19,7 @@ export default function PrivacyPage() {
             <p>We collect information you provide directly to us, including:</p>
             <ul className="list-disc pl-6 space-y-2">
               <li>Account information (name, email address, phone number)</li>
-              <li>Profile information (employment history, rental history, references)</li>
+              <li>Profile information (employment history, emergency contacts)</li>
               <li>Property information (for landlords listing properties)</li>
               <li>Payment information (processed securely through our payment providers)</li>
               <li>Communications between users on our platform</li>

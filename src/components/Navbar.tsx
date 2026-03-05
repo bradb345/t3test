@@ -24,13 +24,14 @@ interface UserRoles {
   roles: string[];
   hasActiveLease: boolean;
   hasPendingApplication: boolean;
+  hasViewingRequest: boolean;
 }
 
 export function Navbar() {
   const { isSignedIn } = useAuth();
   const [hasProperties, setHasProperties] = useState(false);
   const [isTenant, setIsTenant] = useState(false);
-  const [hasPendingApplication, setHasPendingApplication] = useState(false);
+  const [hasActivity, setHasActivity] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const searchParams = useSearchParams();
   const [signInButtonElement, setSignInButtonElement] =
@@ -51,7 +52,7 @@ export function Navbar() {
         .then((res) => res.json())
         .then((data: UserRoles) => {
           setIsTenant(data.hasActiveLease);
-          setHasPendingApplication(data.hasPendingApplication);
+          setHasActivity(data.hasPendingApplication || data.hasViewingRequest);
         })
         .catch((error) => {
           console.error("Error checking tenant status:", error);
@@ -93,12 +94,12 @@ export function Navbar() {
               My Properties
             </Link>
           )}
-          {hasPendingApplication && (
+          {hasActivity && (
             <Link
-              href="/applications"
+              href="/activity"
               className="text-sm font-medium text-muted-foreground hover:text-primary"
             >
-              My Applications
+              My Activity
             </Link>
           )}
           <Link

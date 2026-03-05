@@ -7,8 +7,9 @@ import {
   properties,
   user,
   leases,
+  payments,
 } from "~/server/db/schema";
-import { eq, and, inArray } from "drizzle-orm";
+import { eq, and, inArray, sql, count } from "drizzle-orm";
 import { createAndEmitNotification } from "~/server/notification-emitter";
 import { sendAppEmail } from "~/lib/emails/server";
 import { persistTenantProfile } from "~/lib/tenant-profile";
@@ -71,6 +72,57 @@ export async function GET(_request: NextRequest, props: { params: Promise<{ id: 
       console.error("Error parsing application data");
     }
 
+    // Fetch platform history: past leases for this applicant
+    const leaseHistory = await db
+      .select({
+        leaseId: leases.id,
+        propertyName: properties.name,
+        unitNumber: units.unitNumber,
+        leaseStart: leases.leaseStart,
+        leaseEnd: leases.leaseEnd,
+        monthlyRent: leases.monthlyRent,
+        currency: leases.currency,
+        status: leases.status,
+        delinquent: leases.delinquent,
+      })
+      .from(leases)
+      .innerJoin(units, eq(units.id, leases.unitId))
+      .innerJoin(properties, eq(properties.id, units.propertyId))
+      .where(eq(leases.tenantId, applicationData.applicant.id))
+      .orderBy(sql`${leases.leaseStart} DESC`);
+
+    // Fetch payment stats per lease
+    const paymentStats = leaseHistory.length > 0
+      ? await db
+          .select({
+            leaseId: payments.leaseId,
+            total: count(),
+            completed: count(sql`CASE WHEN ${payments.status} = 'completed' THEN 1 END`),
+            late: count(sql`CASE WHEN ${payments.status} = 'late' THEN 1 END`),
+            failed: count(sql`CASE WHEN ${payments.status} = 'failed' THEN 1 END`),
+          })
+          .from(payments)
+          .where(
+            inArray(
+              payments.leaseId,
+              leaseHistory.map((l) => l.leaseId)
+            )
+          )
+          .groupBy(payments.leaseId)
+      : [];
+
+    const statsMap = new Map(paymentStats.map((s) => [s.leaseId, s]));
+
+    const platformHistory = leaseHistory.map((lease) => {
+      const stats = statsMap.get(lease.leaseId);
+      return {
+        ...lease,
+        paymentStats: stats
+          ? { total: stats.total, completed: stats.completed, late: stats.late, failed: stats.failed }
+          : { total: 0, completed: 0, late: 0, failed: 0 },
+      };
+    });
+
     return NextResponse.json({
       application: {
         id: applicationData.application.id,
@@ -100,6 +152,7 @@ export async function GET(_request: NextRequest, props: { params: Promise<{ id: 
         phone: applicationData.applicant.phone,
         imageUrl: applicationData.applicant.image_url,
       },
+      platformHistory,
     });
   } catch (error) {
     console.error("Error fetching application:", error);
