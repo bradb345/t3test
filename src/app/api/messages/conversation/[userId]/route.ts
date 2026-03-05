@@ -1,12 +1,34 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { db } from "~/server/db";
-import { messages, user } from "~/server/db/schema";
-import { eq, or, and, desc } from "drizzle-orm";
+import { conversations, messages, user } from "~/server/db/schema";
+import { eq, and, desc } from "drizzle-orm";
 import { createAndEmitNotification } from "~/server/notification-emitter";
 
+// Find conversation between two users
+async function findConversation(userId1: number, userId2: number) {
+  const participant1Id = Math.min(userId1, userId2);
+  const participant2Id = Math.max(userId1, userId2);
+
+  const [conversation] = await db
+    .select()
+    .from(conversations)
+    .where(
+      and(
+        eq(conversations.participant1Id, participant1Id),
+        eq(conversations.participant2Id, participant2Id)
+      )
+    )
+    .limit(1);
+
+  return conversation;
+}
+
 // GET: Fetch messages between current user and specified user
-export async function GET(_request: NextRequest, props: { params: Promise<{ userId: string }> }) {
+export async function GET(
+  _request: NextRequest,
+  props: { params: Promise<{ userId: string }> }
+) {
   const params = await props.params;
   try {
     const { userId: clerkUserId } = await auth();
@@ -19,7 +41,6 @@ export async function GET(_request: NextRequest, props: { params: Promise<{ user
       return NextResponse.json({ error: "Invalid user ID" }, { status: 400 });
     }
 
-    // Get current user's DB ID
     const [currentUser] = await db
       .select()
       .from(user)
@@ -30,7 +51,6 @@ export async function GET(_request: NextRequest, props: { params: Promise<{ user
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    // Get other user's info
     const [otherUser] = await db
       .select()
       .from(user)
@@ -44,30 +64,30 @@ export async function GET(_request: NextRequest, props: { params: Promise<{ user
       );
     }
 
-    // Get all messages between the two users
+    const conversation = await findConversation(currentUser.id, otherUserId);
+
+    if (!conversation) {
+      return NextResponse.json({
+        otherUser: {
+          id: otherUser.id,
+          name: `${otherUser.first_name} ${otherUser.last_name}`,
+          image: otherUser.image_url,
+        },
+        messages: [],
+      });
+    }
+
     const conversationMessages = await db
       .select()
       .from(messages)
-      .where(
-        or(
-          and(
-            eq(messages.fromUserId, currentUser.id),
-            eq(messages.toUserId, otherUserId)
-          ),
-          and(
-            eq(messages.fromUserId, otherUserId),
-            eq(messages.toUserId, currentUser.id)
-          )
-        )
-      )
+      .where(eq(messages.conversationId, conversation.id))
       .orderBy(desc(messages.createdAt));
 
-    // Format messages with sender info
     const formattedMessages = conversationMessages.map((msg) => ({
       id: msg.id,
-      subject: msg.subject,
+      subject: conversation.subject,
       content: msg.content,
-      type: msg.type,
+      type: conversation.type,
       status: msg.status,
       createdAt: msg.createdAt,
       isFromCurrentUser: msg.fromUserId === currentUser.id,
@@ -91,7 +111,10 @@ export async function GET(_request: NextRequest, props: { params: Promise<{ user
 }
 
 // POST: Reply to conversation
-export async function POST(request: NextRequest, props: { params: Promise<{ userId: string }> }) {
+export async function POST(
+  request: NextRequest,
+  props: { params: Promise<{ userId: string }> }
+) {
   const params = await props.params;
   try {
     const { userId: clerkUserId } = await auth();
@@ -104,7 +127,6 @@ export async function POST(request: NextRequest, props: { params: Promise<{ user
       return NextResponse.json({ error: "Invalid user ID" }, { status: 400 });
     }
 
-    // Get current user's DB ID
     const [currentUser] = await db
       .select()
       .from(user)
@@ -115,7 +137,6 @@ export async function POST(request: NextRequest, props: { params: Promise<{ user
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    // Prevent sending messages to yourself
     if (toUserId === currentUser.id) {
       return NextResponse.json(
         { error: "Cannot send a message to yourself" },
@@ -123,7 +144,6 @@ export async function POST(request: NextRequest, props: { params: Promise<{ user
       );
     }
 
-    // Check recipient exists
     const [recipient] = await db
       .select()
       .from(user)
@@ -150,18 +170,47 @@ export async function POST(request: NextRequest, props: { params: Promise<{ user
       );
     }
 
+    // Find or create conversation
+    let conversation = await findConversation(currentUser.id, toUserId);
+
+    if (!conversation) {
+      const participant1Id = Math.min(currentUser.id, toUserId);
+      const participant2Id = Math.max(currentUser.id, toUserId);
+
+      [conversation] = await db
+        .insert(conversations)
+        .values({
+          participant1Id,
+          participant2Id,
+          subject: body.subject?.trim() || "Conversation",
+          type: body.type ?? "general",
+        })
+        .returning();
+    }
+
+    if (!conversation) {
+      return NextResponse.json(
+        { error: "Failed to create conversation" },
+        { status: 500 }
+      );
+    }
+
     // Create the message
     const [newMessage] = await db
       .insert(messages)
       .values({
+        conversationId: conversation.id,
         fromUserId: currentUser.id,
-        toUserId,
-        subject: body.subject?.trim() || "Re: Conversation",
         content: body.content.trim(),
-        type: body.type ?? "reply",
         status: "unread",
       })
       .returning();
+
+    // Update conversation lastMessageAt
+    await db
+      .update(conversations)
+      .set({ lastMessageAt: new Date() })
+      .where(eq(conversations.id, conversation.id));
 
     // Send notification to recipient
     await createAndEmitNotification({
@@ -182,9 +231,9 @@ export async function POST(request: NextRequest, props: { params: Promise<{ user
         success: true,
         message: {
           id: newMessage?.id,
-          subject: newMessage?.subject,
+          subject: conversation.subject,
           content: newMessage?.content,
-          type: newMessage?.type,
+          type: conversation.type,
           status: newMessage?.status,
           createdAt: newMessage?.createdAt,
           isFromCurrentUser: true,
@@ -202,7 +251,10 @@ export async function POST(request: NextRequest, props: { params: Promise<{ user
 }
 
 // PATCH: Mark messages as read
-export async function PATCH(_request: NextRequest, props: { params: Promise<{ userId: string }> }) {
+export async function PATCH(
+  _request: NextRequest,
+  props: { params: Promise<{ userId: string }> }
+) {
   const params = await props.params;
   try {
     const { userId: clerkUserId } = await auth();
@@ -215,7 +267,6 @@ export async function PATCH(_request: NextRequest, props: { params: Promise<{ us
       return NextResponse.json({ error: "Invalid user ID" }, { status: 400 });
     }
 
-    // Get current user's DB ID
     const [currentUser] = await db
       .select()
       .from(user)
@@ -226,17 +277,21 @@ export async function PATCH(_request: NextRequest, props: { params: Promise<{ us
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    // Mark all messages from other user as read
-    await db
-      .update(messages)
-      .set({ status: "read" })
-      .where(
-        and(
-          eq(messages.fromUserId, otherUserId),
-          eq(messages.toUserId, currentUser.id),
-          eq(messages.status, "unread")
-        )
-      );
+    const conversation = await findConversation(currentUser.id, otherUserId);
+
+    if (conversation) {
+      // Mark all messages from other user in this conversation as read
+      await db
+        .update(messages)
+        .set({ status: "read" })
+        .where(
+          and(
+            eq(messages.conversationId, conversation.id),
+            eq(messages.fromUserId, otherUserId),
+            eq(messages.status, "unread")
+          )
+        );
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

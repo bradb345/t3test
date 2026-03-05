@@ -1,12 +1,12 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { db } from "~/server/db";
-import { messages, user } from "~/server/db/schema";
-import { eq, or, desc, sql } from "drizzle-orm";
+import { conversations, messages, user } from "~/server/db/schema";
+import { eq, or, desc, sql, and } from "drizzle-orm";
 import { createAndEmitNotification } from "~/server/notification-emitter";
 import { trackServerEvent } from "~/lib/posthog-events/server";
 
-// GET: Fetch user's conversations (grouped by other user)
+// GET: Fetch user's conversations list
 export async function GET() {
   try {
     const { userId: clerkUserId } = await auth();
@@ -14,7 +14,6 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Get current user's DB ID
     const [currentUser] = await db
       .select()
       .from(user)
@@ -25,88 +24,77 @@ export async function GET() {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    // Get all messages where user is sender or recipient
-    const allMessages = await db
+    // Get all conversations where user is a participant
+    const userConversations = await db
       .select({
-        message: messages,
-        otherUser: user,
+        conversation: conversations,
       })
-      .from(messages)
-      .innerJoin(
-        user,
-        sql`CASE
-          WHEN ${messages.fromUserId} = ${currentUser.id} THEN ${messages.toUserId} = ${user.id}
-          ELSE ${messages.fromUserId} = ${user.id}
-        END`
-      )
+      .from(conversations)
       .where(
         or(
-          eq(messages.fromUserId, currentUser.id),
-          eq(messages.toUserId, currentUser.id)
+          eq(conversations.participant1Id, currentUser.id),
+          eq(conversations.participant2Id, currentUser.id)
         )
       )
-      .orderBy(desc(messages.createdAt));
+      .orderBy(desc(conversations.lastMessageAt));
 
-    // Pre-compute unread counts in a single pass (O(n) instead of O(n²))
-    const unreadCountByUser = new Map<number, number>();
-    for (const row of allMessages) {
-      const otherUserId = row.otherUser.id;
-      // Count messages FROM the other user that are unread
-      if (
-        row.message.fromUserId === otherUserId &&
-        row.message.status === "unread"
-      ) {
-        unreadCountByUser.set(
-          otherUserId,
-          (unreadCountByUser.get(otherUserId) ?? 0) + 1
-        );
-      }
-    }
+    // Build response with other user info and unread counts
+    const conversationList = await Promise.all(
+      userConversations.map(async ({ conversation }) => {
+        const otherUserId =
+          conversation.participant1Id === currentUser.id
+            ? conversation.participant2Id
+            : conversation.participant1Id;
 
-    // Group by other user
-    const conversationsMap = new Map<
-      number,
-      {
-        userId: number;
-        userName: string;
-        userImage: string | null;
-        lastMessage: {
-          id: number;
-          subject: string;
-          content: string;
-          status: string;
-          createdAt: Date;
-          isFromCurrentUser: boolean;
-        };
-        unreadCount: number;
-      }
-    >();
+        // Get other user info
+        const [otherUser] = await db
+          .select()
+          .from(user)
+          .where(eq(user.id, otherUserId))
+          .limit(1);
 
-    for (const row of allMessages) {
-      const otherUserId = row.otherUser.id;
-      const isFromCurrentUser = row.message.fromUserId === currentUser.id;
+        // Get last message
+        const [lastMessage] = await db
+          .select()
+          .from(messages)
+          .where(eq(messages.conversationId, conversation.id))
+          .orderBy(desc(messages.createdAt))
+          .limit(1);
 
-      if (!conversationsMap.has(otherUserId)) {
-        conversationsMap.set(otherUserId, {
-          userId: otherUserId,
-          userName: `${row.otherUser.first_name} ${row.otherUser.last_name}`,
-          userImage: row.otherUser.image_url,
+        // Get unread count (messages from other user that are unread)
+        const [unreadResult] = await db
+          .select({ count: sql<number>`count(*)` })
+          .from(messages)
+          .where(
+            and(
+              eq(messages.conversationId, conversation.id),
+              eq(messages.fromUserId, otherUserId),
+              eq(messages.status, "unread")
+            )
+          );
+
+        if (!otherUser || !lastMessage) return null;
+
+        return {
+          userId: otherUser.id,
+          userName: `${otherUser.first_name} ${otherUser.last_name}`,
+          userImage: otherUser.image_url,
           lastMessage: {
-            id: row.message.id,
-            subject: row.message.subject,
-            content: row.message.content,
-            status: row.message.status,
-            createdAt: row.message.createdAt,
-            isFromCurrentUser,
+            id: lastMessage.id,
+            subject: conversation.subject,
+            content: lastMessage.content,
+            status: lastMessage.status,
+            createdAt: lastMessage.createdAt,
+            isFromCurrentUser: lastMessage.fromUserId === currentUser.id,
           },
-          unreadCount: unreadCountByUser.get(otherUserId) ?? 0,
-        });
-      }
-    }
+          unreadCount: Number(unreadResult?.count ?? 0),
+        };
+      })
+    );
 
-    const conversations = Array.from(conversationsMap.values());
-
-    return NextResponse.json({ conversations });
+    return NextResponse.json({
+      conversations: conversationList.filter(Boolean),
+    });
   } catch (error) {
     console.error("Error fetching conversations:", error);
     return NextResponse.json(
@@ -116,7 +104,7 @@ export async function GET() {
   }
 }
 
-// POST: Send a new message
+// POST: Send a new message (creates conversation if needed)
 export async function POST(request: NextRequest) {
   try {
     const { userId: clerkUserId } = await auth();
@@ -124,7 +112,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Get current user's DB ID
     const [currentUser] = await db
       .select()
       .from(user)
@@ -143,7 +130,6 @@ export async function POST(request: NextRequest) {
       propertyId?: number;
     };
 
-    // Validate required fields
     if (!body.toUserId) {
       return NextResponse.json(
         { error: "Recipient is required" },
@@ -163,7 +149,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check recipient exists
     const [recipient] = await db
       .select()
       .from(user)
@@ -177,7 +162,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Cannot send to self
     if (body.toUserId === currentUser.id) {
       return NextResponse.json(
         { error: "Cannot send message to yourself" },
@@ -185,19 +169,58 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Ensure participant1Id < participant2Id for uniqueness
+    const participant1Id = Math.min(currentUser.id, body.toUserId);
+    const participant2Id = Math.max(currentUser.id, body.toUserId);
+
+    // Find or create conversation
+    let [conversation] = await db
+      .select()
+      .from(conversations)
+      .where(
+        and(
+          eq(conversations.participant1Id, participant1Id),
+          eq(conversations.participant2Id, participant2Id)
+        )
+      )
+      .limit(1);
+
+    if (!conversation) {
+      [conversation] = await db
+        .insert(conversations)
+        .values({
+          participant1Id,
+          participant2Id,
+          subject: body.subject.trim(),
+          type: body.type ?? "general",
+          propertyId: body.propertyId ?? null,
+        })
+        .returning();
+    }
+
+    if (!conversation) {
+      return NextResponse.json(
+        { error: "Failed to create conversation" },
+        { status: 500 }
+      );
+    }
+
     // Create the message
     const [newMessage] = await db
       .insert(messages)
       .values({
+        conversationId: conversation.id,
         fromUserId: currentUser.id,
-        toUserId: body.toUserId,
-        subject: body.subject.trim(),
         content: body.content.trim(),
-        type: body.type ?? "general",
         status: "unread",
-        propertyId: body.propertyId ?? null,
       })
       .returning();
+
+    // Update conversation lastMessageAt
+    await db
+      .update(conversations)
+      .set({ lastMessageAt: new Date() })
+      .where(eq(conversations.id, conversation.id));
 
     // Send notification to recipient
     await createAndEmitNotification({
@@ -215,12 +238,12 @@ export async function POST(request: NextRequest) {
 
     // Track message sent event in PostHog
     await trackServerEvent(clerkUserId, "message_sent", {
-        message_id: newMessage?.id,
-        message_type: body.type ?? "general",
-        has_property_context: !!body.propertyId,
-        message_body: body.content.trim(),
-        source: "api",
-      });
+      message_id: newMessage?.id,
+      message_type: body.type ?? "general",
+      has_property_context: !!body.propertyId,
+      message_body: body.content.trim(),
+      source: "api",
+    });
 
     return NextResponse.json(
       { success: true, message: newMessage },
