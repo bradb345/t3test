@@ -7,7 +7,8 @@ export function leaseTermsUpdatedEmail(
   const tenantName = escapeHtml(params.tenantName);
   const unitNumber = escapeHtml(params.unitNumber);
   const propertyName = escapeHtml(params.propertyName);
-  const { dashboardUrl, leaseStart, leaseEnd } = params;
+  const dashboardUrl = escapeHtml(params.dashboardUrl);
+  const { leaseStart, leaseEnd } = params;
 
   const formatDate = (date: Date) =>
     new Date(date).toLocaleDateString("en-US", {

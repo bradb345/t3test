@@ -170,7 +170,7 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
         unit_id: unitId,
         property_id: unitData.property.id,
         has_preferred_date: !!body.preferredDate,
-        message_body: body.message?.trim() ?? null,
+        has_message: !!body.message?.trim(),
         source: "api",
       });
 

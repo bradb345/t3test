@@ -299,7 +299,7 @@ export async function POST(request: NextRequest) {
       lease_id: leaseId,
       initiated_by: initiatedBy,
       move_out_date: moveOutDate.toISOString(),
-      message_body: reason ?? null,
+      has_message: !!reason,
     });
 
     return NextResponse.json({

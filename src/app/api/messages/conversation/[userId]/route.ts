@@ -274,13 +274,13 @@ export async function POST(
     }
 
     // Track message sent event in PostHog
-    await trackServerEvent(clerkUserId, "message_sent", {
+    void trackServerEvent(clerkUserId, "message_sent", {
       message_id: newMessage?.id,
       message_type: body.type ?? "general",
       has_property_context: false,
       has_attachments: !!body.attachments?.length,
       attachment_count: body.attachments?.length ?? 0,
-      message_body: body.content?.trim() ?? "",
+      message_length: (body.content?.trim() ?? "").length,
       source: "conversation_reply",
     });
 

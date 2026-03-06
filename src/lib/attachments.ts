@@ -53,7 +53,11 @@ export function safeParseAttachments(json: string | null): AttachmentInput[] | n
   try {
     const parsed = JSON.parse(json) as unknown;
     if (!Array.isArray(parsed)) return null;
-    const valid = parsed.filter(isValidAttachment);
+    const valid = parsed.filter(
+      (item): item is AttachmentInput =>
+        isValidAttachment(item) &&
+        ALLOWED_URL_PATTERNS.some((pattern) => pattern.test(item.url))
+    );
     return valid.length > 0 ? valid : null;
   } catch {
     return null;

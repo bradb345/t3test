@@ -25,45 +25,40 @@ export async function GET() {
   const roles = parseRoles(dbUser.roles);
   const isTenant = hasRole(dbUser.roles, "tenant");
 
-  // Only check for active lease if user has tenant role
-  let hasActiveLease = false;
-  if (isTenant) {
-    const [activeLease] = await db
-      .select({ id: leases.id })
-      .from(leases)
+  // Run independent queries in parallel
+  const [activeLeaseResult, pendingAppResult, viewingRequestResult] = await Promise.all([
+    isTenant
+      ? db
+          .select({ id: leases.id })
+          .from(leases)
+          .where(
+            and(
+              eq(leases.tenantId, dbUser.id),
+              or(eq(leases.status, "active"), eq(leases.status, "notice_given"))
+            )
+          )
+          .limit(1)
+      : Promise.resolve([]),
+    db
+      .select({ id: tenancyApplications.id })
+      .from(tenancyApplications)
       .where(
         and(
-          eq(leases.tenantId, dbUser.id),
-          or(eq(leases.status, "active"), eq(leases.status, "notice_given"))
+          eq(tenancyApplications.applicantUserId, dbUser.id),
+          inArray(tenancyApplications.status, ["pending", "under_review"])
         )
       )
-      .limit(1);
+      .limit(1),
+    db
+      .select({ id: viewingRequests.id })
+      .from(viewingRequests)
+      .where(eq(viewingRequests.requesterUserId, dbUser.id))
+      .limit(1),
+  ]);
 
-    hasActiveLease = !!activeLease;
-  }
-
-  // Check for pending or under_review applications
-  const [pendingApp] = await db
-    .select({ id: tenancyApplications.id })
-    .from(tenancyApplications)
-    .where(
-      and(
-        eq(tenancyApplications.applicantUserId, dbUser.id),
-        inArray(tenancyApplications.status, ["pending", "under_review"])
-      )
-    )
-    .limit(1);
-
-  const hasPendingApplication = !!pendingApp;
-
-  // Check for viewing requests
-  const [viewingRequest] = await db
-    .select({ id: viewingRequests.id })
-    .from(viewingRequests)
-    .where(eq(viewingRequests.requesterUserId, dbUser.id))
-    .limit(1);
-
-  const hasViewingRequest = !!viewingRequest;
+  const hasActiveLease = activeLeaseResult.length > 0;
+  const hasPendingApplication = pendingAppResult.length > 0;
+  const hasViewingRequest = viewingRequestResult.length > 0;
 
   return NextResponse.json({ roles, hasActiveLease, hasPendingApplication, hasViewingRequest });
 }

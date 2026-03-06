@@ -26,9 +26,10 @@ export async function GET() {
     }
 
     // Get all conversations with other user info, last message, and unread counts in a single query
+    // Use raw column refs (c.participant1_id) because the table is aliased as 'c' in the query
     const otherUser = sql`CASE
-      WHEN ${conversations.participant1Id} = ${currentUser.id} THEN ${conversations.participant2Id}
-      ELSE ${conversations.participant1Id}
+      WHEN c.participant1_id = ${currentUser.id} THEN c.participant2_id
+      ELSE c.participant1_id
     END`;
 
     const conversationRows = await db.execute(sql`
@@ -277,13 +278,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Track message sent event in PostHog
-    await trackServerEvent(clerkUserId, "message_sent", {
+    void trackServerEvent(clerkUserId, "message_sent", {
       message_id: newMessage?.id,
       message_type: body.type ?? "general",
       has_property_context: !!body.propertyId,
       has_attachments: !!body.attachments?.length,
       attachment_count: body.attachments?.length ?? 0,
-      message_body: body.content?.trim() ?? "",
+      message_length: (body.content?.trim() ?? "").length,
       source: "api",
     });
 

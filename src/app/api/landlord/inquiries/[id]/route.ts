@@ -117,7 +117,7 @@ export async function PATCH(request: NextRequest, props: { params: Promise<{ id:
       void trackServerEvent(clerkUserId, "viewing_request_responded", {
         request_id: requestId,
         response_status: body.status,
-        message_body: body.landlordNotes?.trim() ?? null,
+        has_message: !!body.landlordNotes?.trim(),
       });
     }
 

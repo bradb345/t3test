@@ -38,26 +38,32 @@ export function Navbar() {
     useState<HTMLButtonElement | null>(null);
 
   useEffect(() => {
-    if (isSignedIn) {
-      fetch("/api/properties")
-        .then((res) => res.json())
-        .then((data: Property[]) => {
-          setHasProperties(data.length > 0);
-        })
-        .catch((error) => {
-          console.error("Error checking properties:", error);
-        });
+    if (!isSignedIn) return;
 
-      fetch("/api/tenant/check")
-        .then((res) => res.json())
-        .then((data: UserRoles) => {
-          setIsTenant(data.hasActiveLease);
-          setHasActivity(data.hasPendingApplication || data.hasViewingRequest);
-        })
-        .catch((error) => {
-          console.error("Error checking tenant status:", error);
-        });
-    }
+    const controller = new AbortController();
+
+    fetch("/api/properties", { signal: controller.signal })
+      .then((res) => res.json())
+      .then((data: Property[]) => {
+        setHasProperties(data.length > 0);
+      })
+      .catch((error) => {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+        console.error("Error checking properties:", error);
+      });
+
+    fetch("/api/tenant/check", { signal: controller.signal })
+      .then((res) => res.json())
+      .then((data: UserRoles) => {
+        setIsTenant(data.hasActiveLease);
+        setHasActivity(data.hasPendingApplication || data.hasViewingRequest);
+      })
+      .catch((error) => {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+        console.error("Error checking tenant status:", error);
+      });
+
+    return () => controller.abort();
   }, [isSignedIn]);
 
   const signInButtonRef = useCallback((node: HTMLButtonElement | null) => {
