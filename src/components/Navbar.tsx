@@ -24,39 +24,46 @@ interface UserRoles {
   roles: string[];
   hasActiveLease: boolean;
   hasPendingApplication: boolean;
+  hasViewingRequest: boolean;
 }
 
 export function Navbar() {
   const { isSignedIn } = useAuth();
   const [hasProperties, setHasProperties] = useState(false);
   const [isTenant, setIsTenant] = useState(false);
-  const [hasPendingApplication, setHasPendingApplication] = useState(false);
+  const [hasActivity, setHasActivity] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const searchParams = useSearchParams();
   const [signInButtonElement, setSignInButtonElement] =
     useState<HTMLButtonElement | null>(null);
 
   useEffect(() => {
-    if (isSignedIn) {
-      fetch("/api/properties")
-        .then((res) => res.json())
-        .then((data: Property[]) => {
-          setHasProperties(data.length > 0);
-        })
-        .catch((error) => {
-          console.error("Error checking properties:", error);
-        });
+    if (!isSignedIn) return;
 
-      fetch("/api/tenant/check")
-        .then((res) => res.json())
-        .then((data: UserRoles) => {
-          setIsTenant(data.hasActiveLease);
-          setHasPendingApplication(data.hasPendingApplication);
-        })
-        .catch((error) => {
-          console.error("Error checking tenant status:", error);
-        });
-    }
+    const controller = new AbortController();
+
+    fetch("/api/properties", { signal: controller.signal })
+      .then((res) => res.json())
+      .then((data: Property[]) => {
+        setHasProperties(data.length > 0);
+      })
+      .catch((error) => {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+        console.error("Error checking properties:", error);
+      });
+
+    fetch("/api/tenant/check", { signal: controller.signal })
+      .then((res) => res.json())
+      .then((data: UserRoles) => {
+        setIsTenant(data.hasActiveLease);
+        setHasActivity(data.hasPendingApplication || data.hasViewingRequest);
+      })
+      .catch((error) => {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+        console.error("Error checking tenant status:", error);
+      });
+
+    return () => controller.abort();
   }, [isSignedIn]);
 
   const signInButtonRef = useCallback((node: HTMLButtonElement | null) => {
@@ -93,12 +100,12 @@ export function Navbar() {
               My Properties
             </Link>
           )}
-          {hasPendingApplication && (
+          {hasActivity && (
             <Link
-              href="/applications"
+              href="/activity"
               className="text-sm font-medium text-muted-foreground hover:text-primary"
             >
-              My Applications
+              My Activity
             </Link>
           )}
           <Link

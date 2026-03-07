@@ -34,8 +34,6 @@ export interface OnboardingData {
   personal?: PersonalInfo;
   contact?: ContactInfo;
   employment?: EmploymentInfo[];
-  rentalHistory?: RentalHistoryEntry[];
-  references?: Reference[];
   emergencyContacts?: EmergencyContact[];
   documents?: DocumentUpload[];
   additionalInfo?: AdditionalInfo;
@@ -81,34 +79,6 @@ export interface EmploymentInfo {
   supervisorEmail?: string;
   additionalIncomeSource?: string;
   additionalIncomeAmount?: number;
-}
-
-export interface RentalHistoryEntry {
-  address: string;
-  city?: string;
-  state?: string;
-  zipCode?: string;
-  landlordName: string;
-  landlordPhone?: string;
-  landlordEmail?: string;
-  moveInDate: string;
-  moveOutDate?: string;
-  monthlyRent: number;
-  currency: string;
-  reasonForLeaving?: string;
-  isCurrent: boolean;
-  canContactLandlord: boolean;
-}
-
-export interface Reference {
-  referenceType: 'personal' | 'professional' | 'previous_landlord';
-  fullName: string;
-  relationship: string;
-  phone: string;
-  email?: string;
-  yearsKnown?: number;
-  canContact: boolean;
-  notes?: string;
 }
 
 export interface EmergencyContact {
@@ -289,22 +259,6 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
     requiredFields: ['employerName', 'position', 'annualIncome'],
     helpText: 'Required for income verification and lease approval.',
     estimatedTime: 5,
-  },
-  {
-    id: 'rentalHistory',
-    title: 'Rental History',
-    description: 'Previous rentals',
-    requiredFields: ['address', 'landlordName', 'moveInDate', 'monthlyRent'],
-    helpText: 'Helps verify rental history and reliability.',
-    estimatedTime: 5,
-  },
-  {
-    id: 'references',
-    title: 'References',
-    description: 'Personal references',
-    requiredFields: ['fullName', 'phone'],
-    helpText: 'Provides additional verification of character and reliability.',
-    estimatedTime: 3,
   },
   {
     id: 'emergencyContacts',

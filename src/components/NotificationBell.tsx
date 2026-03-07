@@ -58,9 +58,23 @@ export function NotificationBell() {
     const eventSource = new EventSource("/api/notifications/stream");
 
     eventSource.addEventListener("notification", (event) => {
-      const notification = JSON.parse(event.data as string) as Notification;
-      setNotifications((prev) => [notification, ...prev]);
-      setUnreadCount((prev) => prev + 1);
+      let notification: Notification;
+      try {
+        notification = JSON.parse(event.data as string) as Notification;
+      } catch {
+        console.error("Failed to parse SSE notification data");
+        return;
+      }
+      setNotifications((prev) => {
+        const existingIndex = prev.findIndex((n) => n.id === notification.id);
+        if (existingIndex !== -1) {
+          const updated = [...prev];
+          updated.splice(existingIndex, 1);
+          return [notification, ...updated];
+        }
+        setUnreadCount((c) => c + 1);
+        return [notification, ...prev];
+      });
     });
 
     eventSource.addEventListener("open", () => {
@@ -237,7 +251,7 @@ export function NotificationBell() {
                 >
                   {notification.actionUrl ? (
                     <Link
-                      href={notification.actionUrl}
+                      href={notification.actionUrl.startsWith("/") ? notification.actionUrl : "/"}
                       onClick={() => {
                         void markAsRead(notification.id);
                         setIsOpen(false);

@@ -2,12 +2,13 @@
 
 import { useRouter } from "next/navigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
-import { Home, Wrench, CreditCard, FileText, User, AlertTriangle } from "lucide-react";
+import { Home, Wrench, CreditCard, FileText, User, AlertTriangle, Eye } from "lucide-react";
 import { OverviewTab } from "./overview/OverviewTab";
 import { MaintenanceTab } from "./maintenance/MaintenanceTab";
 import { PaymentsTab } from "./payments/PaymentsTab";
 import { DocumentsTab } from "./documents/DocumentsTab";
 import { ProfileTab } from "./profile/ProfileTab";
+import { ViewingRequestsTab } from "./viewing-requests/ViewingRequestsTab";
 import type {
   user,
   leases,
@@ -21,6 +22,7 @@ import type {
   emergencyContacts,
   tenantOffboardingNotices,
   refunds,
+  viewingRequests,
 } from "~/server/db/schema";
 
 type User = typeof user.$inferSelect;
@@ -35,9 +37,16 @@ type EmploymentInfo = typeof employmentInfo.$inferSelect;
 type EmergencyContact = typeof emergencyContacts.$inferSelect;
 type Refund = typeof refunds.$inferSelect;
 type OffboardingNotice = typeof tenantOffboardingNotices.$inferSelect;
+type ViewingRequest = typeof viewingRequests.$inferSelect;
 
 interface LeaseWithDetails {
   lease: Lease;
+  unit: Unit;
+  property: Property;
+}
+
+interface ViewingRequestWithDetails {
+  viewingRequest: ViewingRequest;
   unit: Unit;
   property: Property;
 }
@@ -55,6 +64,7 @@ interface DashboardClientProps {
   pendingRenewalLease: Lease | null;
   isDelinquent: boolean;
   refunds: Refund[];
+  viewingRequests: ViewingRequestWithDetails[];
 }
 
 export function DashboardClient({
@@ -70,6 +80,7 @@ export function DashboardClient({
   pendingRenewalLease,
   isDelinquent,
   refunds,
+  viewingRequests,
 }: DashboardClientProps) {
   const router = useRouter();
 
@@ -109,7 +120,7 @@ export function DashboardClient({
 
         {/* Tabs Navigation */}
         <Tabs defaultValue={isDelinquent ? "payments" : "overview"} className="w-full">
-          <TabsList className="mb-8 grid w-full grid-cols-5">
+          <TabsList className="mb-8 grid w-full grid-cols-6">
             <TabsTrigger
               value="overview"
               className="flex items-center gap-2"
@@ -137,6 +148,14 @@ export function DashboardClient({
             >
               <FileText className="h-4 w-4" />
               <span className="hidden sm:inline">Documents</span>
+            </TabsTrigger>
+            <TabsTrigger
+              value="viewings"
+              className="flex items-center gap-2"
+              disabled={isDelinquent}
+            >
+              <Eye className="h-4 w-4" />
+              <span className="hidden sm:inline">Viewings</span>
             </TabsTrigger>
             <TabsTrigger
               value="profile"
@@ -178,6 +197,11 @@ export function DashboardClient({
                 tenantDocuments={tenantDocuments}
                 profileId={profile?.id ?? null}
               />
+            </TabsContent>
+          )}
+          {!isDelinquent && (
+            <TabsContent value="viewings">
+              <ViewingRequestsTab viewingRequests={viewingRequests} />
             </TabsContent>
           )}
           {!isDelinquent && (

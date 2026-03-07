@@ -44,7 +44,9 @@
       "Bash(done)",
       "Bash(npm run cy:clean:*)",
       "Bash(npx dotenv:*)",
-      "Bash(xargs dirname:*)"
+      "Bash(xargs dirname:*)",
+      "Bash(gh pr:*)",
+      "Bash(npm run:*)"
     ]
   }
 }

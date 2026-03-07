@@ -3,7 +3,9 @@
 
 import { sql } from "drizzle-orm";
 import {
+  check,
   index,
+  uniqueIndex,
   pgTableCreator,
   serial,
   timestamp,
@@ -366,47 +368,61 @@ export const payments = createTable(
   })
 );
 
-// Example message data:
-/*
-{
-  id: 1,
-  fromUserId: 42,
-  toUserId: 56,
-  propertyId: 1,
-  subject: "Maintenance Request Follow-up",
-  content: "Just checking on the status of the kitchen faucet repair...",
-  type: "maintenance",
-  status: "unread",
-  attachments: [
-    "https://example.com/messages/photo1.jpg"
-  ]
-}
-*/
+// Conversations table - one row per unique pair of users
+// participant1Id is always the lower user ID to enforce uniqueness
+export const conversations = createTable(
+  "conversation",
+  {
+    id: serial("id").primaryKey(),
+    participant1Id: integer("participant1_id")
+      .notNull()
+      .references(() => user.id),
+    participant2Id: integer("participant2_id")
+      .notNull()
+      .references(() => user.id),
+    type: varchar("type", { length: 50 }).notNull().default("general"),
+    propertyId: integer("property_id")
+      .references(() => properties.id),
+    lastMessageAt: timestamp("last_message_at", { withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+  },
+  (conversation) => ({
+    participantPairIndex: uniqueIndex("conversation_participant_pair_idx").on(
+      conversation.participant1Id,
+      conversation.participant2Id
+    ),
+    participantOrderCheck: check("conversation_participant_order_check", sql`${conversation.participant1Id} < ${conversation.participant2Id}`),
+    participant1Index: index("conversation_participant1_idx").on(conversation.participant1Id),
+    participant2Index: index("conversation_participant2_idx").on(conversation.participant2Id),
+    lastMessageAtIndex: index("conversation_last_message_at_idx").on(conversation.lastMessageAt),
+  })
+);
+
+// Messages table - one row per message, linked to a conversation
 export const messages = createTable(
   "message",
   {
     id: serial("id").primaryKey(),
+    conversationId: integer("conversation_id")
+      .notNull()
+      .references(() => conversations.id),
     fromUserId: integer("from_user_id")
       .notNull()
       .references(() => user.id),
-    toUserId: integer("to_user_id")
-      .notNull()
-      .references(() => user.id),
-    propertyId: integer("property_id")
-      .references(() => properties.id),
-    subject: varchar("subject", { length: 256 }).notNull(),
     content: text("content").notNull(),
-    type: varchar("type", { length: 50 }).notNull(),
-    status: varchar("status", { length: 20 }).notNull().default('unread'),
+    status: varchar("status", { length: 20 }).notNull().default("unread"),
     attachments: text("attachments"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .default(sql`CURRENT_TIMESTAMP`)
       .notNull(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).$onUpdate(() => new Date()),
   },
   (message) => ({
-    userMessageIndex: index("user_message_idx").on(message.toUserId, message.status),
-    propertyMessageIndex: index("property_message_idx").on(message.propertyId),
+    conversationIndex: index("message_conversation_idx").on(message.conversationId, message.createdAt),
+    unreadIndex: index("message_unread_idx").on(message.conversationId, message.status),
   })
 );
 
@@ -599,86 +615,6 @@ export const employmentInfo = createTable(
   })
 );
 
-// Example rental history data:
-/*
-{
-  id: 1,
-  tenantProfileId: 1,
-  address: "789 Oak Street, Los Angeles, CA 90001",
-  landlordName: "Property Management Inc.",
-  landlordPhone: "+1-555-777-6666",
-  landlordEmail: "contact@propertymanagement.com",
-  moveInDate: "2018-01-01",
-  moveOutDate: "2023-12-31",
-  monthlyRent: 1800.00,
-  reasonForLeaving: "Job relocation"
-}
-*/
-export const rentalHistory = createTable(
-  "rental_history",
-  {
-    id: serial("id").primaryKey(),
-    tenantProfileId: integer("tenant_profile_id")
-      .notNull()
-      .references(() => tenantProfiles.id),
-    address: text("address").notNull(),
-    landlordName: varchar("landlord_name", { length: 256 }).notNull(),
-    landlordPhone: varchar("landlord_phone", { length: 20 }),
-    landlordEmail: varchar("landlord_email", { length: 256 }),
-    moveInDate: timestamp("move_in_date", { withTimezone: true }).notNull(),
-    moveOutDate: timestamp("move_out_date", { withTimezone: true }),
-    monthlyRent: decimal("monthly_rent", { precision: 10, scale: 2 }).notNull(),
-    currency: varchar("currency", { length: 3 }).notNull().default("USD"),
-    reasonForLeaving: text("reason_for_leaving"),
-    isCurrent: boolean("is_current").default(false),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .default(sql`CURRENT_TIMESTAMP`)
-      .notNull(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).$onUpdate(() => new Date()),
-  },
-  (history) => ({
-    tenantRentalHistoryIndex: index("tenant_rental_history_idx").on(history.tenantProfileId),
-  })
-);
-
-// Example references data:
-/*
-{
-  id: 1,
-  tenantProfileId: 1,
-  referenceType: "personal",
-  fullName: "Alice Johnson",
-  relationship: "Friend",
-  phone: "+1-555-444-3333",
-  email: "alice.johnson@example.com",
-  yearsKnown: 5,
-  canContact: true
-}
-*/
-export const references = createTable(
-  "reference",
-  {
-    id: serial("id").primaryKey(),
-    tenantProfileId: integer("tenant_profile_id")
-      .notNull()
-      .references(() => tenantProfiles.id),
-    referenceType: varchar("reference_type", { length: 50 }).notNull(),
-    fullName: varchar("full_name", { length: 256 }).notNull(),
-    relationship: varchar("relationship", { length: 100 }),
-    phone: varchar("phone", { length: 20 }).notNull(),
-    email: varchar("email", { length: 256 }),
-    yearsKnown: integer("years_known"),
-    canContact: boolean("can_contact").default(true),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .default(sql`CURRENT_TIMESTAMP`)
-      .notNull(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).$onUpdate(() => new Date()),
-  },
-  (reference) => ({
-    tenantReferenceIndex: index("tenant_reference_idx").on(reference.tenantProfileId),
-  })
-);
-
 // Example emergency contacts data:
 /*
 {
@@ -822,6 +758,7 @@ export const viewingRequests = createTable(
     unitId: integer("unit_id")
       .notNull()
       .references(() => units.id),
+    requesterUserId: integer("requester_user_id").references(() => user.id),
     name: varchar("name", { length: 256 }).notNull(),
     email: varchar("email", { length: 256 }).notNull(),
     phone: varchar("phone", { length: 20 }),
@@ -843,6 +780,7 @@ export const viewingRequests = createTable(
     unitIndex: index("viewing_unit_idx").on(request.unitId),
     statusIndex: index("viewing_status_idx").on(request.status),
     emailIndex: index("viewing_email_idx").on(request.email),
+    requesterIndex: index("viewing_requester_idx").on(request.requesterUserId),
   })
 );
 

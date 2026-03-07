@@ -9,7 +9,6 @@ import {
   DialogTitle,
 } from "~/components/ui/dialog";
 import { Button } from "~/components/ui/button";
-import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { Textarea } from "~/components/ui/textarea";
 import { Loader2, CheckCircle } from "lucide-react";
@@ -33,10 +32,7 @@ export function ContactLandlordModal({
   unitNumber,
   propertyName,
 }: ContactLandlordModalProps) {
-  const [formData, setFormData] = useState({
-    subject: `Inquiry about Unit ${unitNumber} at ${propertyName}`,
-    message: "",
-  });
+  const [message, setMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -52,10 +48,9 @@ export function ContactLandlordModal({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           toUserId: landlordId,
-          subject: formData.subject.trim(),
-          content: formData.message.trim(),
+          content: message.trim(),
           type: "inquiry",
-          propertyId: undefined, // User-to-user messaging
+          propertyId: undefined,
           unitId,
         }),
       });
@@ -75,10 +70,7 @@ export function ContactLandlordModal({
 
   const handleClose = () => {
     if (!isSubmitting) {
-      setFormData({
-        subject: `Inquiry about Unit ${unitNumber} at ${propertyName}`,
-        message: "",
-      });
+      setMessage("");
       setIsSuccess(false);
       setError(null);
       onClose();
@@ -120,31 +112,13 @@ export function ContactLandlordModal({
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="subject">
-              Subject <span className="text-red-500">*</span>
-            </Label>
-            <Input
-              id="subject"
-              type="text"
-              value={formData.subject}
-              onChange={(e) =>
-                setFormData({ ...formData, subject: e.target.value })
-              }
-              required
-              disabled={isSubmitting}
-            />
-          </div>
-
-          <div className="space-y-2">
             <Label htmlFor="message">
               Message <span className="text-red-500">*</span>
             </Label>
             <Textarea
               id="message"
-              value={formData.message}
-              onChange={(e) =>
-                setFormData({ ...formData, message: e.target.value })
-              }
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
               placeholder="Write your message to the landlord..."
               rows={5}
               required
@@ -168,7 +142,7 @@ export function ContactLandlordModal({
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting} className="flex-1">
+            <Button type="submit" disabled={isSubmitting || !message.trim()} className="flex-1">
               {isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />

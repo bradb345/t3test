@@ -5,6 +5,8 @@ import { viewingRequests, units, properties, user, notifications } from "~/serve
 import { eq, and, like } from "drizzle-orm";
 import { hasRole } from "~/lib/roles";
 import { trackServerEvent } from "~/lib/posthog-events/server";
+import { createAndEmitNotification } from "~/server/notification-emitter";
+import { sendAppEmail } from "~/lib/emails/server";
 
 const VALID_STATUSES = ["pending", "approved", "declined", "completed"];
 
@@ -115,7 +117,68 @@ export async function PATCH(request: NextRequest, props: { params: Promise<{ id:
       void trackServerEvent(clerkUserId, "viewing_request_responded", {
         request_id: requestId,
         response_status: body.status,
-        message_body: body.landlordNotes?.trim() ?? null,
+        has_message: !!body.landlordNotes?.trim(),
+      });
+    }
+
+    // Notify tenant when status changes from pending to approved/declined
+    if (
+      body.status &&
+      existingRequest.request.status === "pending" &&
+      (body.status === "approved" || body.status === "declined")
+    ) {
+      const statusLabel = body.status === "approved" ? "Approved" : "Declined";
+      const unitNumber = existingRequest.unit.unitNumber;
+      const propertyName = existingRequest.property.name;
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+      const listingUrl = `${baseUrl}/units/${existingRequest.unit.id}`;
+      const notesMessage = updatedRequest?.landlordNotes
+        ? ` Notes: "${updatedRequest.landlordNotes}"`
+        : "";
+
+      // Find requester user — prefer requesterUserId, fall back to email match
+      let requesterDbUser: { id: number } | undefined;
+      if (existingRequest.request.requesterUserId) {
+        const [found] = await db
+          .select({ id: user.id })
+          .from(user)
+          .where(eq(user.id, existingRequest.request.requesterUserId))
+          .limit(1);
+        requesterDbUser = found;
+      } else {
+        const [found] = await db
+          .select({ id: user.id })
+          .from(user)
+          .where(eq(user.email, existingRequest.request.email))
+          .limit(1);
+        requesterDbUser = found;
+      }
+
+      // Send in-app notification if we found the user
+      if (requesterDbUser) {
+        await createAndEmitNotification({
+          userId: requesterDbUser.id,
+          type: "viewing_request_response",
+          title: `Viewing Request ${statusLabel}`,
+          message: `Your viewing request for Unit ${unitNumber} at ${propertyName} has been ${body.status}.${notesMessage}`,
+          data: JSON.stringify({
+            viewingRequestId: requestId,
+            unitId: existingRequest.unit.id,
+            propertyId: existingRequest.property.id,
+            status: body.status,
+          }),
+          actionUrl: "/activity?tab=viewings",
+        });
+      }
+
+      // Send email notification
+      await sendAppEmail(existingRequest.request.email, "viewing_request_response", {
+        requesterName: existingRequest.request.name,
+        unitNumber,
+        propertyName,
+        status: body.status,
+        landlordNotes: updatedRequest?.landlordNotes ?? undefined,
+        listingUrl,
       });
     }
 

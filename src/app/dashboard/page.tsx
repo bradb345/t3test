@@ -14,6 +14,7 @@ import {
   emergencyContacts,
   tenantOffboardingNotices,
   refunds,
+  viewingRequests,
 } from "~/server/db/schema";
 import { eq, and, asc, desc, or, inArray } from "drizzle-orm";
 import { hasRole } from "~/lib/roles";
@@ -100,7 +101,7 @@ export default async function TenantDashboard() {
   pendingRenewalLease = renewalResult ?? null;
 
   // Fetch remaining data in parallel
-  const [recentPayments, maintenanceReqs, profile, tenantRefunds] = await Promise.all([
+  const [recentPayments, maintenanceReqs, profile, tenantRefunds, tenantViewingRequests] = await Promise.all([
     // Get payments for this tenant
     db
       .select()
@@ -130,6 +131,19 @@ export default async function TenantDashboard() {
       .from(refunds)
       .where(eq(refunds.tenantId, dbUser.id))
       .orderBy(desc(refunds.createdAt)),
+
+    // Get viewing requests for this tenant
+    db
+      .select({
+        viewingRequest: viewingRequests,
+        unit: units,
+        property: properties,
+      })
+      .from(viewingRequests)
+      .innerJoin(units, eq(units.id, viewingRequests.unitId))
+      .innerJoin(properties, eq(properties.id, units.propertyId))
+      .where(eq(viewingRequests.requesterUserId, dbUser.id))
+      .orderBy(desc(viewingRequests.createdAt)),
   ]);
 
   // Get profile-related data if profile exists
@@ -173,6 +187,7 @@ export default async function TenantDashboard() {
       pendingRenewalLease={pendingRenewalLease}
       isDelinquent={activeLease.lease.delinquent}
       refunds={tenantRefunds}
+      viewingRequests={tenantViewingRequests}
     />
   );
 }

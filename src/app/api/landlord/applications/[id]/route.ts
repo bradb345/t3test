@@ -7,8 +7,9 @@ import {
   properties,
   user,
   leases,
+  payments,
 } from "~/server/db/schema";
-import { eq, and, inArray } from "drizzle-orm";
+import { eq, and, inArray, sql, count } from "drizzle-orm";
 import { createAndEmitNotification } from "~/server/notification-emitter";
 import { sendAppEmail } from "~/lib/emails/server";
 import { persistTenantProfile } from "~/lib/tenant-profile";
@@ -71,6 +72,57 @@ export async function GET(_request: NextRequest, props: { params: Promise<{ id: 
       console.error("Error parsing application data");
     }
 
+    // Fetch platform history: past leases for this applicant
+    const leaseHistory = await db
+      .select({
+        leaseId: leases.id,
+        propertyName: properties.name,
+        unitNumber: units.unitNumber,
+        leaseStart: leases.leaseStart,
+        leaseEnd: leases.leaseEnd,
+        monthlyRent: leases.monthlyRent,
+        currency: leases.currency,
+        status: leases.status,
+        delinquent: leases.delinquent,
+      })
+      .from(leases)
+      .innerJoin(units, eq(units.id, leases.unitId))
+      .innerJoin(properties, eq(properties.id, units.propertyId))
+      .where(eq(leases.tenantId, applicationData.applicant.id))
+      .orderBy(sql`${leases.leaseStart} DESC`);
+
+    // Fetch payment stats per lease
+    const paymentStats = leaseHistory.length > 0
+      ? await db
+          .select({
+            leaseId: payments.leaseId,
+            total: count(),
+            completed: count(sql`CASE WHEN ${payments.status} = 'completed' THEN 1 END`),
+            late: count(sql`CASE WHEN ${payments.status} = 'late' THEN 1 END`),
+            failed: count(sql`CASE WHEN ${payments.status} = 'failed' THEN 1 END`),
+          })
+          .from(payments)
+          .where(
+            inArray(
+              payments.leaseId,
+              leaseHistory.map((l) => l.leaseId)
+            )
+          )
+          .groupBy(payments.leaseId)
+      : [];
+
+    const statsMap = new Map(paymentStats.map((s) => [s.leaseId, s]));
+
+    const platformHistory = leaseHistory.map((lease) => {
+      const stats = statsMap.get(lease.leaseId);
+      return {
+        ...lease,
+        paymentStats: stats
+          ? { total: stats.total, completed: stats.completed, late: stats.late, failed: stats.failed }
+          : { total: 0, completed: 0, late: 0, failed: 0 },
+      };
+    });
+
     return NextResponse.json({
       application: {
         id: applicationData.application.id,
@@ -100,6 +152,7 @@ export async function GET(_request: NextRequest, props: { params: Promise<{ id: 
         phone: applicationData.applicant.phone,
         imageUrl: applicationData.applicant.image_url,
       },
+      platformHistory,
     });
   } catch (error) {
     console.error("Error fetching application:", error);
@@ -186,91 +239,106 @@ export async function PATCH(request: NextRequest, props: { params: Promise<{ id:
       );
     }
 
-    // If approving, check for existing lease BEFORE updating application status
-    // to avoid an inconsistent state where the app is marked approved but no lease is created.
     if (body.decision === "approved") {
-      const [existingLease] = await db
-        .select({ id: leases.id, status: leases.status })
-        .from(leases)
-        .where(
-          and(
-            eq(leases.unitId, applicationData.unit.id),
-            inArray(leases.status, ["active", "notice_given"])
+      // Wrap approval in a transaction to prevent race conditions
+      // (concurrent approvals could otherwise both pass the active-lease check)
+      // Wrap lease check + creation in a transaction to prevent race conditions
+      // (concurrent approvals could otherwise both pass the active-lease check)
+      const txResult = await db.transaction(async (tx) => {
+        const [existingLease] = await tx
+          .select({ id: leases.id, status: leases.status })
+          .from(leases)
+          .where(
+            and(
+              eq(leases.unitId, applicationData.unit.id),
+              inArray(leases.status, ["active", "notice_given"])
+            )
           )
-        )
-        .limit(1);
+          .limit(1);
 
-      if (existingLease) {
-        return NextResponse.json(
-          {
-            error:
-              "Cannot approve application — this unit has an active lease. The existing lease must be fully terminated through the offboarding process before a new tenant can be approved.",
-          },
-          { status: 400 }
-        );
+        if (existingLease) {
+          return { error: "Cannot approve application — this unit has an active lease. The existing lease must be fully terminated through the offboarding process before a new tenant can be approved." } as const;
+        }
+
+        // Update the application status
+        await tx
+          .update(tenancyApplications)
+          .set({
+            status: body.decision,
+            decision: body.decision,
+            decisionNotes: body.decisionNotes?.trim() ?? null,
+            reviewedAt: new Date(),
+            reviewedByUserId: currentUser.id,
+          })
+          .where(
+            and(
+              eq(tenancyApplications.id, applicationId),
+              eq(tenancyApplications.status, "pending")
+            )
+          );
+
+        // Create lease
+        const rentDueDay = body.rentDueDay && body.rentDueDay >= 1 && body.rentDueDay <= 28
+          ? body.rentDueDay
+          : 1;
+        const leaseStart = new Date();
+        const leaseEnd = new Date();
+        leaseEnd.setFullYear(leaseEnd.getFullYear() + 1);
+
+        await tx.insert(leases).values({
+          unitId: applicationData.unit.id,
+          tenantId: applicationData.applicant.id,
+          landlordId: currentUser.id,
+          leaseStart,
+          leaseEnd,
+          monthlyRent: applicationData.unit.monthlyRent ?? "0",
+          securityDeposit: applicationData.unit.deposit,
+          rentDueDay,
+          status: "pending_signature",
+        });
+
+        // Mark unit as unavailable and hidden
+        await tx
+          .update(units)
+          .set({
+            isAvailable: false,
+            isVisible: false,
+            updatedAt: new Date(),
+          })
+          .where(eq(units.id, applicationData.unit.id));
+
+        return { success: true } as const;
+      });
+
+      if ("error" in txResult) {
+        return NextResponse.json({ error: txResult.error }, { status: 400 });
       }
-    }
 
-    // Update the application
-    await db
-      .update(tenancyApplications)
-      .set({
-        status: body.decision,
-        decision: body.decision,
-        decisionNotes: body.decisionNotes?.trim() ?? null,
-        reviewedAt: new Date(),
-        reviewedByUserId: currentUser.id,
-      })
-      .where(eq(tenancyApplications.id, applicationId));
-
-    // If approved, create lease + payment directly (no invitation needed)
-    if (body.decision === "approved") {
-
-      // 1. Persist tenant profile from application data
+      // Post-transaction side effects (these use global db, not tx)
       const rawAppData = applicationData.application.applicationData;
       if (rawAppData) {
         const appDataParsed = JSON.parse(rawAppData) as OnboardingData;
         await persistTenantProfile(applicationData.applicant.id, appDataParsed);
       }
 
-      // 3. Create lease
-      const rentDueDay = body.rentDueDay && body.rentDueDay >= 1 && body.rentDueDay <= 28
-        ? body.rentDueDay
-        : 1;
-      const leaseStart = new Date();
-      const leaseEnd = new Date();
-      leaseEnd.setFullYear(leaseEnd.getFullYear() + 1);
-
-      const [newLease] = await db.insert(leases).values({
-        unitId: applicationData.unit.id,
-        tenantId: applicationData.applicant.id,
-        landlordId: currentUser.id,
-        leaseStart,
-        leaseEnd,
-        monthlyRent: applicationData.unit.monthlyRent ?? "0",
-        securityDeposit: applicationData.unit.deposit,
-        rentDueDay,
-        status: "pending_signature",
-      }).returning();
-
-      // 4. Mark unit as unavailable and hidden
-      await db
-        .update(units)
-        .set({
-          isAvailable: false,
-          isVisible: false,
-          updatedAt: new Date(),
-        })
-        .where(eq(units.id, applicationData.unit.id));
-
-      // 5. Sync to Algolia
       await updateUnitIndex(applicationData.unit.id, {
         isAvailable: false,
         isVisible: false,
       });
 
-      // 6. Assign tenant role
       await addRoleToUserById(applicationData.applicant.id, "tenant");
+    } else {
+      // Rejection: update application outside transaction
+      await db
+        .update(tenancyApplications)
+        .set({
+          status: body.decision,
+          decision: body.decision,
+          decisionNotes: body.decisionNotes?.trim() ?? null,
+          reviewedAt: new Date(),
+          reviewedByUserId: currentUser.id,
+        })
+        .where(eq(tenancyApplications.id, applicationId));
     }
 
     // Send notification to applicant
@@ -334,7 +402,7 @@ export async function PATCH(request: NextRequest, props: { params: Promise<{ id:
         unit_id: applicationData.unit.id,
         property_id: applicationData.property.id,
         applicant_id: applicationData.applicant.id,
-        message_body: body.decisionNotes?.trim() ?? null,
+        has_decision_notes: !!body.decisionNotes?.trim(),
         source: "api",
       });
 

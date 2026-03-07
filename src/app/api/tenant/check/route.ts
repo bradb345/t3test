@@ -1,7 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { db } from "~/server/db";
-import { user, leases, tenancyApplications } from "~/server/db/schema";
+import { user, leases, tenancyApplications, viewingRequests } from "~/server/db/schema";
 import { eq, and, or, inArray } from "drizzle-orm";
 import { parseRoles, hasRole } from "~/lib/roles";
 
@@ -9,7 +9,7 @@ import { parseRoles, hasRole } from "~/lib/roles";
 export async function GET() {
   const { userId: clerkUserId } = await auth();
   if (!clerkUserId) {
-    return NextResponse.json({ roles: [], hasActiveLease: false, hasPendingApplication: false });
+    return NextResponse.json({ roles: [], hasActiveLease: false, hasPendingApplication: false, hasViewingRequest: false });
   }
 
   const [dbUser] = await db
@@ -19,42 +19,46 @@ export async function GET() {
     .limit(1);
 
   if (!dbUser) {
-    return NextResponse.json({ roles: [], hasActiveLease: false, hasPendingApplication: false });
+    return NextResponse.json({ roles: [], hasActiveLease: false, hasPendingApplication: false, hasViewingRequest: false });
   }
 
   const roles = parseRoles(dbUser.roles);
   const isTenant = hasRole(dbUser.roles, "tenant");
 
-  // Only check for active lease if user has tenant role
-  let hasActiveLease = false;
-  if (isTenant) {
-    const [activeLease] = await db
-      .select({ id: leases.id })
-      .from(leases)
+  // Run independent queries in parallel
+  const [activeLeaseResult, pendingAppResult, viewingRequestResult] = await Promise.all([
+    isTenant
+      ? db
+          .select({ id: leases.id })
+          .from(leases)
+          .where(
+            and(
+              eq(leases.tenantId, dbUser.id),
+              or(eq(leases.status, "active"), eq(leases.status, "notice_given"))
+            )
+          )
+          .limit(1)
+      : Promise.resolve([]),
+    db
+      .select({ id: tenancyApplications.id })
+      .from(tenancyApplications)
       .where(
         and(
-          eq(leases.tenantId, dbUser.id),
-          or(eq(leases.status, "active"), eq(leases.status, "notice_given"))
+          eq(tenancyApplications.applicantUserId, dbUser.id),
+          inArray(tenancyApplications.status, ["pending", "under_review"])
         )
       )
-      .limit(1);
+      .limit(1),
+    db
+      .select({ id: viewingRequests.id })
+      .from(viewingRequests)
+      .where(eq(viewingRequests.requesterUserId, dbUser.id))
+      .limit(1),
+  ]);
 
-    hasActiveLease = !!activeLease;
-  }
+  const hasActiveLease = activeLeaseResult.length > 0;
+  const hasPendingApplication = pendingAppResult.length > 0;
+  const hasViewingRequest = viewingRequestResult.length > 0;
 
-  // Check for pending or under_review applications
-  const [pendingApp] = await db
-    .select({ id: tenancyApplications.id })
-    .from(tenancyApplications)
-    .where(
-      and(
-        eq(tenancyApplications.applicantUserId, dbUser.id),
-        inArray(tenancyApplications.status, ["pending", "under_review"])
-      )
-    )
-    .limit(1);
-
-  const hasPendingApplication = !!pendingApp;
-
-  return NextResponse.json({ roles, hasActiveLease, hasPendingApplication });
+  return NextResponse.json({ roles, hasActiveLease, hasPendingApplication, hasViewingRequest });
 }

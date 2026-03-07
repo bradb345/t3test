@@ -326,7 +326,7 @@ export function TenantInvitationModal({
               <br />
               The tenant will receive a detailed email guiding them through the
               onboarding process, including providing personal information,
-              employment details, references, and uploading required documents.
+              employment details and uploading required documents.
             </p>
           </div>
 

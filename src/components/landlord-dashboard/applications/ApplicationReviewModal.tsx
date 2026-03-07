@@ -23,9 +23,30 @@ import {
   FileText,
   Phone,
   ExternalLink,
+  History,
 } from "lucide-react";
 import { formatCurrency } from "~/lib/currency";
 import type { TenancyApplicationWithDetails } from "~/types/landlord";
+
+interface LeasePaymentStats {
+  total: number;
+  completed: number;
+  late: number;
+  failed: number;
+}
+
+interface LeaseHistoryEntry {
+  leaseId: number;
+  propertyName: string;
+  unitNumber: string;
+  leaseStart: string;
+  leaseEnd: string;
+  monthlyRent: string;
+  currency: string;
+  status: string;
+  delinquent: boolean;
+  paymentStats: LeasePaymentStats;
+}
 
 interface ApplicationReviewModalProps {
   open: boolean;
@@ -73,6 +94,7 @@ export function ApplicationReviewModal({
 }: ApplicationReviewModalProps) {
   const [fullApplicationData, setFullApplicationData] =
     useState<ApplicationData | null>(null);
+  const [platformHistory, setPlatformHistory] = useState<LeaseHistoryEntry[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [decisionNotes, setDecisionNotes] = useState("");
@@ -90,8 +112,10 @@ export function ApplicationReviewModal({
         .then(
           (data: {
             application: { applicationData: ApplicationData | null };
+            platformHistory?: LeaseHistoryEntry[];
           }) => {
             setFullApplicationData(data.application.applicationData);
+            setPlatformHistory(data.platformHistory ?? []);
           }
         )
         .catch(() => {
@@ -210,7 +234,7 @@ export function ApplicationReviewModal({
           <>
             {/* Application Details Tabs */}
             <Tabs defaultValue="personal" className="mt-4">
-              <TabsList className="grid w-full grid-cols-4">
+              <TabsList className="grid w-full grid-cols-5">
                 <TabsTrigger value="personal" className="text-xs sm:text-sm">
                   <User className="mr-1 h-4 w-4 sm:mr-2" />
                   <span className="hidden sm:inline">Personal</span>
@@ -226,6 +250,10 @@ export function ApplicationReviewModal({
                 <TabsTrigger value="documents" className="text-xs sm:text-sm">
                   <FileText className="mr-1 h-4 w-4 sm:mr-2" />
                   <span className="hidden sm:inline">Documents</span>
+                </TabsTrigger>
+                <TabsTrigger value="history" className="text-xs sm:text-sm">
+                  <History className="mr-1 h-4 w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">History</span>
                 </TabsTrigger>
               </TabsList>
 
@@ -381,6 +409,124 @@ export function ApplicationReviewModal({
                     )}
                   </div>
                 </div>
+              </TabsContent>
+
+              <TabsContent value="history" className="mt-4 space-y-4">
+                {platformHistory.length === 0 ? (
+                  <div className="rounded-lg border border-dashed p-6 text-center">
+                    <History className="mx-auto h-8 w-8 text-muted-foreground/50" />
+                    <p className="mt-2 font-medium">New to Platform</p>
+                    <p className="text-sm text-muted-foreground">
+                      This applicant has no prior lease history on the platform.
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    {/* Summary row */}
+                    <div className="grid grid-cols-3 gap-3 rounded-lg bg-muted/50 p-3 text-sm">
+                      <div className="text-center">
+                        <p className="text-lg font-semibold">{platformHistory.length}</p>
+                        <p className="text-muted-foreground">Past Leases</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-lg font-semibold">
+                          {platformHistory.some((l) => l.delinquent) ? (
+                            <span className="text-red-600">Yes</span>
+                          ) : (
+                            <span className="text-green-600">No</span>
+                          )}
+                        </p>
+                        <p className="text-muted-foreground">Delinquency</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-lg font-semibold">
+                          {(() => {
+                            const totals = platformHistory.reduce(
+                              (acc, l) => ({
+                                completed: acc.completed + l.paymentStats.completed,
+                                total: acc.total + l.paymentStats.total,
+                              }),
+                              { completed: 0, total: 0 }
+                            );
+                            return totals.total > 0
+                              ? `${Math.round((totals.completed / totals.total) * 100)}%`
+                              : "N/A";
+                          })()}
+                        </p>
+                        <p className="text-muted-foreground">On-Time Rate</p>
+                      </div>
+                    </div>
+
+                    {/* Per-lease cards */}
+                    <div className="space-y-3">
+                      {platformHistory.map((lease) => (
+                        <div key={lease.leaseId} className="rounded-lg border p-4 text-sm">
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <p className="font-medium">
+                                {lease.propertyName} — Unit {lease.unitNumber}
+                              </p>
+                              <p className="text-muted-foreground">
+                                {new Date(lease.leaseStart).toLocaleDateString("en-US", {
+                                  month: "short",
+                                  year: "numeric",
+                                })}
+                                {" – "}
+                                {new Date(lease.leaseEnd).toLocaleDateString("en-US", {
+                                  month: "short",
+                                  year: "numeric",
+                                })}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {lease.delinquent && (
+                                <Badge variant="destructive" className="text-xs">
+                                  Delinquent
+                                </Badge>
+                              )}
+                              <Badge
+                                variant={
+                                  lease.status === "active"
+                                    ? "default"
+                                    : lease.status === "terminated"
+                                      ? "destructive"
+                                      : "secondary"
+                                }
+                                className="capitalize text-xs"
+                              >
+                                {lease.status.replace("_", " ")}
+                              </Badge>
+                            </div>
+                          </div>
+                          <div className="mt-3 grid grid-cols-4 gap-2 rounded bg-muted/30 p-2 text-center text-xs">
+                            <div>
+                              <p className="font-medium">
+                                {formatCurrency(parseFloat(lease.monthlyRent), lease.currency)}
+                              </p>
+                              <p className="text-muted-foreground">Rent</p>
+                            </div>
+                            <div>
+                              <p className="font-medium">{lease.paymentStats.total}</p>
+                              <p className="text-muted-foreground">Payments</p>
+                            </div>
+                            <div>
+                              <p className="font-medium text-green-600">
+                                {lease.paymentStats.completed}
+                              </p>
+                              <p className="text-muted-foreground">On Time</p>
+                            </div>
+                            <div>
+                              <p className="font-medium text-red-600">
+                                {lease.paymentStats.late + lease.paymentStats.failed}
+                              </p>
+                              <p className="text-muted-foreground">Late/Failed</p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
               </TabsContent>
             </Tabs>
 

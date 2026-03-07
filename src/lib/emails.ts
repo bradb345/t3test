@@ -172,6 +172,20 @@ export type EmailMap = {
     dashboardUrl: string;
   };
 
+  // Lease terms
+  lease_terms_updated: {
+    tenantName: string;
+    unitNumber: string;
+    propertyName: string;
+    currency: string;
+    leaseStart: Date;
+    leaseEnd: Date;
+    monthlyRent: string;
+    securityDeposit?: string;
+    rentDueDay: number;
+    dashboardUrl: string;
+  };
+
   // Lease renewal
   lease_renewal_offered: {
     tenantName: string;
@@ -196,6 +210,28 @@ export type EmailMap = {
     newLeaseStart: Date;
     newLeaseEnd: Date;
     dashboardUrl: string;
+  };
+
+  // Viewing requests
+  viewing_request: {
+    landlordName: string;
+    requesterName: string;
+    requesterEmail: string;
+    requesterPhone?: string;
+    unitNumber: string;
+    propertyName: string;
+    preferredDate?: string;
+    preferredTime?: string;
+    message?: string;
+    dashboardUrl: string;
+  };
+  viewing_request_response: {
+    requesterName: string;
+    unitNumber: string;
+    propertyName: string;
+    status: "approved" | "declined";
+    landlordNotes?: string;
+    listingUrl: string;
   };
 
   // Maintenance

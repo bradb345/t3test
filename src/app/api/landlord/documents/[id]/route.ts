@@ -22,7 +22,6 @@ const documentTypeLabels: Record<string, string> = {
   bank_statement: "Bank Statement",
   proof_of_income: "Proof of Income",
   employment_verification: "Employment Verification",
-  rental_history: "Rental History",
   reference_letter: "Reference Letter",
   other: "Other Document",
 };
