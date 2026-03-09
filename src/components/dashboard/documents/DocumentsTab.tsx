@@ -41,6 +41,7 @@ interface DocumentsTabProps {
   tenantDocuments: TenantDocument[];
   unitDocuments: UnitDocumentWithUploader[];
   profileId: number | null;
+  currentUserAuthId: string;
 }
 
 export function DocumentsTab({
@@ -48,6 +49,7 @@ export function DocumentsTab({
   tenantDocuments: initialDocuments,
   unitDocuments: initialUnitDocuments,
   profileId,
+  currentUserAuthId,
 }: DocumentsTabProps) {
   const [documents, setDocuments] = useState(initialDocuments);
   const [unitDocs, setUnitDocs] = useState(initialUnitDocuments);
@@ -184,21 +186,23 @@ export function DocumentsTab({
                         View
                       </a>
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        setUnitDocToDelete(doc);
-                        setShowDeleteDialog(true);
-                      }}
-                      disabled={deletingUnitDocId === doc.id}
-                    >
-                      {deletingUnitDocId === doc.id ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      )}
-                    </Button>
+                    {doc.uploader.auth_id === currentUserAuthId && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setUnitDocToDelete(doc);
+                          setShowDeleteDialog(true);
+                        }}
+                        disabled={deletingUnitDocId === doc.id}
+                      >
+                        {deletingUnitDocId === doc.id ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        )}
+                      </Button>
+                    )}
                   </div>
                 </div>
               ))}

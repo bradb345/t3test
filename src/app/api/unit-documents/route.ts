@@ -127,17 +127,21 @@ export async function GET(request: NextRequest) {
       accessibleUnitIds = [uid];
     }
 
+    const whereConditions = [inArray(unitDocuments.unitId, accessibleUnitIds)];
+    if (documentType) {
+      if (!isValidUnitDocumentType(documentType)) {
+        return NextResponse.json({ error: "Invalid document type filter" }, { status: 400 });
+      }
+      whereConditions.push(eq(unitDocuments.documentType, documentType));
+    }
+
     const docs = await db
       .select()
       .from(unitDocuments)
-      .where(inArray(unitDocuments.unitId, accessibleUnitIds))
+      .where(and(...whereConditions))
       .orderBy(desc(unitDocuments.uploadedAt));
 
-    const filtered = documentType
-      ? docs.filter((d) => d.documentType === documentType)
-      : docs;
-
-    return NextResponse.json({ documents: filtered });
+    return NextResponse.json({ documents: docs });
   } catch (error) {
     console.error("Error fetching unit documents:", error);
     return NextResponse.json(
@@ -155,30 +159,42 @@ export async function POST(request: NextRequest) {
     }
 
     const body = (await request.json()) as {
-      unitId: number;
-      documentType: string;
-      fileName: string;
-      fileUrl: string;
+      unitId: unknown;
+      documentType: unknown;
+      fileName: unknown;
+      fileUrl: unknown;
       fileSize?: number;
       mimeType?: string;
       notes?: string;
     };
 
-    if (!body.unitId || !body.documentType || !body.fileName || !body.fileUrl) {
+    const unitId = typeof body.unitId === "string" ? parseInt(body.unitId) : Number(body.unitId);
+    if (!body.unitId || isNaN(unitId)) {
       return NextResponse.json(
-        { error: "Missing required fields: unitId, documentType, fileName, fileUrl" },
+        { error: "unitId must be a valid integer" },
         { status: 400 }
       );
     }
 
-    if (!isValidUnitDocumentType(body.documentType)) {
+    const documentType = typeof body.documentType === "string" ? body.documentType.trim() : "";
+    const fileName = typeof body.fileName === "string" ? body.fileName.trim() : "";
+    const fileUrl = typeof body.fileUrl === "string" ? body.fileUrl.trim() : "";
+
+    if (!documentType || !fileName || !fileUrl) {
+      return NextResponse.json(
+        { error: "Missing required fields: documentType, fileName, fileUrl" },
+        { status: 400 }
+      );
+    }
+
+    if (!isValidUnitDocumentType(documentType)) {
       return NextResponse.json(
         { error: "Invalid document type" },
         { status: 400 }
       );
     }
 
-    const currentUser = await verifyUnitAccess(clerkUserId, body.unitId);
+    const currentUser = await verifyUnitAccess(clerkUserId, unitId);
     if (!currentUser) {
       return NextResponse.json(
         { error: "You do not have access to this unit" },
@@ -189,14 +205,14 @@ export async function POST(request: NextRequest) {
     const [newDoc] = await db
       .insert(unitDocuments)
       .values({
-        unitId: body.unitId,
+        unitId,
         uploadedBy: currentUser.id,
-        documentType: body.documentType,
-        fileName: body.fileName,
-        fileUrl: body.fileUrl,
+        documentType,
+        fileName,
+        fileUrl,
         fileSize: body.fileSize ?? null,
-        mimeType: body.mimeType ?? null,
-        notes: body.notes?.trim() ? body.notes.trim() : null,
+        mimeType: typeof body.mimeType === "string" ? body.mimeType.trim() || null : null,
+        notes: typeof body.notes === "string" && body.notes.trim() ? body.notes.trim() : null,
       })
       .returning();
 

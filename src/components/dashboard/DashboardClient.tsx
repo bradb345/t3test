@@ -334,6 +334,7 @@ export function DashboardClient({
                 tenantDocuments={tenantDocuments}
                 unitDocuments={unitDocuments}
                 profileId={profile?.id ?? null}
+                currentUserAuthId={user.auth_id}
               />
             </TabsContent>
           )}
