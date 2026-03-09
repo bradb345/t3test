@@ -156,15 +156,6 @@ export type ServerEventMap = {
   document_uploaded: {
     document_type: string;
   };
-  document_verified: {
-    document_id: number;
-    document_type: string;
-    property_id: number;
-    tenant_user_id: number;
-    decision: string;
-    notes: string | null;
-    source: string;
-  };
   profile_updated: {
     fields_updated: string[];
   };
@@ -223,12 +214,6 @@ export type ClientEventMap = {
   signed_lease_viewed: {
     lease_id: number;
     unit_id: number;
-  };
-
-  // Documents
-  document_verification_action_clicked: {
-    document_id: number;
-    action: "approve" | "reject";
   };
 
   // Search

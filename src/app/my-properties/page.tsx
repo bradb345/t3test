@@ -10,6 +10,7 @@ import {
   payments,
   tenantDocuments,
   tenantProfiles,
+  unitDocuments,
   viewingRequests,
   refunds,
 } from "~/server/db/schema";
@@ -22,10 +23,11 @@ import type {
   LeaseExpiration,
   TenantWithLease,
   MaintenanceRequestWithDetails,
-  DocumentWithDetails,
+  UnitDocumentWithDetails,
   PaymentWithDetails,
   ViewingRequestWithDetails,
   RefundWithDetails,
+  TenantDocumentWithDetails,
 } from "~/types/landlord";
 
 export default async function MyPropertiesPage() {
@@ -81,6 +83,7 @@ export default async function MyPropertiesPage() {
         tenants={[]}
         maintenanceRequests={[]}
         documents={[]}
+        unitDocuments={[]}
         payments={[]}
         viewingRequests={[]}
         refunds={[]}
@@ -206,10 +209,9 @@ export default async function MyPropertiesPage() {
 
   // Fetch documents from tenants in landlord's properties
   const tenantIds = activeLeases.map((l) => l.tenant.id);
-  let documentsWithDetails: DocumentWithDetails[] = [];
+  let documentsWithDetails: TenantDocumentWithDetails[] = [];
 
   if (tenantIds.length > 0) {
-    // Get tenant profiles for the tenants
     const profiles = await db
       .select()
       .from(tenantProfiles)
@@ -224,7 +226,6 @@ export default async function MyPropertiesPage() {
         .where(inArray(tenantDocuments.tenantProfileId, profileIds))
         .orderBy(desc(tenantDocuments.uploadedAt));
 
-      // Map documents with tenant/property info
       documentsWithDetails = docs.map((doc) => {
         const profile = profiles.find((p) => p.id === doc.tenantProfileId);
         const tenantLease = activeLeases.find((l) => l.tenant.id === profile?.userId);
@@ -254,6 +255,30 @@ export default async function MyPropertiesPage() {
       });
     }
   }
+
+  // Fetch unit documents (shared landlord + tenant uploads)
+  const unitDocsData = unitIds.length > 0
+    ? await db
+        .select({
+          document: unitDocuments,
+          unit: units,
+          property: properties,
+          uploader: user,
+        })
+        .from(unitDocuments)
+        .innerJoin(units, eq(units.id, unitDocuments.unitId))
+        .innerJoin(properties, eq(properties.id, units.propertyId))
+        .innerJoin(user, eq(user.id, unitDocuments.uploadedBy))
+        .where(inArray(unitDocuments.unitId, unitIds))
+        .orderBy(desc(unitDocuments.uploadedAt))
+    : [];
+
+  const unitDocsWithDetails: UnitDocumentWithDetails[] = unitDocsData.map((d) => ({
+    ...d.document,
+    unit: d.unit,
+    property: d.property,
+    uploader: d.uploader,
+  }));
 
   // Fetch payments with details
   const paymentsData = tenantIds.length > 0
@@ -357,6 +382,7 @@ export default async function MyPropertiesPage() {
       tenants={tenants}
       maintenanceRequests={maintenanceWithDetails}
       documents={documentsWithDetails}
+      unitDocuments={unitDocsWithDetails}
       payments={paymentsWithDetails}
       viewingRequests={viewingRequestsWithDetails}
       refunds={refundsWithDetails}

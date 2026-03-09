@@ -1,19 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "~/components/ui/alert-dialog";
-import { File, ExternalLink, Trash2, Loader2, RefreshCw } from "lucide-react";
+import { DeleteConfirmationDialog } from "~/components/DeleteConfirmationDialog";
+import { File, ExternalLink, Trash2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import type { tenantDocuments } from "~/server/db/schema";
 import { formatDate } from "~/lib/date";
@@ -23,7 +13,6 @@ type TenantDocument = typeof tenantDocuments.$inferSelect;
 interface DocumentCardProps {
   document: TenantDocument;
   onDeleted: (documentId: number) => void;
-  onReupload?: (documentType: string) => void;
 }
 
 const documentTypeLabels: Record<string, string> = {
@@ -34,22 +23,7 @@ const documentTypeLabels: Record<string, string> = {
   other: "Other",
 };
 
-const statusConfig = {
-  pending_review: {
-    label: "Pending Review",
-    variant: "secondary" as const,
-  },
-  approved: {
-    label: "Approved",
-    variant: "default" as const,
-  },
-  rejected: {
-    label: "Rejected",
-    variant: "destructive" as const,
-  },
-};
-
-export function DocumentCard({ document, onDeleted, onReupload }: DocumentCardProps) {
+export function DocumentCard({ document, onDeleted }: DocumentCardProps) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
@@ -75,10 +49,6 @@ export function DocumentCard({ document, onDeleted, onReupload }: DocumentCardPr
     }
   };
 
-  const status =
-    statusConfig[document.status as keyof typeof statusConfig] ??
-    statusConfig.pending_review;
-
   return (
     <>
       <div className="flex flex-col rounded-lg border p-4">
@@ -94,7 +64,6 @@ export function DocumentCard({ document, onDeleted, onReupload }: DocumentCardPr
               </p>
             </div>
           </div>
-          <Badge variant={status.variant} className="shrink-0">{status.label}</Badge>
         </div>
 
         <div className="mt-3 text-xs text-muted-foreground">
@@ -118,17 +87,6 @@ export function DocumentCard({ document, onDeleted, onReupload }: DocumentCardPr
               View
             </a>
           </Button>
-          {document.status === "rejected" && onReupload && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="flex-1"
-              onClick={() => onReupload(document.documentType)}
-            >
-              <RefreshCw className="mr-2 h-3 w-3" />
-              Re-upload
-            </Button>
-          )}
           <Button
             variant="ghost"
             size="sm"
@@ -144,34 +102,14 @@ export function DocumentCard({ document, onDeleted, onReupload }: DocumentCardPr
         </div>
       </div>
 
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Document</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete &quot;{document.fileName}&quot;?
-              This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              disabled={isDeleting}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {isDeleting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Deleting...
-                </>
-              ) : (
-                "Delete"
-              )}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeleteConfirmationDialog
+        open={showDeleteDialog}
+        onOpenChange={setShowDeleteDialog}
+        onConfirm={handleDelete}
+        title="Delete Document"
+        description={`Are you sure you want to delete "${document.fileName}"? This action cannot be undone.`}
+        isDeleting={isDeleting}
+      />
     </>
   );
 }

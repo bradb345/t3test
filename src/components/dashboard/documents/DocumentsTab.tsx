@@ -9,15 +9,21 @@ import {
   CardTitle,
 } from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
-import { FileText, Upload, File, ExternalLink } from "lucide-react";
+import { Upload, File, ExternalLink, FolderOpen, Trash2, Loader2 } from "lucide-react";
 import { DocumentCard } from "./DocumentCard";
 import { DocumentUploadModal } from "./DocumentUploadModal";
+import { UnitDocumentUploadModal } from "./UnitDocumentUploadModal";
+import { DeleteConfirmationDialog } from "~/components/DeleteConfirmationDialog";
+import { unitDocumentTypeLabels } from "~/lib/document-constants";
+import { formatDate } from "~/lib/date";
+import { toast } from "sonner";
 import type {
   leases,
   units,
   properties,
   tenantDocuments,
 } from "~/server/db/schema";
+import type { UnitDocumentWithUploader } from "../DashboardClient";
 
 type Lease = typeof leases.$inferSelect;
 type Unit = typeof units.$inferSelect;
@@ -33,41 +39,26 @@ interface LeaseWithDetails {
 interface DocumentsTabProps {
   lease: LeaseWithDetails;
   tenantDocuments: TenantDocument[];
+  unitDocuments: UnitDocumentWithUploader[];
   profileId: number | null;
-}
-
-interface LeaseDocument {
-  url: string;
-  name: string;
+  currentUserAuthId: string;
 }
 
 export function DocumentsTab({
   lease,
   tenantDocuments: initialDocuments,
+  unitDocuments: initialUnitDocuments,
   profileId,
+  currentUserAuthId,
 }: DocumentsTabProps) {
   const [documents, setDocuments] = useState(initialDocuments);
+  const [unitDocs, setUnitDocs] = useState(initialUnitDocuments);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [isUnitDocUploadOpen, setIsUnitDocUploadOpen] = useState(false);
   const [defaultDocumentType, setDefaultDocumentType] = useState<string | undefined>();
-
-  // Parse lease documents
-  let leaseDocuments: LeaseDocument[] = [];
-  if (lease.lease.documents) {
-    try {
-      const parsed: unknown = JSON.parse(lease.lease.documents);
-      if (Array.isArray(parsed)) {
-        leaseDocuments = parsed.map((url: string, index: number) => ({
-          url,
-          name: `Lease Document ${index + 1}`,
-        }));
-      }
-    } catch {
-      // If it's a single URL string
-      if (typeof lease.lease.documents === "string" && lease.lease.documents.startsWith("http")) {
-        leaseDocuments = [{ url: lease.lease.documents, name: "Lease Agreement" }];
-      }
-    }
-  }
+  const [deletingUnitDocId, setDeletingUnitDocId] = useState<number | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [unitDocToDelete, setUnitDocToDelete] = useState<UnitDocumentWithUploader | null>(null);
 
   const handleDocumentUploaded = (newDocument: TenantDocument) => {
     setDocuments((prev) => [newDocument, ...prev]);
@@ -75,13 +66,35 @@ export function DocumentsTab({
     setDefaultDocumentType(undefined);
   };
 
-  const handleReupload = (documentType: string) => {
-    setDefaultDocumentType(documentType);
-    setIsUploadModalOpen(true);
-  };
-
   const handleDocumentDeleted = (documentId: number) => {
     setDocuments((prev) => prev.filter((doc) => doc.id !== documentId));
+  };
+
+  const handleUnitDocumentUploaded = (newDoc: UnitDocumentWithUploader) => {
+    setUnitDocs((prev) => [newDoc, ...prev]);
+    setIsUnitDocUploadOpen(false);
+  };
+
+  const handleDeleteUnitDoc = async () => {
+    if (!unitDocToDelete) return;
+    setDeletingUnitDocId(unitDocToDelete.id);
+    try {
+      const response = await fetch(`/api/unit-documents/${unitDocToDelete.id}`, {
+        method: "DELETE",
+      });
+      if (!response.ok) {
+        throw new Error("Failed to delete document");
+      }
+      toast.success("Document deleted successfully");
+      setUnitDocs((prev) => prev.filter((doc) => doc.id !== unitDocToDelete.id));
+    } catch (error) {
+      console.error("Error deleting unit document:", error);
+      toast.error("Failed to delete document");
+    } finally {
+      setDeletingUnitDocId(null);
+      setShowDeleteDialog(false);
+      setUnitDocToDelete(null);
+    }
   };
 
   return (
@@ -104,50 +117,93 @@ export function DocumentsTab({
         )}
       </div>
 
-      {/* Lease Documents */}
+      {/* Unit Documents (shared between landlord and tenant) */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5" />
-            Lease Documents
-          </CardTitle>
-          <CardDescription>
-            Documents related to your lease agreement
-          </CardDescription>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <FolderOpen className="h-5 w-5" />
+              Unit Documents
+            </CardTitle>
+            <CardDescription className="mt-1.5">
+              Shared documents for your unit (insurance, inspections, checklists, etc.)
+            </CardDescription>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsUnitDocUploadOpen(true)}
+          >
+            <Upload className="mr-2 h-4 w-4" />
+            Upload
+          </Button>
         </CardHeader>
         <CardContent>
-          {leaseDocuments.length === 0 ? (
+          {unitDocs.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-8 text-center">
-              <FileText className="mb-4 h-12 w-12 text-muted-foreground" />
-              <p className="font-medium">No lease documents</p>
+              <FolderOpen className="mb-4 h-12 w-12 text-muted-foreground" />
+              <p className="font-medium">No unit documents</p>
               <p className="mt-1 text-sm text-muted-foreground">
-                Lease documents will appear here when uploaded by your landlord
+                Documents uploaded to your unit will appear here
               </p>
             </div>
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {leaseDocuments.map((doc, index) => (
-                <div
-                  key={index}
-                  className="flex items-center justify-between gap-2 rounded-lg border p-4"
-                >
-                  <div className="flex min-w-0 flex-1 items-center gap-3">
-                    <File className="h-8 w-8 shrink-0 text-blue-500" />
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate font-medium" title={doc.name}>{doc.name}</p>
-                      <p className="text-xs text-muted-foreground">PDF Document</p>
+              {unitDocs.map((doc) => (
+                <div key={doc.id} className="flex flex-col rounded-lg border p-4">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex min-w-0 flex-1 items-center gap-3">
+                      <File className="h-8 w-8 shrink-0 text-blue-500" />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-medium" title={doc.fileName}>
+                          {doc.fileName}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {unitDocumentTypeLabels[doc.documentType] ?? doc.documentType}
+                        </p>
+                      </div>
                     </div>
                   </div>
-                  <Button variant="ghost" size="icon" className="shrink-0" asChild>
-                    <a
-                      href={doc.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      title="Open document"
-                    >
-                      <ExternalLink className="h-4 w-4" />
-                    </a>
-                  </Button>
+
+                  <div className="mt-3 text-xs text-muted-foreground">
+                    Uploaded {formatDate(doc.uploadedAt)} by {doc.uploader.first_name} {doc.uploader.last_name}
+                  </div>
+
+                  {doc.notes && (
+                    <div className="mt-2 rounded bg-muted p-2 text-xs text-muted-foreground">
+                      {doc.notes}
+                    </div>
+                  )}
+
+                  <div className="mt-3 flex items-center gap-2">
+                    <Button variant="outline" size="sm" className="flex-1" asChild>
+                      <a
+                        href={doc.fileUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <ExternalLink className="mr-2 h-3 w-3" />
+                        View
+                      </a>
+                    </Button>
+                    {doc.uploader.auth_id === currentUserAuthId && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setUnitDocToDelete(doc);
+                          setShowDeleteDialog(true);
+                        }}
+                        disabled={deletingUnitDocId === doc.id}
+                      >
+                        {deletingUnitDocId === doc.id ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        )}
+                      </Button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
@@ -195,7 +251,6 @@ export function DocumentsTab({
                   key={doc.id}
                   document={doc}
                   onDeleted={handleDocumentDeleted}
-                  onReupload={handleReupload}
                 />
               ))}
             </div>
@@ -215,6 +270,22 @@ export function DocumentsTab({
           defaultDocumentType={defaultDocumentType}
         />
       )}
+
+      <UnitDocumentUploadModal
+        open={isUnitDocUploadOpen}
+        onOpenChange={setIsUnitDocUploadOpen}
+        unitId={lease.unit.id}
+        onDocumentUploaded={handleUnitDocumentUploaded}
+      />
+
+      <DeleteConfirmationDialog
+        open={showDeleteDialog}
+        onOpenChange={setShowDeleteDialog}
+        onConfirm={handleDeleteUnitDoc}
+        title="Delete Document"
+        description={`Are you sure you want to delete "${unitDocToDelete?.fileName}"? This action cannot be undone.`}
+        isDeleting={deletingUnitDocId !== null}
+      />
     </div>
   );
 }

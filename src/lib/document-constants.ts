@@ -1,6 +1,5 @@
 /**
- * Valid document types for tenant document uploads
- * Used for both frontend display and backend validation
+ * Valid document types for tenant document uploads (used during onboarding/application)
  */
 export const documentTypes = [
   { value: "government_id", label: "Government ID" },
@@ -10,19 +9,32 @@ export const documentTypes = [
   { value: "other", label: "Other" },
 ] as const;
 
-/**
- * Array of valid document type values for validation
- */
 export const validDocumentTypes = documentTypes.map((t) => t.value);
-
-/**
- * Type for document type values
- */
 export type DocumentType = (typeof documentTypes)[number]["value"];
 
-/**
- * Check if a string is a valid document type
- */
 export function isValidDocumentType(type: string): type is DocumentType {
   return validDocumentTypes.includes(type as DocumentType);
 }
+
+/**
+ * Valid document types for unit documents (shared between landlord and tenant)
+ */
+export const unitDocumentTypes = [
+  { value: "lease_agreement", label: "Lease Agreement" },
+  { value: "insurance", label: "Insurance" },
+  { value: "compliance", label: "Compliance" },
+  { value: "inspection_report", label: "Inspection Report" },
+  { value: "move_in_checklist", label: "Move-in Checklist" },
+  { value: "other", label: "Other" },
+] as const;
+
+export const validUnitDocumentTypes = unitDocumentTypes.map((t) => t.value);
+export type UnitDocumentType = (typeof unitDocumentTypes)[number]["value"];
+
+export function isValidUnitDocumentType(type: string): type is UnitDocumentType {
+  return validUnitDocumentTypes.includes(type as UnitDocumentType);
+}
+
+export const unitDocumentTypeLabels: Record<string, string> = Object.fromEntries(
+  unitDocumentTypes.map((t) => [t.value, t.label])
+);

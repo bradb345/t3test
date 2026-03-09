@@ -11,11 +11,14 @@ import {
   SelectValue,
 } from "~/components/ui/select";
 import { Button } from "~/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { PropertyDocumentsSection } from "./PropertyDocumentsSection";
-import type { DocumentWithDetails, PropertyWithUnits } from "~/types/landlord";
+import { LandlordDocumentsSection } from "./LandlordDocumentsSection";
+import type { UnitDocumentWithDetails, PropertyWithUnits, TenantDocumentWithDetails } from "~/types/landlord";
 
 interface DocumentsTabProps {
-  documents: DocumentWithDetails[];
+  documents: TenantDocumentWithDetails[];
+  unitDocuments: UnitDocumentWithDetails[];
   properties: PropertyWithUnits[];
 }
 
@@ -28,8 +31,7 @@ const documentTypes = [
   { value: "other", label: "Other" },
 ];
 
-export function DocumentsTab({ documents: initialDocuments, properties }: DocumentsTabProps) {
-  const [documents, setDocuments] = useState(initialDocuments);
+export function DocumentsTab({ documents: initialDocuments, unitDocuments, properties }: DocumentsTabProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [propertyFilter, setPropertyFilter] = useState<string>("all");
   const [unitFilter, setUnitFilter] = useState<string>("all");
@@ -44,13 +46,7 @@ export function DocumentsTab({ documents: initialDocuments, properties }: Docume
     setUnitFilter("all");
   };
 
-  const handleDocumentUpdated = (updatedDoc: DocumentWithDetails) => {
-    setDocuments((prev) =>
-      prev.map((doc) => (doc.id === updatedDoc.id ? updatedDoc : doc))
-    );
-  };
-
-  const filteredDocuments = documents.filter((doc) => {
+  const filteredDocuments = initialDocuments.filter((doc) => {
     const searchLower = searchQuery.toLowerCase();
     const matchesSearch =
       doc.fileName.toLowerCase().includes(searchLower) ||
@@ -81,81 +77,94 @@ export function DocumentsTab({ documents: initialDocuments, properties }: Docume
         <div>
           <h2 className="text-2xl font-bold tracking-tight">Documents</h2>
           <p className="text-muted-foreground">
-            View tenant documents and lease agreements
+            Manage unit and tenant documents
           </p>
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="relative flex-1 sm:max-w-xs">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Search documents..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
+      <Tabs defaultValue="unit" className="w-full">
+        <TabsList>
+          <TabsTrigger value="unit">Unit Documents</TabsTrigger>
+          <TabsTrigger value="tenant">Tenant Documents</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="unit" className="mt-6">
+          <LandlordDocumentsSection
+            documents={unitDocuments}
+            properties={properties}
           />
-        </div>
+        </TabsContent>
 
-        <div className="flex items-center gap-2">
-          <Filter className="h-4 w-4 text-muted-foreground" />
-        </div>
+        <TabsContent value="tenant" className="mt-6 space-y-6">
+          {/* Tenant Documents Filters */}
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="relative flex-1 sm:max-w-xs">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Search documents..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9"
+              />
+            </div>
 
-        <Select value={propertyFilter} onValueChange={handlePropertyFilterChange}>
-          <SelectTrigger className="w-[160px]">
-            <SelectValue placeholder="Property" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Properties</SelectItem>
-            {properties.map((property) => (
-              <SelectItem key={property.id} value={property.id.toString()}>
-                {property.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-muted-foreground" />
+            </div>
 
-        <Select value={unitFilter} onValueChange={setUnitFilter}>
-          <SelectTrigger className="w-[160px]">
-            <SelectValue placeholder="Unit" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Units</SelectItem>
-            {availableUnits.map((unit) => (
-              <SelectItem key={unit.id} value={unit.id.toString()}>
-                {unit.propertyName ? `${unit.propertyName} - ${unit.unitNumber}` : unit.unitNumber}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+            <Select value={propertyFilter} onValueChange={handlePropertyFilterChange}>
+              <SelectTrigger className="w-[160px]">
+                <SelectValue placeholder="Property" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Properties</SelectItem>
+                {properties.map((property) => (
+                  <SelectItem key={property.id} value={property.id.toString()}>
+                    {property.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-        <Select value={typeFilter} onValueChange={setTypeFilter}>
-          <SelectTrigger className="w-[160px]">
-            <SelectValue placeholder="Document Type" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Types</SelectItem>
-            {documentTypes.map((type) => (
-              <SelectItem key={type.value} value={type.value}>
-                {type.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+            <Select value={unitFilter} onValueChange={setUnitFilter}>
+              <SelectTrigger className="w-[160px]">
+                <SelectValue placeholder="Unit" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Units</SelectItem>
+                {availableUnits.map((unit) => (
+                  <SelectItem key={unit.id} value={unit.id.toString()}>
+                    {unit.propertyName ? `${unit.propertyName} - ${unit.unitNumber}` : unit.unitNumber}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-        {hasActiveFilters && (
-          <Button variant="ghost" size="sm" onClick={clearFilters}>
-            Clear filters
-          </Button>
-        )}
-      </div>
+            <Select value={typeFilter} onValueChange={setTypeFilter}>
+              <SelectTrigger className="w-[160px]">
+                <SelectValue placeholder="Document Type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Types</SelectItem>
+                {documentTypes.map((type) => (
+                  <SelectItem key={type.value} value={type.value}>
+                    {type.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-      {/* Document List */}
-      <PropertyDocumentsSection
-        documents={filteredDocuments}
-        onDocumentUpdated={handleDocumentUpdated}
-      />
+            {hasActiveFilters && (
+              <Button variant="ghost" size="sm" onClick={clearFilters}>
+                Clear filters
+              </Button>
+            )}
+          </div>
+
+          {/* Tenant Document List */}
+          <PropertyDocumentsSection documents={filteredDocuments} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

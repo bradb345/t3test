@@ -11,6 +11,7 @@ import type {
   payments,
   maintenanceRequests,
   tenantDocuments,
+  unitDocuments,
   refunds,
 } from "~/server/db/schema";
 
@@ -21,4 +22,5 @@ export type Property = typeof properties.$inferSelect;
 export type Payment = typeof payments.$inferSelect;
 export type MaintenanceRequest = typeof maintenanceRequests.$inferSelect;
 export type TenantDocument = typeof tenantDocuments.$inferSelect;
+export type UnitDocument = typeof unitDocuments.$inferSelect;
 export type Refund = typeof refunds.$inferSelect;
