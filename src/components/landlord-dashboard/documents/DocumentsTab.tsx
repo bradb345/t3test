@@ -12,9 +12,9 @@ import {
 } from "~/components/ui/select";
 import { Button } from "~/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
-import { PropertyDocumentsSection, type TenantDocumentWithDetails } from "./PropertyDocumentsSection";
+import { PropertyDocumentsSection } from "./PropertyDocumentsSection";
 import { LandlordDocumentsSection } from "./LandlordDocumentsSection";
-import type { UnitDocumentWithDetails, PropertyWithUnits } from "~/types/landlord";
+import type { UnitDocumentWithDetails, PropertyWithUnits, TenantDocumentWithDetails } from "~/types/landlord";
 
 interface DocumentsTabProps {
   documents: TenantDocumentWithDetails[];

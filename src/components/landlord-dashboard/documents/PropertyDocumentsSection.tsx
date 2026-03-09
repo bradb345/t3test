@@ -9,13 +9,7 @@ import {
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
-import type { TenantDocument, User as UserType, Unit, Property } from "~/types/landlord";
-
-export interface TenantDocumentWithDetails extends TenantDocument {
-  tenant: UserType;
-  unit: Unit | null;
-  property: Property | null;
-}
+import type { TenantDocumentWithDetails } from "~/types/landlord";
 
 interface PropertyDocumentsSectionProps {
   documents: TenantDocumentWithDetails[];

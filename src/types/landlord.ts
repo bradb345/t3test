@@ -49,6 +49,12 @@ export interface PaymentWithDetails extends Payment {
   property: Property;
 }
 
+export interface TenantDocumentWithDetails extends TenantDocument {
+  tenant: User;
+  unit: Unit | null;
+  property: Property | null;
+}
+
 export interface UnitDocumentWithDetails extends UnitDocument {
   unit: Unit;
   property: Property;

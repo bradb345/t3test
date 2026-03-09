@@ -33,8 +33,8 @@ import type {
   ViewingRequestWithDetails,
   RefundWithDetails,
   LandlordDashboardTab,
+  TenantDocumentWithDetails,
 } from "~/types/landlord";
-import type { TenantDocumentWithDetails } from "./documents/PropertyDocumentsSection";
 
 interface LandlordDashboardClientProps {
   user: User;

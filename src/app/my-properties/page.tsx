@@ -27,8 +27,8 @@ import type {
   PaymentWithDetails,
   ViewingRequestWithDetails,
   RefundWithDetails,
+  TenantDocumentWithDetails,
 } from "~/types/landlord";
-import type { TenantDocumentWithDetails } from "~/components/landlord-dashboard/documents/PropertyDocumentsSection";
 
 export default async function MyPropertiesPage() {
   const { userId: clerkUserId } = await auth();

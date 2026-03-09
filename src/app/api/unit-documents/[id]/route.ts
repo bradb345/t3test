@@ -69,11 +69,18 @@ export async function DELETE(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    // Delete from UploadThing
-    await deleteFilesFromUploadThing(
-      [doc.fileUrl],
-      `unit-document-${documentId}`
-    );
+    // Delete from UploadThing (best-effort, don't block DB deletion)
+    try {
+      await deleteFilesFromUploadThing(
+        [doc.fileUrl],
+        `unit-document-${documentId}`
+      );
+    } catch (error) {
+      console.error("Failed to delete file from UploadThing", {
+        error,
+        fileUrl: doc.fileUrl,
+      });
+    }
 
     // Delete from database
     await db
