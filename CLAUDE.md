@@ -8,6 +8,8 @@ Always use the DRY (Don't Repeat Yourself) principle when working in this codeba
 
 Consider scalability when writing code. Choose patterns and data structures that handle growing data volumes, concurrent users, and increased load. Prefer solutions that can scale horizontally (e.g., external pub/sub over in-memory state, paginated queries over unbounded fetches, indexed lookups over full scans).
 
+Never use native browser dialogs (`alert()`, `confirm()`, `window.alert()`, `window.confirm()`, `prompt()`). Use the existing reusable dialog components: `DeleteConfirmationDialog` for delete confirmations, `ConfirmationDialog` for general confirmations (supports destructive/default variants), and `AlertModal` for informational alerts (success/error/warning/info).
+
 ## Build & Development Commands
 
 ```bash

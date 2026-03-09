@@ -30,8 +30,7 @@ interface UserRoles {
 export function Navbar() {
   const { isSignedIn } = useAuth();
   const [hasProperties, setHasProperties] = useState(false);
-  const [isTenant, setIsTenant] = useState(false);
-  const [hasActivity, setHasActivity] = useState(false);
+  const [showDashboard, setShowDashboard] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const searchParams = useSearchParams();
   const [signInButtonElement, setSignInButtonElement] =
@@ -55,8 +54,7 @@ export function Navbar() {
     fetch("/api/tenant/check", { signal: controller.signal })
       .then((res) => res.json())
       .then((data: UserRoles) => {
-        setIsTenant(data.hasActiveLease);
-        setHasActivity(data.hasPendingApplication || data.hasViewingRequest);
+        setShowDashboard(data.hasActiveLease || data.hasPendingApplication || data.hasViewingRequest);
       })
       .catch((error) => {
         if (error instanceof DOMException && error.name === "AbortError") return;
@@ -100,12 +98,12 @@ export function Navbar() {
               My Properties
             </Link>
           )}
-          {hasActivity && (
+          {showDashboard && (
             <Link
-              href="/activity"
+              href="/dashboard"
               className="text-sm font-medium text-muted-foreground hover:text-primary"
             >
-              My Activity
+              Dashboard
             </Link>
           )}
           <Link
@@ -114,14 +112,6 @@ export function Navbar() {
           >
             Messages
           </Link>
-          {isTenant && (
-            <Link
-              href="/dashboard"
-              className="text-sm font-medium text-muted-foreground hover:text-primary"
-            >
-              Dashboard
-            </Link>
-          )}
         </>
       )}
       {!isSignedIn && (

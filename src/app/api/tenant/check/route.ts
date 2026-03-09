@@ -2,7 +2,7 @@ import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { db } from "~/server/db";
 import { user, leases, tenancyApplications, viewingRequests } from "~/server/db/schema";
-import { eq, and, or, inArray } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import { parseRoles, hasRole } from "~/lib/roles";
 
 // GET: Check if current user is a tenant with an active lease or pending application
@@ -34,7 +34,7 @@ export async function GET() {
           .where(
             and(
               eq(leases.tenantId, dbUser.id),
-              or(eq(leases.status, "active"), eq(leases.status, "notice_given"))
+              inArray(leases.status, ["active", "notice_given", "pending_signature"])
             )
           )
           .limit(1)
