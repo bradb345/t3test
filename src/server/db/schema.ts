@@ -684,9 +684,6 @@ export const tenantDocuments = createTable(
     uploadedAt: timestamp("uploaded_at", { withTimezone: true })
       .default(sql`CURRENT_TIMESTAMP`)
       .notNull(),
-    verifiedAt: timestamp("verified_at", { withTimezone: true }),
-    verifiedBy: integer("verified_by").references(() => user.id),
-    status: varchar("status", { length: 20 }).notNull().default('pending_review'),
     notes: text("notes"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .default(sql`CURRENT_TIMESTAMP`)
@@ -695,7 +692,6 @@ export const tenantDocuments = createTable(
   },
   (document) => ({
     tenantDocumentIndex: index("tenant_document_idx").on(document.tenantProfileId, document.documentType),
-    statusIndex: index("document_status_idx").on(document.status),
   })
 );
 
@@ -840,6 +836,52 @@ export const refunds = createTable(
     leaseIndex: index("refund_lease_idx").on(refund.leaseId),
     tenantIndex: index("refund_tenant_idx").on(refund.tenantId),
     statusIndex: index("refund_status_idx").on(refund.status),
+  })
+);
+
+// Example unit document data:
+/*
+{
+  id: 1,
+  unitId: 1,
+  uploadedBy: 56,
+  documentType: "lease_agreement",
+  fileName: "lease_agreement_2024.pdf",
+  fileUrl: "https://uploadthing.com/f/abc123",
+  fileSize: 524288,
+  mimeType: "application/pdf",
+  notes: "Signed lease agreement for 2024",
+  uploadedAt: "2024-03-15T14:30:00Z"
+}
+*/
+export const unitDocuments = createTable(
+  "unit_document",
+  {
+    id: serial("id").primaryKey(),
+    unitId: integer("unit_id")
+      .notNull()
+      .references(() => units.id),
+    uploadedBy: integer("uploaded_by")
+      .notNull()
+      .references(() => user.id),
+    documentType: varchar("document_type", { length: 50 }).notNull(),
+    fileName: varchar("file_name", { length: 256 }).notNull(),
+    fileUrl: text("file_url").notNull(),
+    fileSize: integer("file_size"),
+    mimeType: varchar("mime_type", { length: 100 }),
+    notes: text("notes"),
+    uploadedAt: timestamp("uploaded_at", { withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).$onUpdate(() => new Date()),
+  },
+  (document) => ({
+    unitDocumentIndex: index("unit_document_unit_idx").on(document.unitId),
+    typeIndex: index("unit_document_type_idx").on(document.unitId, document.documentType),
+    uploaderIndex: index("unit_document_uploader_idx").on(document.uploadedBy),
   })
 );
 

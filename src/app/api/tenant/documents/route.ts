@@ -75,7 +75,6 @@ export async function POST(request: NextRequest) {
       fileUrl: body.fileUrl.trim(),
       fileSize: body.fileSize ?? null,
       mimeType: body.mimeType ?? null,
-      status: "pending_review",
     })
     .returning();
 

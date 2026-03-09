@@ -28,12 +28,13 @@ import type {
   LeaseExpiration,
   TenantWithLease,
   MaintenanceRequestWithDetails,
-  DocumentWithDetails,
+  UnitDocumentWithDetails,
   PaymentWithDetails,
   ViewingRequestWithDetails,
   RefundWithDetails,
   LandlordDashboardTab,
 } from "~/types/landlord";
+import type { TenantDocumentWithDetails } from "./documents/PropertyDocumentsSection";
 
 interface LandlordDashboardClientProps {
   user: User;
@@ -42,7 +43,8 @@ interface LandlordDashboardClientProps {
   leaseExpirations: LeaseExpiration[];
   tenants: TenantWithLease[];
   maintenanceRequests: MaintenanceRequestWithDetails[];
-  documents: DocumentWithDetails[];
+  documents: TenantDocumentWithDetails[];
+  unitDocuments: UnitDocumentWithDetails[];
   payments: PaymentWithDetails[];
   viewingRequests: ViewingRequestWithDetails[];
   refunds: RefundWithDetails[];
@@ -67,6 +69,7 @@ export function LandlordDashboardClient({
   tenants,
   maintenanceRequests,
   documents,
+  unitDocuments,
   payments,
   viewingRequests,
   refunds,
@@ -201,7 +204,7 @@ export function LandlordDashboardClient({
           </TabsContent>
 
           <TabsContent value="documents">
-            <DocumentsTab documents={documents} properties={properties} />
+            <DocumentsTab documents={documents} unitDocuments={unitDocuments} properties={properties} />
           </TabsContent>
 
           <TabsContent value="financials">
