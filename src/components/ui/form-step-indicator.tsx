@@ -46,7 +46,7 @@ export function FormStepIndicator({
           const clickable = canNavigateTo(index);
 
           return (
-            <div key={step.label} className="flex flex-1 items-center">
+            <div key={`${step.label}-${index}`} className="flex flex-1 items-center">
               <button
                 type="button"
                 onClick={() => clickable && onStepClick(stepNumber)}
@@ -114,10 +114,12 @@ export function FormStepIndicator({
 
             return (
               <button
-                key={step.label}
+                key={`${step.label}-${index}`}
                 type="button"
                 onClick={() => clickable && onStepClick(stepNumber)}
                 disabled={!clickable}
+                aria-label={`Go to step ${stepNumber}: ${step.label}`}
+                aria-current={isCurrent ? "step" : undefined}
                 className={cn(
                   "h-2 flex-1 rounded-full transition-all",
                   completed && "bg-green-500",
