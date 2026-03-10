@@ -22,6 +22,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "~/components/ui/alert-dialog";
+import { FormStepIndicator } from "~/components/ui/form-step-indicator";
 
 const FEATURE_OPTIONS = [
   "Hardwood Floors",
@@ -235,6 +236,16 @@ export function UnitListingForm({
     );
   };
 
+  const UNIT_STEPS = [
+    { label: "Basic Information", description: "Unit details & pricing" },
+    { label: "Photos & Details", description: "Description & images" },
+  ];
+
+  const isStepComplete = (step: number) => {
+    if (step === 1) return isStepOneComplete();
+    return false;
+  };
+
   return (
     <div className="relative">
       {/* Discard Changes Button */}
@@ -266,6 +277,15 @@ export function UnitListingForm({
           </AlertDialogContent>
         </AlertDialog>
       </div>
+
+      {/* Step Indicator */}
+      <FormStepIndicator
+        steps={UNIT_STEPS}
+        currentStep={currentStep}
+        onStepClick={setCurrentStep}
+        mode={mode}
+        isStepComplete={isStepComplete}
+      />
 
       {/* Form Content */}
       <form onSubmit={handleSubmit} className="space-y-8">
