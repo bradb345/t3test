@@ -309,8 +309,13 @@ export function PropertyListingForm({
     { label: "Property Details", description: "Description & photos" },
   ];
 
+  const isStepTwoComplete = () => {
+    return formData.description.trim() !== "";
+  };
+
   const isStepComplete = (step: number) => {
     if (step === 1) return isStepOneComplete();
+    if (step === 2) return isStepTwoComplete();
     return false;
   };
 

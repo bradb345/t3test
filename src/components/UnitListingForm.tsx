@@ -241,8 +241,13 @@ export function UnitListingForm({
     { label: "Photos & Details", description: "Description & images" },
   ];
 
+  const isStepTwoComplete = () => {
+    return formData.description.trim() !== "" && formData.imageUrls.length > 0;
+  };
+
   const isStepComplete = (step: number) => {
     if (step === 1) return isStepOneComplete();
+    if (step === 2) return isStepTwoComplete();
     return false;
   };
 

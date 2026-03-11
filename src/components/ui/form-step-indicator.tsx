@@ -51,6 +51,8 @@ export function FormStepIndicator({
                 type="button"
                 onClick={() => clickable && onStepClick(stepNumber)}
                 disabled={!clickable}
+                aria-current={isCurrent ? "step" : undefined}
+                aria-label={`Go to step ${stepNumber}: ${step.label}`}
                 className={cn(
                   "flex items-center gap-3 rounded-lg px-4 py-3 text-left transition-all w-full",
                   clickable && !isCurrent && "cursor-pointer hover:bg-muted/50",
@@ -121,14 +123,20 @@ export function FormStepIndicator({
                 aria-label={`Go to step ${stepNumber}: ${step.label}`}
                 aria-current={isCurrent ? "step" : undefined}
                 className={cn(
-                  "h-2 flex-1 rounded-full transition-all",
-                  completed && "bg-green-500",
-                  isCurrent && "bg-primary",
-                  !isCurrent && !completed && "bg-muted-foreground/20",
+                  "flex-1 min-h-10 rounded-full px-1 py-2 flex items-center",
                   clickable && !isCurrent && "cursor-pointer hover:opacity-80",
                   !clickable && "cursor-not-allowed"
                 )}
-              />
+              >
+                <div
+                  className={cn(
+                    "h-2 w-full rounded-full transition-all",
+                    completed && "bg-green-500",
+                    isCurrent && "bg-primary",
+                    !isCurrent && !completed && "bg-muted-foreground/20"
+                  )}
+                />
+              </button>
             );
           })}
         </div>
