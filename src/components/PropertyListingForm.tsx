@@ -23,6 +23,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "~/components/ui/alert-dialog";
+import { FormStepIndicator } from "~/components/ui/form-step-indicator";
 
 const AMENITY_OPTIONS = [
   "Pool",
@@ -303,6 +304,21 @@ export function PropertyListingForm({
     );
   };
 
+  const PROPERTY_STEPS = [
+    { label: "Basic Information", description: "Name, address, type" },
+    { label: "Property Details", description: "Description & photos" },
+  ];
+
+  const isStepTwoComplete = () => {
+    return formData.description.trim() !== "";
+  };
+
+  const isStepComplete = (step: number) => {
+    if (step === 1) return isStepOneComplete();
+    if (step === 2) return isStepTwoComplete();
+    return false;
+  };
+
   return (
     <div className="relative">
       {/* Discard Changes Button - Positioned under navbar */}
@@ -334,6 +350,15 @@ export function PropertyListingForm({
           </AlertDialogContent>
         </AlertDialog>
       </div>
+
+      {/* Step Indicator */}
+      <FormStepIndicator
+        steps={PROPERTY_STEPS}
+        currentStep={currentStep}
+        onStepClick={setCurrentStep}
+        mode={mode}
+        isStepComplete={isStepComplete}
+      />
 
       {/* Form Content */}
       <form onSubmit={handleSubmit} className="space-y-8">
