@@ -9,6 +9,7 @@ import {
 } from "~/server/db/schema";
 import { eq, and } from "drizzle-orm";
 import { createAndEmitNotification } from "~/server/notification-emitter";
+import { sendAppEmail } from "~/lib/emails/server";
 import { trackServerEvent } from "~/lib/posthog-events/server";
 
 // POST: Submit a tenancy application
@@ -119,6 +120,8 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
       .limit(1);
 
     if (landlord) {
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+
       await createAndEmitNotification({
         userId: landlord.id,
         type: "new_application",
@@ -133,6 +136,17 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
         }),
         actionUrl: `/my-properties?tab=applications`,
       });
+
+      if (landlord.email) {
+        await sendAppEmail(landlord.email, "new_application", {
+          landlordName: landlord.first_name ?? "Landlord",
+          applicantName: `${currentUser.first_name} ${currentUser.last_name}`,
+          applicantEmail: currentUser.email ?? "",
+          unitNumber: unitData.unit.unitNumber ?? "",
+          propertyName: unitData.property.name,
+          dashboardUrl: `${baseUrl}/my-properties?tab=applications`,
+        });
+      }
     }
 
     // Track tenancy application submission in PostHog

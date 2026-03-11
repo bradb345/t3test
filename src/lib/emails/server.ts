@@ -8,6 +8,7 @@ import { onboardingCompleteEmail } from "./templates/onboarding-complete";
 import { welcomeEmail } from "./templates/welcome";
 import { propertyInquiryEmail } from "./templates/property-inquiry";
 import { noticeGivenEmail } from "./templates/notice-given";
+import { newApplicationEmail } from "./templates/new-application";
 import { applicationApprovedEmail } from "./templates/application-approved";
 import { applicationRejectedEmail } from "./templates/application-rejected";
 import { leaseActivatedEmail } from "./templates/lease-activated";
@@ -41,6 +42,7 @@ const templateBuilders: {
   welcome: welcomeEmail,
   property_inquiry: propertyInquiryEmail,
   notice_given: noticeGivenEmail,
+  new_application: newApplicationEmail,
   application_approved: applicationApprovedEmail,
   application_rejected: applicationRejectedEmail,
   lease_activated: leaseActivatedEmail,
