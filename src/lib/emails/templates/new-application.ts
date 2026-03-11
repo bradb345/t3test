@@ -9,10 +9,10 @@ export function newApplicationEmail(
   const applicantEmail = escapeHtml(params.applicantEmail);
   const unitNumber = escapeHtml(params.unitNumber);
   const propertyName = escapeHtml(params.propertyName);
-  const dashboardUrl = params.dashboardUrl;
+  const dashboardUrl = escapeHtml(params.dashboardUrl);
 
   return {
-    subject: `New Tenancy Application for Unit ${params.unitNumber} at ${params.propertyName}`,
+    subject: `New Tenancy Application for Unit ${unitNumber} at ${propertyName}`,
     html: `
 <!DOCTYPE html>
 <html>
