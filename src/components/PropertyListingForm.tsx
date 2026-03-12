@@ -279,7 +279,7 @@ export function PropertyListingForm({
           ? "Property created successfully"
           : "Property updated successfully",
       );
-      router.push("/my-properties");
+      router.push(mode === "create" ? "/my-properties?tab=properties" : "/my-properties");
       router.refresh();
     } catch (error) {
       console.error("Error saving property:", error);
@@ -310,7 +310,7 @@ export function PropertyListingForm({
   ];
 
   const isStepTwoComplete = () => {
-    return formData.description.trim() !== "";
+    return formData.description.trim() !== "" && formData.imageUrls.length > 0;
   };
 
   const isStepComplete = (step: number) => {
@@ -503,7 +503,7 @@ export function PropertyListingForm({
             </div>
             <div>
                 <div>
-                <label className="mb-1 block text-sm font-medium">Property Photos</label>
+                <label className="mb-1 block text-sm font-medium">Property Photos <span className="text-red-500">*</span></label>
                 <p className="mb-2 text-sm text-muted-foreground">
                   Upload photos of the main property building, common areas, and amenities. Do not include photos of individual units.
                 </p>
@@ -566,7 +566,7 @@ export function PropertyListingForm({
               >
                 Back
               </Button>
-              <Button type="submit" disabled={isSubmitting || isUploading}>
+              <Button type="submit" disabled={isSubmitting || isUploading || !isStepTwoComplete()}>
                 {isSubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
