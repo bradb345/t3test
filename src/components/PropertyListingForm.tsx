@@ -504,6 +504,7 @@ export function PropertyListingForm({
                 }
                 className="min-h-[100px] w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
                 placeholder="Describe your property..."
+                required
               />
             </div>
             <div>
@@ -520,6 +521,7 @@ export function PropertyListingForm({
                 onChange={handleImageUpload}
                 className="w-full"
                 disabled={isUploading}
+                aria-required="true"
               />
               {isUploading && (
                 <div className="mt-2">

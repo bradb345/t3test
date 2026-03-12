@@ -138,14 +138,18 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
       });
 
       if (landlord.email) {
-        await sendAppEmail(landlord.email, "new_application", {
-          landlordName: landlord.first_name ?? "Landlord",
-          applicantName: `${currentUser.first_name} ${currentUser.last_name}`,
-          applicantEmail: currentUser.email ?? "",
-          unitNumber: unitData.unit.unitNumber ?? "",
-          propertyName: unitData.property.name,
-          dashboardUrl: `${baseUrl}/my-properties?tab=applications`,
-        });
+        try {
+          await sendAppEmail(landlord.email, "new_application", {
+            landlordName: landlord.first_name ?? "Landlord",
+            applicantName: `${currentUser.first_name} ${currentUser.last_name}`,
+            applicantEmail: currentUser.email ?? "",
+            unitNumber: unitData.unit.unitNumber ?? "",
+            propertyName: unitData.property.name,
+            dashboardUrl: `${baseUrl}/my-properties?tab=applications`,
+          });
+        } catch (emailError) {
+          console.error("Failed to send new application email:", emailError);
+        }
       }
     }
 
