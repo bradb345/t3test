@@ -223,6 +223,11 @@ export function PropertyListingForm({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!isStepTwoComplete()) {
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -279,7 +284,7 @@ export function PropertyListingForm({
           ? "Property created successfully"
           : "Property updated successfully",
       );
-      router.push("/my-properties");
+      router.push(mode === "create" ? "/my-properties?tab=properties" : "/my-properties");
       router.refresh();
     } catch (error) {
       console.error("Error saving property:", error);
@@ -310,7 +315,7 @@ export function PropertyListingForm({
   ];
 
   const isStepTwoComplete = () => {
-    return formData.description.trim() !== "";
+    return formData.description.trim() !== "" && formData.imageUrls.length > 0;
   };
 
   const isStepComplete = (step: number) => {
@@ -487,7 +492,7 @@ export function PropertyListingForm({
           <div className="space-y-4">
             <div>
               <label className="mb-1 block text-sm font-medium">
-                Description
+                Description <span className="text-red-500">*</span>
               </label>
               <textarea
                 value={formData.description}
@@ -499,11 +504,12 @@ export function PropertyListingForm({
                 }
                 className="min-h-[100px] w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
                 placeholder="Describe your property..."
+                required
               />
             </div>
             <div>
                 <div>
-                <label className="mb-1 block text-sm font-medium">Property Photos</label>
+                <label className="mb-1 block text-sm font-medium">Property Photos <span className="text-red-500">*</span></label>
                 <p className="mb-2 text-sm text-muted-foreground">
                   Upload photos of the main property building, common areas, and amenities. Do not include photos of individual units.
                 </p>
@@ -515,6 +521,7 @@ export function PropertyListingForm({
                 onChange={handleImageUpload}
                 className="w-full"
                 disabled={isUploading}
+                aria-required="true"
               />
               {isUploading && (
                 <div className="mt-2">
@@ -528,6 +535,11 @@ export function PropertyListingForm({
                     Uploading images...
                   </p>
                 </div>
+              )}
+              {!isUploading && formData.imageUrls.length === 0 && (
+                <p className="mt-1 text-sm text-red-500">
+                  At least one photo is required.
+                </p>
               )}
               {formData.imageUrls.length > 0 && (
                 <div className="mt-2 flex flex-wrap gap-2">
@@ -566,7 +578,7 @@ export function PropertyListingForm({
               >
                 Back
               </Button>
-              <Button type="submit" disabled={isSubmitting || isUploading}>
+              <Button type="submit" disabled={isSubmitting || isUploading || !isStepTwoComplete()}>
                 {isSubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
