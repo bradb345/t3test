@@ -223,6 +223,11 @@ export function PropertyListingForm({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!isStepTwoComplete()) {
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -487,7 +492,7 @@ export function PropertyListingForm({
           <div className="space-y-4">
             <div>
               <label className="mb-1 block text-sm font-medium">
-                Description
+                Description <span className="text-red-500">*</span>
               </label>
               <textarea
                 value={formData.description}
@@ -528,6 +533,11 @@ export function PropertyListingForm({
                     Uploading images...
                   </p>
                 </div>
+              )}
+              {!isUploading && formData.imageUrls.length === 0 && (
+                <p className="mt-1 text-sm text-red-500">
+                  At least one photo is required.
+                </p>
               )}
               {formData.imageUrls.length > 0 && (
                 <div className="mt-2 flex flex-wrap gap-2">
