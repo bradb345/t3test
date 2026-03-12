@@ -73,6 +73,14 @@ export type EmailMap = {
   };
 
   // Applications
+  new_application: {
+    landlordName: string;
+    applicantName: string;
+    applicantEmail: string;
+    unitNumber: string;
+    propertyName: string;
+    dashboardUrl: string;
+  };
   application_approved: {
     applicantName: string;
     unitNumber: string;
