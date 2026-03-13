@@ -6,9 +6,9 @@ import { createAndEmitNotification } from "~/server/notification-emitter";
 
 const DAYS_BEFORE_DUE = 7;
 
-/** Build a consistent "leaseId:YYYY-MM" key using UTC to avoid timezone drift */
+/** Build a consistent "leaseId:YYYY-M" dedup key using local time (matches calculateDueDate) */
 function monthKey(leaseId: number, date: Date): string {
-  return `${leaseId}:${date.getUTCFullYear()}-${date.getUTCMonth()}`;
+  return `${leaseId}:${date.getFullYear()}-${date.getMonth()}`;
 }
 
 function getDaysInMonth(year: number, month: number): number {
