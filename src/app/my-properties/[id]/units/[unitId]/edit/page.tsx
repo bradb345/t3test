@@ -43,6 +43,14 @@ export default async function EditUnitPage(
     redirect(`/my-properties/${propertyId}`);
   }
 
+  const existingUnits = await db.query.units.findMany({
+    where: eq(units.propertyId, propertyId),
+    columns: { id: true, unitNumber: true },
+  });
+  const existingUnitNames = existingUnits
+    .filter((u) => u.id !== unitId)
+    .map((u) => u.unitNumber);
+
   return (
     <main className="flex min-h-screen flex-col items-center bg-background">
       <div className="w-full max-w-3xl px-4 pt-32 pb-16">
@@ -55,11 +63,12 @@ export default async function EditUnitPage(
           </p>
         </div>
 
-        <UnitListingForm 
-          propertyId={propertyId} 
+        <UnitListingForm
+          propertyId={propertyId}
           currency={property.currency ?? "USD"}
           initialData={unit}
           mode="edit"
+          existingUnitNames={existingUnitNames}
         />
       </div>
     </main>
