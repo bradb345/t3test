@@ -24,6 +24,7 @@ import type {
   tenantDocuments,
 } from "~/server/db/schema";
 import type { UnitDocumentWithUploader } from "../DashboardClient";
+import { isSafeUploadUrl } from "~/lib/upload-url";
 
 type Lease = typeof leases.$inferSelect;
 type Unit = typeof units.$inferSelect;
@@ -101,20 +102,7 @@ export function DocumentsTab({
     try {
       if (!lease.lease.documents) return [];
       const docs = JSON.parse(lease.lease.documents) as string[];
-      return docs.filter((url) => {
-        try {
-          const parsed = new URL(url);
-          return (
-            parsed.protocol === "https:" &&
-            (parsed.hostname === "utfs.io" ||
-              parsed.hostname === "uploadthing.com" ||
-              parsed.hostname.endsWith(".ufs.sh") ||
-              parsed.hostname.endsWith(".uploadthing.com"))
-          );
-        } catch {
-          return false;
-        }
-      });
+      return docs.filter(isSafeUploadUrl);
     } catch {
       return [];
     }

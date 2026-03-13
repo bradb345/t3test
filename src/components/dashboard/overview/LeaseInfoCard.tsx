@@ -17,6 +17,7 @@ import type { leases, units, properties } from "~/server/db/schema";
 import { formatDate } from "~/lib/date";
 import { formatCurrency } from "~/lib/currency";
 import { trackClientEvent } from "~/lib/posthog-events/client";
+import { isSafeUploadUrl } from "~/lib/upload-url";
 
 type Lease = typeof leases.$inferSelect;
 type Unit = typeof units.$inferSelect;
@@ -113,19 +114,7 @@ export function LeaseInfoCard({ lease, pendingRenewalLease, onRenewalAction }: L
               : [];
             const firstDoc = docs[0];
             if (firstDoc) {
-              try {
-                const parsedUrl = new URL(firstDoc);
-                const hostname = parsedUrl.hostname;
-                const isSafe =
-                  parsedUrl.protocol === "https:" &&
-                  (hostname === "utfs.io" ||
-                    hostname === "uploadthing.com" ||
-                    hostname.endsWith(".ufs.sh") ||
-                    hostname.endsWith(".uploadthing.com"));
-                if (!isSafe) return null;
-              } catch {
-                return null;
-              }
+              if (!isSafeUploadUrl(firstDoc)) return null;
               return (
                 <div className="flex items-center gap-2">
                   <FileText className="h-4 w-4 text-muted-foreground" />

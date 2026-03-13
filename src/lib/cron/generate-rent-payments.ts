@@ -6,6 +6,11 @@ import { createAndEmitNotification } from "~/server/notification-emitter";
 
 const DAYS_BEFORE_DUE = 7;
 
+/** Build a consistent "leaseId:YYYY-MM" key using UTC to avoid timezone drift */
+function monthKey(leaseId: number, date: Date): string {
+  return `${leaseId}:${date.getUTCFullYear()}-${date.getUTCMonth()}`;
+}
+
 function getDaysInMonth(year: number, month: number): number {
   return new Date(year, month + 1, 0).getDate();
 }
@@ -89,36 +94,29 @@ export async function generateRentPayments(): Promise<{
       ),
     );
 
-  // Build a set of existing "leaseId:year-month" keys for rent payments
+  // Build a set of existing "leaseId:YYYY-MM" keys for rent payments
   const existingRentKeys = new Set(
     existingPayments
       .filter((p) => p.type === "rent")
-      .map((p) => {
-        const d = new Date(p.dueDate);
-        return `${p.leaseId}:${d.getFullYear()}-${d.getMonth()}`;
-      }),
+      .map((p) => monthKey(p.leaseId, new Date(p.dueDate))),
   );
 
-  // Build a set of "leaseId:year-month" keys for move_in payments.
+  // Build a set of "leaseId:YYYY-MM" keys for move_in payments.
   // A move_in payment covers first month's rent, so any rent due date
   // in the same month as a move_in payment is already paid.
   const moveInMonthKeys = new Set(
     existingPayments
       .filter((p) => p.type === "move_in")
-      .map((p) => {
-        const d = new Date(p.dueDate);
-        return `${p.leaseId}:${d.getFullYear()}-${d.getMonth()}`;
-      }),
+      .map((p) => monthKey(p.leaseId, new Date(p.dueDate))),
   );
 
   // Filter to only leases that don't already have a payment for this due date
   const toInsert = candidateLeases.filter(({ lease, dueDate }) => {
-    const rentKey = `${lease.id}:${dueDate.getFullYear()}-${dueDate.getMonth()}`;
-    if (existingRentKeys.has(rentKey)) return false;
+    const key = monthKey(lease.id, dueDate);
+    if (existingRentKeys.has(key)) return false;
 
     // Skip if a move_in payment already covers this month's rent
-    const moveInKey = `${lease.id}:${dueDate.getFullYear()}-${dueDate.getMonth()}`;
-    if (moveInMonthKeys.has(moveInKey)) return false;
+    if (moveInMonthKeys.has(key)) return false;
 
     return true;
   });
