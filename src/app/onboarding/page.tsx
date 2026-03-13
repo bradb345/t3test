@@ -10,6 +10,7 @@ import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { cn } from "~/lib/utils";
 import { useUploadThing } from "~/utils/uploadthing";
+import { prepareFilesForUpload, formatUploadError } from "~/lib/upload-utils";
 import posthog from "posthog-js";
 import { trackClientEvent } from "~/lib/posthog-events/client";
 
@@ -816,7 +817,13 @@ function OnboardingContent() {
                         setIsUploading(true);
                         setError(null);
                         try {
-                          const uploadedFiles = await startDocumentUpload([file]);
+                          const prepared = await prepareFilesForUpload([file], "documents");
+                          if (prepared.error) {
+                            setError(prepared.error);
+                            setIsUploading(false);
+                            return;
+                          }
+                          const uploadedFiles = await startDocumentUpload(prepared.files);
                           if (uploadedFiles?.[0]) {
                             setStepFormData({
                               ...stepFormData,
@@ -826,7 +833,7 @@ function OnboardingContent() {
                           }
                         } catch (err) {
                           console.error("Error uploading document:", err);
-                          setError("Failed to upload document. Please try again.");
+                          setError(formatUploadError(err));
                         } finally {
                           setIsUploading(false);
                         }
@@ -860,7 +867,7 @@ function OnboardingContent() {
                       {isUploading ? "Uploading..." : "Click to upload or drag and drop"}
                     </p>
                     <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                      PNG, JPG up to 4MB, or PDF up to 8MB
+                      PNG, JPG, WebP, GIF up to 25MB, or PDF up to 8MB
                     </p>
                   </label>
                   {stepFormData.proofOfAddressFileName && !isUploading && (
@@ -989,7 +996,13 @@ function OnboardingContent() {
                         setIsUploading(true);
                         setError(null);
                         try {
-                          const uploadedFiles = await startPhotoIdUpload([file]);
+                          const prepared = await prepareFilesForUpload([file], "photoID");
+                          if (prepared.error) {
+                            setError(prepared.error);
+                            setIsUploading(false);
+                            return;
+                          }
+                          const uploadedFiles = await startPhotoIdUpload(prepared.files);
                           if (uploadedFiles?.[0]) {
                             setStepFormData({
                               ...stepFormData,
@@ -999,7 +1012,7 @@ function OnboardingContent() {
                           }
                         } catch (err) {
                           console.error("Error uploading photo ID:", err);
-                          setError("Failed to upload photo ID. Please try again.");
+                          setError(formatUploadError(err));
                         } finally {
                           setIsUploading(false);
                         }
@@ -1033,7 +1046,7 @@ function OnboardingContent() {
                       {isUploading ? "Uploading..." : "Click to upload or drag and drop"}
                     </p>
                     <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                      PNG, JPG up to 4MB, or PDF up to 8MB
+                      PNG, JPG, WebP, GIF up to 25MB, or PDF up to 8MB
                     </p>
                   </label>
                   {stepFormData.photoIdFileName && !isUploading && (

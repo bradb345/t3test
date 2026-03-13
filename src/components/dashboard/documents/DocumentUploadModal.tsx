@@ -21,6 +21,7 @@ import {
 import { Loader2, Upload, X, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { useUploadThing } from "~/utils/uploadthing";
+import { prepareFilesForUpload, formatUploadError } from "~/lib/upload-utils";
 import type { tenantDocuments } from "~/server/db/schema";
 import { documentTypes } from "~/lib/document-constants";
 
@@ -61,11 +62,6 @@ export function DocumentUploadModal({
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // Check file size (8MB max for documents)
-      if (file.size > 8 * 1024 * 1024) {
-        toast.error("File size must be less than 8MB");
-        return;
-      }
       setSelectedFile(file);
     }
   };
@@ -85,8 +81,14 @@ export function DocumentUploadModal({
     setIsSubmitting(true);
 
     try {
-      // Upload the file
-      const uploadResult = await startUpload([selectedFile]);
+      const prepared = await prepareFilesForUpload([selectedFile], "documents");
+      if (prepared.error) {
+        toast.error(prepared.error);
+        setIsSubmitting(false);
+        return;
+      }
+
+      const uploadResult = await startUpload(prepared.files);
       if (!uploadResult?.[0]) {
         throw new Error("Failed to upload file");
       }
@@ -99,10 +101,10 @@ export function DocumentUploadModal({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           documentType,
-          fileName: selectedFile.name,
+          fileName: prepared.files[0]!.name,
           fileUrl: uploadedFile.ufsUrl,
-          fileSize: selectedFile.size,
-          mimeType: selectedFile.type,
+          fileSize: prepared.files[0]!.size,
+          mimeType: prepared.files[0]!.type,
         }),
       });
 
@@ -116,9 +118,7 @@ export function DocumentUploadModal({
       resetForm();
     } catch (error) {
       console.error("Error uploading document:", error);
-      toast.error(
-        error instanceof Error ? error.message : "Failed to upload document"
-      );
+      toast.error(formatUploadError(error));
     } finally {
       setIsSubmitting(false);
     }
@@ -194,7 +194,7 @@ export function DocumentUploadModal({
                 >
                   <Upload className="h-8 w-8" />
                   <span>Click to select a file</span>
-                  <span className="text-xs">PDF, JPG, PNG (max 8MB)</span>
+                  <span className="text-xs">Images up to 25MB, PDF up to 8MB</span>
                 </label>
               </div>
             )}

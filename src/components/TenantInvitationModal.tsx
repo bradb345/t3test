@@ -7,6 +7,7 @@ import { Input } from "~/components/ui/input";
 import { toast } from "sonner";
 import { Loader2, Send, Upload, X, FileText } from "lucide-react";
 import { useUploadThing } from "~/utils/uploadthing";
+import { prepareFilesForUpload, formatUploadError } from "~/lib/upload-utils";
 
 interface TenantInvitationModalProps {
   unitId: number;
@@ -49,14 +50,22 @@ export function TenantInvitationModal({
     setIsUploadingDocs(true);
 
     try {
-      const uploadedFiles = await startUpload(Array.from(files));
+      const prepared = await prepareFilesForUpload(Array.from(files), "documents");
+      if (prepared.error) {
+        toast.error(prepared.error);
+        setIsUploadingDocs(false);
+        e.target.value = "";
+        return;
+      }
+
+      const uploadedFiles = await startUpload(prepared.files);
       if (uploadedFiles && uploadedFiles.length > 0) {
         setLeaseDocuments((prev) => [...prev, ...uploadedFiles.map((f) => f.url)]);
         toast.success("Document uploaded");
       }
     } catch (error) {
       console.error("Error uploading documents:", error);
-      toast.error("Failed to upload documents");
+      toast.error(formatUploadError(error));
     } finally {
       setIsUploadingDocs(false);
       // Reset the input so the same file can be uploaded again if needed
