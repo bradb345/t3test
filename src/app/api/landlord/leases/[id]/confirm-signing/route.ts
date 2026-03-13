@@ -6,6 +6,7 @@ import { eq, and } from "drizzle-orm";
 import { createAndEmitNotification } from "~/server/notification-emitter";
 import { sendAppEmail } from "~/lib/emails/server";
 import { trackServerEvent } from "~/lib/posthog-events/server";
+import { isSafeUploadUrl } from "~/lib/upload-url";
 
 // PATCH: Confirm lease has been signed externally
 export async function PATCH(
@@ -28,22 +29,7 @@ export async function PATCH(
     }
 
     // Validate documentUrl is a safe HTTPS URL from a known upload host
-    try {
-      const parsedUrl = new URL(body.documentUrl);
-      const isHttps = parsedUrl.protocol === "https:";
-      const hostname = parsedUrl.hostname;
-      const isAllowedHost =
-        hostname === "utfs.io" ||
-        hostname === "uploadthing.com" ||
-        hostname.endsWith(".ufs.sh") ||
-        hostname.endsWith(".uploadthing.com");
-      if (!isHttps || !isAllowedHost) {
-        return NextResponse.json(
-          { error: "Invalid document URL" },
-          { status: 400 }
-        );
-      }
-    } catch {
+    if (!isSafeUploadUrl(body.documentUrl)) {
       return NextResponse.json(
         { error: "Invalid document URL" },
         { status: 400 }

@@ -62,6 +62,7 @@ interface UnitListingFormProps {
   currency?: string;
   initialData?: InitialData;
   mode?: "create" | "edit";
+  existingUnitNames?: string[];
 }
 
 interface FormData {
@@ -85,6 +86,7 @@ export function UnitListingForm({
   currency = "USD",
   initialData,
   mode = "create",
+  existingUnitNames = [],
 }: UnitListingFormProps) {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
@@ -92,6 +94,7 @@ export function UnitListingForm({
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [showDiscardDialog, setShowDiscardDialog] = useState(false);
+  const [stepTwoTouched, setStepTwoTouched] = useState(mode === "edit");
 
   const currencySymbol = getCurrencySymbol(currency);
 
@@ -240,9 +243,14 @@ export function UnitListingForm({
     router.push(`/my-properties/${propertyId}`);
   };
 
+  const isDuplicateUnitName = existingUnitNames.some(
+    (name) => name.toLowerCase() === formData.unitNumber.trim().toLowerCase()
+  );
+
   const isStepOneComplete = () => {
     return (
       formData.unitNumber.trim() !== "" &&
+      !isDuplicateUnitName &&
       formData.numBedrooms !== "" &&
       formData.numBathrooms !== "" &&
       formData.monthlyRent !== ""
@@ -323,6 +331,11 @@ export function UnitListingForm({
                   }
                   placeholder="e.g., 4B or 101"
                 />
+                {isDuplicateUnitName && (
+                  <p className="mt-1 text-sm text-red-500">
+                    A unit with this name already exists
+                  </p>
+                )}
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -476,16 +489,17 @@ export function UnitListingForm({
                 <textarea
                   required
                   value={formData.description}
-                  onChange={(e) =>
+                  onChange={(e) => {
+                    setStepTwoTouched(true);
                     setFormData((prev) => ({
                       ...prev,
                       description: e.target.value,
-                    }))
-                  }
+                    }));
+                  }}
                   className="min-h-[100px] w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
                   placeholder="Describe this unit..."
                 />
-                {formData.description.trim() === "" && (
+                {stepTwoTouched && formData.description.trim() === "" && (
                   <p className="mt-1 text-sm text-red-500">
                     Description is required
                   </p>
@@ -545,7 +559,7 @@ export function UnitListingForm({
                       </div>
                     ))}
                   </div>
-                ) : !isUploading ? (
+                ) : !isUploading && stepTwoTouched ? (
                   <p className="mt-2 text-sm text-red-500">
                     At least one unit photo is required
                   </p>

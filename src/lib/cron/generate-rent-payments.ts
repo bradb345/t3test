@@ -1,10 +1,15 @@
 import { db } from "~/server/db";
 import { leases, payments, user } from "~/server/db/schema";
-import { eq, and, inArray } from "drizzle-orm";
+import { and, inArray } from "drizzle-orm";
 import { sendAppEmail } from "~/lib/emails/server";
 import { createAndEmitNotification } from "~/server/notification-emitter";
 
 const DAYS_BEFORE_DUE = 7;
+
+/** Build a consistent "leaseId:YYYY-M" dedup key using local time (matches calculateDueDate) */
+function monthKey(leaseId: number, date: Date): string {
+  return `${leaseId}:${date.getFullYear()}-${date.getMonth()}`;
+}
 
 function getDaysInMonth(year: number, month: number): number {
   return new Date(year, month + 1, 0).getDate();
@@ -79,27 +84,41 @@ export async function generateRentPayments(): Promise<{
     .select({
       leaseId: payments.leaseId,
       dueDate: payments.dueDate,
+      type: payments.type,
     })
     .from(payments)
     .where(
       and(
         inArray(payments.leaseId, candidateLeaseIds),
-        eq(payments.type, "rent"),
+        inArray(payments.type, ["rent", "move_in"]),
       ),
     );
 
-  // Build a set of existing "leaseId:dueDate" keys for fast lookup
-  const existingKeys = new Set(
-    existingPayments.map((p) => {
-      const d = new Date(p.dueDate);
-      return `${p.leaseId}:${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
-    }),
+  // Build a set of existing "leaseId:YYYY-MM" keys for rent payments
+  const existingRentKeys = new Set(
+    existingPayments
+      .filter((p) => p.type === "rent")
+      .map((p) => monthKey(p.leaseId, new Date(p.dueDate))),
+  );
+
+  // Build a set of "leaseId:YYYY-MM" keys for move_in payments.
+  // A move_in payment covers first month's rent, so any rent due date
+  // in the same month as a move_in payment is already paid.
+  const moveInMonthKeys = new Set(
+    existingPayments
+      .filter((p) => p.type === "move_in")
+      .map((p) => monthKey(p.leaseId, new Date(p.dueDate))),
   );
 
   // Filter to only leases that don't already have a payment for this due date
   const toInsert = candidateLeases.filter(({ lease, dueDate }) => {
-    const key = `${lease.id}:${dueDate.getFullYear()}-${dueDate.getMonth()}-${dueDate.getDate()}`;
-    return !existingKeys.has(key);
+    const key = monthKey(lease.id, dueDate);
+    if (existingRentKeys.has(key)) return false;
+
+    // Skip if a move_in payment already covers this month's rent
+    if (moveInMonthKeys.has(key)) return false;
+
+    return true;
   });
 
   if (toInsert.length === 0) {
