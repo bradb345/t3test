@@ -9,7 +9,7 @@ import {
   CardTitle,
 } from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
-import { Upload, File, ExternalLink, FolderOpen, Trash2, Loader2 } from "lucide-react";
+import { Upload, File, ExternalLink, Download, FolderOpen, Trash2, Loader2, FileText } from "lucide-react";
 import { DocumentCard } from "./DocumentCard";
 import { DocumentUploadModal } from "./DocumentUploadModal";
 import { UnitDocumentUploadModal } from "./UnitDocumentUploadModal";
@@ -97,6 +97,29 @@ export function DocumentsTab({
     }
   };
 
+  const leaseDocuments = (() => {
+    try {
+      if (!lease.lease.documents) return [];
+      const docs = JSON.parse(lease.lease.documents) as string[];
+      return docs.filter((url) => {
+        try {
+          const parsed = new URL(url);
+          return (
+            parsed.protocol === "https:" &&
+            (parsed.hostname === "utfs.io" ||
+              parsed.hostname === "uploadthing.com" ||
+              parsed.hostname.endsWith(".ufs.sh") ||
+              parsed.hostname.endsWith(".uploadthing.com"))
+          );
+        } catch {
+          return false;
+        }
+      });
+    } catch {
+      return [];
+    }
+  })();
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -116,6 +139,79 @@ export function DocumentsTab({
           </Button>
         )}
       </div>
+
+      {/* Lease Documents */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FileText className="h-5 w-5" />
+            Lease Documents
+          </CardTitle>
+          <CardDescription>
+            Signed lease agreements and related documents
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {leaseDocuments.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-8 text-center">
+              <FileText className="mb-4 h-12 w-12 text-muted-foreground" />
+              <p className="font-medium">No lease documents</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Lease documents will appear here once they are uploaded by your landlord
+              </p>
+            </div>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {leaseDocuments.map((url, index) => {
+                const fileName = (() => {
+                  try {
+                    const pathname = new URL(url).pathname;
+                    const decoded = decodeURIComponent(pathname.split("/").pop() ?? "");
+                    return decoded || `Lease Document ${index + 1}`;
+                  } catch {
+                    return `Lease Document ${index + 1}`;
+                  }
+                })();
+
+                return (
+                  <div key={index} className="flex flex-col rounded-lg border p-4">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <File className="h-8 w-8 shrink-0 text-blue-500" />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-medium" title={fileName}>
+                          {fileName}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Lease Document
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="mt-3 flex items-center gap-2">
+                      <Button variant="outline" size="sm" className="flex-1" asChild>
+                        <a
+                          href={url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          <ExternalLink className="mr-2 h-3 w-3" />
+                          View
+                        </a>
+                      </Button>
+                      <Button variant="outline" size="sm" className="flex-1" asChild>
+                        <a href={url} download={fileName}>
+                          <Download className="mr-2 h-3 w-3" />
+                          Download
+                        </a>
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Unit Documents (shared between landlord and tenant) */}
       <Card>

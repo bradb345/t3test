@@ -46,7 +46,10 @@
       "Bash(npx dotenv:*)",
       "Bash(xargs dirname:*)",
       "Bash(gh pr:*)",
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "mcp__claude_ai_Linear__get_issue",
+      "mcp__claude_ai_Linear__save_issue",
+      "Bash(git checkout:*)"
     ]
   }
 }
