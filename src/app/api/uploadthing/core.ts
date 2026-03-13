@@ -21,7 +21,7 @@ export const ourFileRouter = {
   // Photo ID uploads for onboarding (appends user auth_id to filename)
   photoID: f({
     image: {
-      maxFileSize: "4MB",
+      maxFileSize: "25MB",
       maxFileCount: 1,
     },
     "application/pdf": {
@@ -51,7 +51,7 @@ export const ourFileRouter = {
   // Document uploads for onboarding (proof of address, etc. - appends user auth_id to filename)
   documents: f({
     image: {
-      maxFileSize: "4MB",
+      maxFileSize: "25MB",
       maxFileCount: 1,
     },
     "application/pdf": {
@@ -85,7 +85,7 @@ export const ourFileRouter = {
        * For full list of options and defaults, see the File Route API reference
        * @see https://docs.uploadthing.com/file-routes#route-config
        */
-      maxFileSize: "4MB",
+      maxFileSize: "25MB",
       maxFileCount: 10,
     },
   })
@@ -147,7 +147,7 @@ export const ourFileRouter = {
   // Unit document uploads for landlords and tenants
   unitDocument: f({
     image: {
-      maxFileSize: "8MB",
+      maxFileSize: "25MB",
       maxFileCount: 5,
     },
     "application/pdf": {

@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { Send, Loader2, Paperclip, X, FileText, ImageIcon } from "lucide-react";
 import { cn } from "~/lib/utils";
 import { useUploadThing } from "~/utils/uploadthing";
+import { prepareFilesForUpload, formatUploadError } from "~/lib/upload-utils";
 
 export interface Attachment {
   name: string;
@@ -18,7 +19,6 @@ interface MessageInputProps {
 }
 
 const MAX_FILES = 3;
-const MAX_FILE_SIZE = 8 * 1024 * 1024; // 8MB (matches server limit)
 const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif", "application/pdf"];
 
 export function MessageInput({ onSend, disabled }: MessageInputProps) {
@@ -45,21 +45,10 @@ export function MessageInput({ onSend, disabled }: MessageInputProps) {
     setUploadError(null);
     const newFiles = Array.from(files);
 
-    for (const file of newFiles) {
-      if (!ACCEPTED_TYPES.includes(file.type)) {
-        setUploadError("Only JPG, PNG, WebP, GIF and PDF files are allowed");
-        return;
-      }
-      if (file.size > MAX_FILE_SIZE) {
-        setUploadError("Files must be under 8MB");
-        return;
-      }
-    }
-
     setPendingFiles((prev) => {
       const combined = [...prev, ...newFiles];
       if (combined.length > MAX_FILES) {
-        setUploadError(`Maximum ${MAX_FILES} files per message`);
+        setUploadError("Maximum 3 files per message");
         return prev;
       }
       return combined;
@@ -85,7 +74,16 @@ export function MessageInput({ onSend, disabled }: MessageInputProps) {
 
       if (hasFiles) {
         setIsUploading(true);
-        const uploadResult = await startUpload(pendingFiles);
+
+        const prepared = await prepareFilesForUpload(pendingFiles, "messageAttachment");
+        if (prepared.error) {
+          setUploadError(prepared.error);
+          setIsUploading(false);
+          setIsSending(false);
+          return;
+        }
+
+        const uploadResult = await startUpload(prepared.files);
         setIsUploading(false);
 
         if (!uploadResult) {
@@ -105,8 +103,8 @@ export function MessageInput({ onSend, disabled }: MessageInputProps) {
       await onSend(message.trim(), attachments);
       setMessage("");
       setPendingFiles([]);
-    } catch {
-      setUploadError("Failed to send message");
+    } catch (error) {
+      setUploadError(formatUploadError(error));
     } finally {
       setIsSending(false);
       setIsUploading(false);

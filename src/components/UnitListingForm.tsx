@@ -7,6 +7,7 @@ import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Card } from "~/components/ui/card";
 import { useUploadThing } from "~/utils/uploadthing";
+import { prepareFilesForUpload, formatUploadError } from "~/lib/upload-utils";
 import { Loader2 } from "lucide-react";
 import { MultiSelect } from "~/components/ui/multi-select";
 import { toast } from "sonner";
@@ -132,7 +133,13 @@ export function UnitListingForm({
     setUploadProgress(0);
 
     try {
-      const uploadedImages = await startUpload(Array.from(files), { propertyId: String(propertyId) });
+      const prepared = await prepareFilesForUpload(Array.from(files), "imageUploader");
+      if (prepared.error) {
+        toast.error(prepared.error);
+        return;
+      }
+
+      const uploadedImages = await startUpload(prepared.files, { propertyId: String(propertyId) });
       if (!uploadedImages) return;
 
       setFormData((prev) => ({
@@ -141,7 +148,7 @@ export function UnitListingForm({
       }));
     } catch (error) {
       console.error("Error uploading images:", error);
-      toast.error("Failed to upload images");
+      toast.error(formatUploadError(error));
     } finally {
       setIsUploading(false);
       setUploadProgress(0);
@@ -156,7 +163,13 @@ export function UnitListingForm({
     setUploadProgress(0);
 
     try {
-      const uploadedImages = await startUpload(Array.from(files), { propertyId: String(propertyId) });
+      const prepared = await prepareFilesForUpload(Array.from(files), "imageUploader");
+      if (prepared.error) {
+        toast.error(prepared.error);
+        return;
+      }
+
+      const uploadedImages = await startUpload(prepared.files, { propertyId: String(propertyId) });
       if (!uploadedImages) return;
 
       setFormData((prev) => ({
@@ -165,7 +178,7 @@ export function UnitListingForm({
       }));
     } catch (error) {
       console.error("Error uploading floor plans:", error);
-      toast.error("Failed to upload floor plans");
+      toast.error(formatUploadError(error));
     } finally {
       setIsUploading(false);
       setUploadProgress(0);
