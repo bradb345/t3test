@@ -2,7 +2,7 @@ import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { UnitListingForm } from "~/components/UnitListingForm";
 import { db } from "~/server/db";
-import { properties } from "~/server/db/schema";
+import { properties, units } from "~/server/db/schema";
 import { eq } from "drizzle-orm";
 
 export default async function CreateUnitPage(
@@ -32,6 +32,12 @@ export default async function CreateUnitPage(
     redirect("/my-properties");
   }
 
+  const existingUnits = await db.query.units.findMany({
+    where: eq(units.propertyId, propertyId),
+    columns: { unitNumber: true },
+  });
+  const existingUnitNames = existingUnits.map((u) => u.unitNumber);
+
   return (
     <main className="flex min-h-screen flex-col items-center bg-background">
       <div className="w-full max-w-3xl px-4 pt-32 pb-16">
@@ -44,7 +50,7 @@ export default async function CreateUnitPage(
           </p>
         </div>
 
-        <UnitListingForm propertyId={propertyId} currency={property.currency ?? "USD"} />
+        <UnitListingForm propertyId={propertyId} currency={property.currency ?? "USD"} existingUnitNames={existingUnitNames} />
       </div>
     </main>
   );
