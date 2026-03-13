@@ -467,10 +467,10 @@ function UnitDocumentUploadModal({
         body: JSON.stringify({
           unitId: parseInt(unitId),
           documentType,
-          fileName: selectedFile.name,
+          fileName: prepared.files[0]!.name,
           fileUrl: uploadedFile.ufsUrl,
-          fileSize: selectedFile.size,
-          mimeType: selectedFile.type,
+          fileSize: prepared.files[0]!.size,
+          mimeType: prepared.files[0]!.type,
           notes: notes.trim() || undefined,
         }),
       });
@@ -603,7 +603,7 @@ function UnitDocumentUploadModal({
                 >
                   <Upload className="h-8 w-8" />
                   <span>Click to select a file</span>
-                  <span className="text-xs">PDF, JPG, PNG (max 8MB)</span>
+                  <span className="text-xs">Images up to 25MB, PDF up to 8MB</span>
                 </label>
               </div>
             )}

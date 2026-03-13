@@ -101,10 +101,10 @@ export function DocumentUploadModal({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           documentType,
-          fileName: selectedFile.name,
+          fileName: prepared.files[0]!.name,
           fileUrl: uploadedFile.ufsUrl,
-          fileSize: selectedFile.size,
-          mimeType: selectedFile.type,
+          fileSize: prepared.files[0]!.size,
+          mimeType: prepared.files[0]!.type,
         }),
       });
 
@@ -194,7 +194,7 @@ export function DocumentUploadModal({
                 >
                   <Upload className="h-8 w-8" />
                   <span>Click to select a file</span>
-                  <span className="text-xs">PDF, JPG, PNG (max 8MB)</span>
+                  <span className="text-xs">Images up to 25MB, PDF up to 8MB</span>
                 </label>
               </div>
             )}

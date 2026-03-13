@@ -3,13 +3,13 @@ import imageCompression from "browser-image-compression";
 // Route configuration matching server-side UploadThing routes
 const UPLOAD_ROUTE_CONFIG = {
   imageUploader: {
-    maxSizeMB: 25,
+    maxSizeMB: { image: 25 },
     maxCount: 10,
     acceptedTypes: ["image/jpeg", "image/png", "image/webp", "image/gif"],
     typeLabel: "Only JPG, PNG, WebP, and GIF images are allowed",
   },
   photoID: {
-    maxSizeMB: 25,
+    maxSizeMB: { image: 25, pdf: 8 },
     maxCount: 1,
     acceptedTypes: [
       "image/jpeg",
@@ -21,7 +21,7 @@ const UPLOAD_ROUTE_CONFIG = {
     typeLabel: "Only JPG, PNG, WebP, GIF images, and PDF files are allowed",
   },
   documents: {
-    maxSizeMB: 25,
+    maxSizeMB: { image: 25, pdf: 8 },
     maxCount: 1,
     acceptedTypes: [
       "image/jpeg",
@@ -33,7 +33,7 @@ const UPLOAD_ROUTE_CONFIG = {
     typeLabel: "Only JPG, PNG, WebP, GIF images, and PDF files are allowed",
   },
   messageAttachment: {
-    maxSizeMB: 8,
+    maxSizeMB: { image: 8, pdf: 8 },
     maxCount: 3,
     acceptedTypes: [
       "image/jpeg",
@@ -45,7 +45,7 @@ const UPLOAD_ROUTE_CONFIG = {
     typeLabel: "Only JPG, PNG, WebP, GIF images, and PDF files are allowed",
   },
   unitDocument: {
-    maxSizeMB: 25,
+    maxSizeMB: { image: 25, pdf: 8 },
     maxCount: 5,
     acceptedTypes: [
       "image/jpeg",
@@ -62,6 +62,13 @@ export type UploadRoute = keyof typeof UPLOAD_ROUTE_CONFIG;
 
 function isImageFile(file: File): boolean {
   return file.type.startsWith("image/");
+}
+
+function getMaxSizeMB(config: (typeof UPLOAD_ROUTE_CONFIG)[UploadRoute], file: File): number {
+  if (file.type === "application/pdf" && "pdf" in config.maxSizeMB) {
+    return config.maxSizeMB.pdf;
+  }
+  return config.maxSizeMB.image;
 }
 
 function formatFileSize(bytes: number): string {
@@ -104,8 +111,11 @@ function validateFiles(
  * Compresses an image file if it's over 2MB. Skips PDFs and small images.
  * Falls back to original file on compression failure.
  */
+// GIFs should not be compressed as canvas-based compression strips animation
+const SKIP_COMPRESSION_TYPES = new Set(["image/gif"]);
+
 async function compressImageFile(file: File): Promise<File> {
-  if (!isImageFile(file) || file.size <= 2 * 1024 * 1024) {
+  if (!isImageFile(file) || file.size <= 2 * 1024 * 1024 || SKIP_COMPRESSION_TYPES.has(file.type)) {
     return file;
   }
 
@@ -115,7 +125,7 @@ async function compressImageFile(file: File): Promise<File> {
       maxWidthOrHeight: 2048,
       useWebWorker: true,
     });
-    return new File([compressed], file.name, { type: file.type });
+    return new File([compressed], file.name, { type: compressed.type });
   } catch {
     // Fall back to original file if compression fails
     return file;
@@ -136,16 +146,17 @@ export async function prepareFilesForUpload(
   }
 
   const config = UPLOAD_ROUTE_CONFIG[route];
-  const maxBytes = config.maxSizeMB * 1024 * 1024;
 
   const compressed = await Promise.all(files.map(compressImageFile));
 
-  // Post-compression size check
+  // Post-compression size check (per-MIME limits)
   for (const file of compressed) {
+    const maxMB = getMaxSizeMB(config, file);
+    const maxBytes = maxMB * 1024 * 1024;
     if (file.size > maxBytes) {
       return {
         files: [],
-        error: `File "${file.name}" is still ${formatFileSize(file.size)} after compression. Maximum is ${config.maxSizeMB}MB.`,
+        error: `File "${file.name}" is still ${formatFileSize(file.size)} after compression. Maximum is ${maxMB}MB.`,
       };
     }
   }

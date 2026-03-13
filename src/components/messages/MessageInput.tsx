@@ -47,7 +47,7 @@ export function MessageInput({ onSend, disabled }: MessageInputProps) {
 
     setPendingFiles((prev) => {
       const combined = [...prev, ...newFiles];
-      if (combined.length > 3) {
+      if (combined.length > MAX_FILES) {
         setUploadError("Maximum 3 files per message");
         return prev;
       }
