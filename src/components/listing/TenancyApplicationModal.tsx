@@ -628,7 +628,7 @@ export function TenancyApplicationModal({
                       {isUploading ? "Uploading..." : "Click to upload"}
                     </p>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      PNG, JPG up to 25MB, or PDF up to 8MB
+                      PNG, JPG, WebP, GIF up to 25MB, or PDF up to 8MB
                     </p>
                   </label>
                   {stepFormData.proofOfAddressFileName && !isUploading && (
@@ -792,7 +792,7 @@ export function TenancyApplicationModal({
                       {isUploading ? "Uploading..." : "Click to upload"}
                     </p>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      PNG, JPG up to 25MB, or PDF up to 8MB
+                      PNG, JPG, WebP, GIF up to 25MB, or PDF up to 8MB
                     </p>
                   </label>
                   {stepFormData.photoIdFileName && !isUploading && (

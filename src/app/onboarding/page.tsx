@@ -867,7 +867,7 @@ function OnboardingContent() {
                       {isUploading ? "Uploading..." : "Click to upload or drag and drop"}
                     </p>
                     <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                      PNG, JPG up to 25MB, or PDF up to 8MB
+                      PNG, JPG, WebP, GIF up to 25MB, or PDF up to 8MB
                     </p>
                   </label>
                   {stepFormData.proofOfAddressFileName && !isUploading && (
@@ -1046,7 +1046,7 @@ function OnboardingContent() {
                       {isUploading ? "Uploading..." : "Click to upload or drag and drop"}
                     </p>
                     <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                      PNG, JPG up to 25MB, or PDF up to 8MB
+                      PNG, JPG, WebP, GIF up to 25MB, or PDF up to 8MB
                     </p>
                   </label>
                   {stepFormData.photoIdFileName && !isUploading && (

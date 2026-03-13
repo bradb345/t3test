@@ -1,3 +1,5 @@
+"use client";
+
 import imageCompression from "browser-image-compression";
 
 // Route configuration matching server-side UploadThing routes
