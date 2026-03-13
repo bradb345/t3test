@@ -1,6 +1,6 @@
 import { db } from "~/server/db";
 import { leases, payments, user } from "~/server/db/schema";
-import { eq, and, inArray } from "drizzle-orm";
+import { and, inArray } from "drizzle-orm";
 import { sendAppEmail } from "~/lib/emails/server";
 import { createAndEmitNotification } from "~/server/notification-emitter";
 
@@ -95,7 +95,7 @@ export async function generateRentPayments(): Promise<{
       .filter((p) => p.type === "rent")
       .map((p) => {
         const d = new Date(p.dueDate);
-        return `${p.leaseId}:${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+        return `${p.leaseId}:${d.getFullYear()}-${d.getMonth()}`;
       }),
   );
 
@@ -113,7 +113,7 @@ export async function generateRentPayments(): Promise<{
 
   // Filter to only leases that don't already have a payment for this due date
   const toInsert = candidateLeases.filter(({ lease, dueDate }) => {
-    const rentKey = `${lease.id}:${dueDate.getFullYear()}-${dueDate.getMonth()}-${dueDate.getDate()}`;
+    const rentKey = `${lease.id}:${dueDate.getFullYear()}-${dueDate.getMonth()}`;
     if (existingRentKeys.has(rentKey)) return false;
 
     // Skip if a move_in payment already covers this month's rent
