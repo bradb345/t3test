@@ -14,6 +14,7 @@ import { Label } from "~/components/ui/label";
 import { Loader2, Check, CheckCircle } from "lucide-react";
 import { cn } from "~/lib/utils";
 import { useUploadThing } from "~/utils/uploadthing";
+import { prepareFilesForUpload, formatUploadError } from "~/lib/upload-utils";
 
 interface TenancyApplicationModalProps {
   open: boolean;
@@ -572,9 +573,15 @@ export function TenancyApplicationModal({
                         setIsUploading(true);
                         setError(null);
                         try {
-                          const uploadedFiles = await startDocumentUpload([
-                            file,
-                          ]);
+                          const prepared = await prepareFilesForUpload([file], "documents");
+                          if (prepared.error) {
+                            setError(prepared.error);
+                            setIsUploading(false);
+                            return;
+                          }
+                          const uploadedFiles = await startDocumentUpload(
+                            prepared.files,
+                          );
                           if (uploadedFiles?.[0]) {
                             setStepFormData({
                               ...stepFormData,
@@ -584,7 +591,7 @@ export function TenancyApplicationModal({
                           }
                         } catch (err) {
                           console.error("Error uploading:", err);
-                          setError("Failed to upload. Please try again.");
+                          setError(formatUploadError(err));
                         } finally {
                           setIsUploading(false);
                         }
@@ -730,9 +737,15 @@ export function TenancyApplicationModal({
                         setIsUploading(true);
                         setError(null);
                         try {
-                          const uploadedFiles = await startPhotoIdUpload([
-                            file,
-                          ]);
+                          const prepared = await prepareFilesForUpload([file], "photoID");
+                          if (prepared.error) {
+                            setError(prepared.error);
+                            setIsUploading(false);
+                            return;
+                          }
+                          const uploadedFiles = await startPhotoIdUpload(
+                            prepared.files,
+                          );
                           if (uploadedFiles?.[0]) {
                             setStepFormData({
                               ...stepFormData,
@@ -742,7 +755,7 @@ export function TenancyApplicationModal({
                           }
                         } catch (err) {
                           console.error("Error uploading:", err);
-                          setError("Failed to upload. Please try again.");
+                          setError(formatUploadError(err));
                         } finally {
                           setIsUploading(false);
                         }

@@ -8,6 +8,7 @@ import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Card } from "~/components/ui/card";
 import { useUploadThing } from "~/utils/uploadthing";
+import { prepareFilesForUpload, formatUploadError } from "~/lib/upload-utils";
 import { Loader2 } from "lucide-react";
 import { LocationInput, type PlaceOption } from "~/components/LocationInput";
 import { MultiSelect } from "~/components/ui/multi-select";
@@ -206,7 +207,13 @@ export function PropertyListingForm({
     setUploadProgress(0);
 
     try {
-      const uploadedImages = await startUpload(Array.from(files), { propertyId: uploadId });
+      const prepared = await prepareFilesForUpload(Array.from(files), "imageUploader");
+      if (prepared.error) {
+        toast.error(prepared.error);
+        return;
+      }
+
+      const uploadedImages = await startUpload(prepared.files, { propertyId: uploadId });
       if (!uploadedImages) return;
 
       setFormData((prev) => ({
@@ -215,6 +222,7 @@ export function PropertyListingForm({
       }));
     } catch (error) {
       console.error("Error uploading images:", error);
+      toast.error(formatUploadError(error));
     } finally {
       setIsUploading(false);
       setUploadProgress(0);
